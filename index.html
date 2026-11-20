@@ -1278,7 +1278,7 @@ const DARK = [0, .12, .08, 0, .38, 0, .9];
 /* Catalina Island, past the Palos Verdes kelp forest at the south end of the bay: long and narrow, lying along the coast like the real one, with green hills,
    Avalon harbor (the round Casino and moored boats) facing Pool Island, and bison on the hills.
    `la` runs along the island and `lb` across it (meters); A and B are its half length and half width. */
-const CAT = { x: -2800, y: 3600, rot: -2.48, A: 26, B: 10 };   // (rot turns Avalon's side toward Pool Island)
+const CAT = { x: -3600, y: 3900, rot: -2.396, A: 26, B: 10 };   // (rot turns Avalon's side toward Pool Island)
 let neighbors = [];   // islands next to yours (see setNeighbors)
 const CAT_U = 1/40;   // world units to meters (same as U, which isn't defined yet this early in the file)
 const catLocal = (x, y) => { const dx = (x - CAT.x)*CAT_U, dy = (y - CAT.y)*CAT_U, c = Math.cos(CAT.rot), s = Math.sin(CAT.rot); return [dx*c + dy*s, -dx*s + dy*c]; };
@@ -1309,11 +1309,11 @@ const PIER = { ang: Math.PI, x0: 11, len: 24, w: 4.2, deck: 3.1, wheel: 23, whee
 const pierPt = m => [Math.cos(PIER.ang)*m*40, Math.sin(PIER.ang)*m*40];   // (40 = units per meter)
 const PIER_MID = pierPt(PIER.x0 + PIER.len/2);
 // King Harbor's breakwater: a long wall of big boulders breaking the surface, with a harbor light at its tip
-const BREAKWATER = { x: -300, y: 2000, ang: 1.62, half: 11 };   // just off the beach, down the coast at Redondo
+const BREAKWATER = { x: -100, y: 2700, ang: 1.62, half: 11 };   // just off the beach, down the coast at Redondo
 const LANDMARKS = [
   { name:'Santa Monica Pier',        x:pierPt(PIER.wheel)[0], y:pierPt(PIER.wheel)[1], kind:'smpier', r: 520 },
-  { name:'The Palos Verdes Kelp Tower', x:-1300, y:3300, kind:'kelptower' },
-  { name:'The Sea Lion Buoy',        x:-1200, y:4700,  kind:'buoy' },
+  { name:'The Palos Verdes Kelp Tower', x:-1000, y:4500, kind:'kelptower' },
+  { name:'The Sea Lion Buoy',        x:-2200, y:5300,  kind:'buoy' },
   { name:'King Harbor Breakwater',   x:BREAKWATER.x, y:BREAKWATER.y, kind:'breakwater', r: 520 },
   { name:'The Star of Scotland',     x:-2550, y:0,     kind:'galleon' },
   { name:'Point Dume Rocks',         x:-2300, y:-6500, kind:'turtletown' },
@@ -1325,11 +1325,11 @@ const LM_RENAME = { 'Catalina\'s Kelp Tower':'The Palos Verdes Kelp Tower', 'The
   'The Spanish Galleon':'The Star of Scotland', 'Honu Bay':'Point Dume Rocks', 'Challenger Deep':'The Glowing Canyon' };
 /* League 1's places (units; sizes and depths in meters). Two secrets on Redondo Reef and the Giant Eel off Malibu.
    Sea floor depth is fixed around each one (`floor`, flat out to `flat` m) and nothing random grows there. */
-const GROTTO = { x: -1100, y: 1800, r: 5, h: 5, floor: 7, doorTop: 3.4, flat: 9 };   // the Hidden Sea Cave: a rock dome, top 2 m under water
+const GROTTO = { x: -800, y: 3150, r: 5, h: 5, floor: 7, doorTop: 3.4, flat: 9 };   // the Hidden Sea Cave: a rock dome, top 2 m under water
 GROTTO.doorAng = Math.atan2(GROTTO.y, GROTTO.x);   // its door faces away from Pool Island, so you have to swim around to find it
-const EAGLE = { x: -900, y: 2600, r: 2.8, top: 3.3, floor: 7, flat: 7 };   // Eagle Rock: a sea stack 3.3 m tall, too steep to climb
-const EEL = { x: -900, y: -2100, floor: 6, flat: 6 };   // the Giant Eel's cave, 21 m from the first ring
-EEL.face = Math.atan2(-2600 - EEL.y, -1600 - EEL.x);   // it looks out toward the first ring (EEL_RINGS[0])
+const EAGLE = { x: -1500, y: 3700, r: 2.8, top: 3.3, floor: 7, flat: 7 };   // Eagle Rock: a sea stack 3.3 m tall, too steep to climb
+const EEL = { x: -556, y: -3443, floor: 6, flat: 6 };   // the Giant Eel's cave, 21 m from the first ring
+EEL.face = Math.atan2(-3257 - EEL.y, -1396 - EEL.x);   // it looks out toward the first ring (EEL_RINGS[0])
 // League 2 (Silver): a house at the bottom of Dume Canyon, the junk on the sea floor that its note points to, and the Kraken
 const TRENCH_HOUSE = { x: -2000, y: -3800, floor: 45, flat: 8 };   // 45 m down, in the dark
 const JUNK = { x: -2000, y: 800, floor: 8, flat: 7 };            // near the wreck of the Star of Scotland
@@ -1351,9 +1351,10 @@ function zoneAt(x,y){
   d += 110*Math.sin(a*5 + 1); a += .16*Math.sin(d/340);
   if (d < 1050) return 0;
   const q = Math.PI/4;
-  if (a > q && a < 3*q)   return d < 2900 ? 3 : d < 4300 || off < 800 ? 1 : 2;   // down the coast toward Palos Verdes: Redondo Reef, then the kelp, then the whales out deep
-  if (a < -q && a > -3*q) return d > 3050 && off > 1200 ? 6 : 5;               // up the coast: Malibu all along the shore, and Dume Canyon out past it
-  return 4;                                                          // straight out past the pier: the old wreck
+  const W = Math.PI*5/6;
+  if (a > q && a < W)   return d < 4000 ? 3 : d < 5400 || off < 800 ? 1 : 2;   // down the coast toward Palos Verdes: Redondo Reef, then the kelp, then the whales out deep
+  if (a < -q && a > -W) return d > 3800 && off > 1300 ? 6 : 5;               // up the coast: Malibu all along the shore, and Dume Canyon out past it
+  return 4;                                                         // straight out past the pier: the old wreck
 }
 // Sea depth in meters. Shallow shelves around the islands and reefs, a kelp forest about 13 m deep,
 // open ocean 20-30 m, and the Midnight Trench dropping to about 70 m. Worlds blend into each other.
@@ -1382,7 +1383,7 @@ function chunkBuddies(c){
   const me = curChar().id;
   if (c.kinFor !== me){ c.kinFor = me; c.kin = [];
     const R = mulberry(hash(c.cx*7 + 3, c.cy*13 + me.length*101)), mx = (c.cx + .5)*CH, my = (c.cy + .5)*CH, z = zoneAt(mx, my);
-    if ((KIN[me] || []).includes(z) && coastS(mx, my) > 22*METERS && R() < .35) c.kin.push({ id: me, bx: mx + (R() - .5)*CH*.6, by: my + (R() - .5)*CH*.6, rad: 90 + R()*110, w: (R() < .5 ? -1 : 1)*(.25 + R()*.2), ph: R()*TAU }); }
+    if ((KIN[me] || []).includes(z) && coastS(mx, my) > 450 && R() < .35) c.kin.push({ id: me, bx: mx + (R() - .5)*CH*.6, by: my + (R() - .5)*CH*.6, rad: 90 + R()*110, w: (R() < .5 ? -1 : 1)*(.25 + R()*.2), ph: R()*TAU }); }
   return c.kin.length ? c.buddies.concat(c.kin) : c.buddies;
 }
 function getChunk(cx,cy){
@@ -1410,27 +1411,29 @@ function getChunk(cx,cy){
     else if (it.type === 'anemone' && R() < .5) c.fish.push({ sp:'blacksmith', reef:true, bx:x, by:y, rad:30, ph:R()*TAU, n:3 });
   }
   const mx = X0 + CH/2, my = Y0 + CH/2, mz = zoneAt(mx,my);
-  if (coastS(mx, my) > 28*METERS) {   // (schools, whales, boats and treasure stay out of the surf)
-    if ((mz === 1 || mz === 3 || mz === 5) && R() < .5) c.fish.push({ sp:'garibaldi', reef:true, bx:mx + (R() - .5)*250, by:my + (R() - .5)*250, rad:60 + R()*60, ph:R()*TAU, n:2 + (R()*3|0) });
+  const seaRoom = coastS(mx, my), roomy = r => seaRoom > r + 240;   // (how far the middle of this chunk is from the sand: schools, whales and boats stay out of the surf)
+  {
+    if ((mz === 1 || mz === 3 || mz === 5) && R() < .5 && roomy(250)) c.fish.push({ sp:'garibaldi', reef:true, bx:mx + (R() - .5)*250, by:my + (R() - .5)*250, rad:60 + R()*60, ph:R()*TAU, n:2 + (R()*3|0) });
     const school = ({ 0:['sardine',.4], 1:['sardine',.7], 2:['sardine',.5], 3:['sardine',.35], 4:['sardine',.6], 5:['sardine',.5], 6:['lantern',.8] })[mz];
-    if (school && R() < school[1]){ const big = school[0] === 'sardine';
+    if (school && R() < school[1] && roomy(600)){ const big = school[0] === 'sardine';
       c.fish.push({ sp:school[0], bx:mx+(R()-.5)*200, by:my+(R()-.5)*200, rad:80+R()*140, w:(R()<.5?-1:1)*(.16+R()*.22), ph:R()*TAU,
         n: big ? 25 + (R()*35|0) : 6 + (R()*8|0), spread: big ? 70 : 110, depth: -1.4 - R()*2.8 }); }
-    if (mz === 4 && R() < .35) c.fish.push({ sp:'grouper',   // giant sea bass, hiding around the wreck
+    if (mz === 4 && R() < .35 && roomy(180)) c.fish.push({ sp:'grouper',   // giant sea bass, hiding around the wreck
       bx:mx, by:my, rad:120, w:.12, ph:R()*TAU, n:1 + (R()*2|0), spread:60, depth:-4.3 });
     // treasure on the bottom (more in deep, dark and wrecked places) and fishing boats up top
     if (R() < [.03, .05, .06, .05, .15, .04, .12][mz]){ const deep = mz === 4 || mz === 6;
-      c.chests.push({ x:X0 + 40 + R()*(CH - 80), y:Y0 + 40 + R()*(CH - 80), id:'c' + key, v: (deep ? 120 : 50) + ((R()*6)|0)*10, rot:R()*TAU }); }
-    if (mz !== 0 && mz !== 6 && R() < .06 && Math.hypot(mx, my) > 1600){ const bt = { x:mx + (R() - .5)*200, y:my + (R() - .5)*200, ang:R()*TAU, id:'b' + key, ph:R()*TAU }; if (!onLeagueCourse(bt.x, bt.y, 9, true)) c.boats.push(bt); }   // (no boats parked in the eel race)
+      const ch = { x:X0 + 40 + R()*(CH - 80), y:Y0 + 40 + R()*(CH - 80), id:'c' + key, v: (deep ? 120 : 50) + ((R()*6)|0)*10, rot:R()*TAU }; if (coastS(ch.x, ch.y) > 10*METERS) c.chests.push(ch); }
+    if (mz !== 0 && mz !== 6 && R() < .06 && Math.hypot(mx, my) > 1600){ const bt = { x:mx + (R() - .5)*200, y:my + (R() - .5)*200, ang:R()*TAU, id:'b' + key, ph:R()*TAU }; if (!onLeagueCourse(bt.x, bt.y, 9, true) && coastS(bt.x, bt.y) > 25*METERS) c.boats.push(bt); }   // (no boats parked in the eel race)
     // jellyfish: moon jellies are harmless; orange-red sea nettles sting (none by the pier)
     const JCH = [.12, .3, .25, .3, .4, .25, 1.1], DEADLY = [0, .35, .3, .35, .4, .3, .6];
     for (let q = JCH[mz]; q > 0; q -= 1) if (R() < Math.min(1, q)){ const deadly = R() < DEADLY[mz];
       const j = { x:X0 + R()*CH, y:Y0 + R()*CH, ph:R()*TAU, wr:40 + R()*80, d0:1 + R()*3.2, deadly, size:.22 + R()*.25, tl: deadly ? 1.4 + R()*1.4 : .35 + R()*.4 };
-      if (!(deadly && (onLeagueCourse(j.x, j.y, 7, true) || LEAGUE_SPOTS.some(q => Math.hypot(j.x - q.x, j.y - q.y) < 25*METERS) || Math.hypot(j.x - KRAKEN.x, j.y - KRAKEN.y) < 60*METERS))) c.jellies.push(j); }   // (league places are danger enough)
+      if (coastS(j.x, j.y) > j.wr + 6*METERS && !(deadly && (onLeagueCourse(j.x, j.y, 7, true) || LEAGUE_SPOTS.some(q => Math.hypot(j.x - q.x, j.y - q.y) < 25*METERS) || Math.hypot(j.x - KRAKEN.x, j.y - KRAKEN.y) < 60*METERS))) c.jellies.push(j); }   // (league places are danger enough)
     for (const [buddy, chance] of ({ 0:[['dolphin',.22]], 1:[['whale',.05]], 2:[['whale',.3], ['dolphin',.35]], 3:[['dolphin',.25], ['manta',.3]], 4:[['manta',.1]], 5:[['dolphin',.3], ['whale',.1]] })[mz] || [])   // (otters and sea turtles are rare here: they show up when you're one of them, see KIN)
-      if (R() < chance) c.buddies.push({ id:buddy, bx:mx, by:my, rad:(buddy === 'whale' ? 320 : 90) + R()*110, w:(R()<.5?-1:1)*(buddy === 'whale' ? .06 : .25+R()*.2), ph:R()*TAU });
+      if (R() < chance && roomy(buddy === 'whale' ? 430 : 200)) c.buddies.push({ id:buddy, bx:mx, by:my, rad:(buddy === 'whale' ? 320 : 90) + R()*110, w:(R()<.5?-1:1)*(buddy === 'whale' ? .06 : .25+R()*.2), ph:R()*TAU });
     if (R() < .5) c.pearls.push({ x:X0+30+R()*(CH-60), y:Y0+30+R()*(CH-60), id:key+'#0' });
     if (R() < .15) c.pearls.push({ x:X0+30+R()*(CH-60), y:Y0+30+R()*(CH-60), id:key+'#1' });
+    c.pearls = c.pearls.filter(p => coastS(p.x, p.y) > 3*METERS);
   }
   chunks.set(key, c); return c;
 }
@@ -1729,7 +1732,7 @@ const BOTTLE_NOTES = ['"Help, I\'m stuck on a desert island! ...Just kidding, I\
 function questSpot(o, minM, maxM, test, strict){   // a random spot in open water, minM to maxM meters from you (strict: null if there's none)
   for (let k = 0; k < 40; k++){ const a = Math.random()*TAU, d = (minM + Math.random()*(maxM - minM))*METERS, x = o.x + Math.cos(a)*d, y = o.y + Math.sin(a)*d;
     if (groundAt(x, y) < -1.5 && coastS(x, y) > 12*METERS && !onLeagueCourse(x, y, 6) && Math.hypot(x - KRAKEN.x, y - KRAKEN.y) > 70*METERS && (!test || test(x, y))) return { x, y }; }
-  return strict ? null : { x: o.x + 60*METERS, y: o.y };
+  return strict ? null : { x: o.x - 60*METERS, y: o.y };   // (out to sea)
 }
 function newQuest(o, not = [], requestedKind){
   const kinds = Object.keys(QUEST_KIND).filter(k => !not.includes(k)), kind = requestedKind || kinds[(Math.random()*kinds.length)|0];
@@ -1955,7 +1958,7 @@ function leagueCollide(o){
 /* The Giant Eel. It waits with its head out of its cave. Come within 14 m and it bursts out after you. You race at your own speed and
    the eel is always a little slower (EEL_SPD), so it only gets you if you stop or swim into it. Swim through the 8 rings, in order,
    to escape. If it catches you there's no penalty: it just goes home, and you can try again. */
-const EEL_RINGS = [[-1600, -2600], [-2200, -2750], [-2900, -2700], [-3500, -2450], [-3900, -1950], [-3600, -1500], [-3000, -1500], [-2500, -1250]];   // (the old course, mirrored and moved out past the beach)
+const EEL_RINGS = [[-1396, -3257], [-1909, -2912], [-2340, -2358], [-2556, -1745], [-2452, -1113], [-1917, -1035], [-1515, -1481], [-995, -1685]];   // (the old course, mirrored and turned to fit off Malibu: same spacing and turns)
 // Eel speeds as a share of YOUR top speed (with your speed bar), and how close (m) it gets before it snaps. Troy's rule (2026-09-28): it's always
 // a little slower than you and turns worse, so it only gets you if you stop or swim into it. The snap is scary but never faster than you.
 const EEL_SPD = { burst: .5, chase: .85, lunge: .98, recover: .6, lungeAt: 4, turn: 1.5 };
@@ -2595,7 +2598,7 @@ const LAND = { top: 12, pch: [24, 29.5], face: [29.5, 35], park: [35, 45], ave: 
 const landST = (x, y) => [(x - coastX(y))*U, y*U];
 const landXY = (s, t) => [coastX(t*METERS) + s*METERS, t*METERS];   // (back to units)
 function landH(s, t){   // the ground (what the 3D land shows)
-  if (s < 0) return -shelfD(-s);
+  if (s < 0) return .3 - shelfD(-s);   // (the wet sand slopes on down into the sea, with no step at the water's edge)
   const T = LAND.top, kn = 1 - smooth(6, 34, t), km = smooth(-150, -190, t), kp = smooth(120, 160, t);
   const hS = s < 28 ? .15 + s*.045 : 1.41 + Math.min(2.4, (s - 28)*.05);   // south of the pier: a very wide beach, then a low town
   let hN;                                                                  // north: beach, bike path, PCH, the bluff, the park
@@ -3895,7 +3898,7 @@ function bubble(x, y, vx, vy){ if (curDepth > .3){ sprayAt(x*U, -curDepth, y*U, 
 
 /* ---------- Scenery helpers ---------- */
 // The mainland in 3D: one big sheet of ground following the coast (sand, paths, roads, the bluff, grass, hills), then the things on it
-let coastGroup = null, coastCars = null;
+let coastGroup = null, coastCars = null, coastFill = null;
 function landColor(s, t, h, c){
   const n = Math.sin(s*1.7 + t*.9)*Math.sin(t*1.3 - s*.6), kn = 1 - smooth(6, 34, t), wild = Math.max(smooth(-150, -190, t), smooth(120, 160, t));
   const inc = t > LAND.incline[0] - 6 && t < LAND.incline[1] + .6 && s > LAND.inS[0] - .1 && s < LAND.inS[1] + .1;
@@ -4031,12 +4034,13 @@ function buildCoast(){
       x.font = '900 120px Nunito, sans-serif'; x.fillText('SANTA MONICA', 512, 108); x.font = '900 84px Nunito, sans-serif'; x.fillText('YACHT HARBOR', 512, 214);
       x.font = '800 46px Nunito, sans-serif'; x.fillStyle = '#fff'; x.fillText('SPORT FISHING · BOATING · CAFES', 512, 300);
       const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(span + .4, 2.6), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); sign.position.set(-.05, H - .6, 0); sign.rotation.y = -Math.PI/2; arch.add(sign);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(span + .4, 2.6), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(-.05, H - .6, 0); sign.rotation.y = -Math.PI/2; arch.add(sign);
     const back = new THREE.Mesh(new THREE.BoxGeometry(.12, 2.75, span + .55), blue); back.position.set(.05, H - .6, 0); arch.add(back);
+    const street = sign.clone(); street.position.x = .15; street.rotation.y = Math.PI/2; arch.add(street);   // (and from Ocean Avenue)
     const crown = new THREE.Mesh(new THREE.TorusGeometry(span/2 + .2, .14, 8, 28, Math.PI), cream); crown.position.y = H + .6; crown.scale.y = .35; crown.rotation.y = Math.PI/2; arch.add(crown);
     at(arch, LAND.ave[0] + 1, 0, 0, T); }
   waterizeTree(g); oceanWorld.add(g);
-  { const fill = new THREE.DirectionalLight(0xfff1dc, .75); fill.position.set(-1, .55, .3); oceanScene.add(fill, fill.target); }   // soft afternoon light off the sea, so the bluffs (which face the water) aren't in the dark
+  { const fill = new THREE.DirectionalLight(0xfff1dc, 0); fill.position.set(-1, .55, .3); oceanScene.add(fill, fill.target); coastFill = fill; }   // soft afternoon light off the sea, so the bluffs (which face the water) aren't in the dark
   // cars: along PCH (into the tunnel), along Ocean Avenue, and up and down the Incline
   const I0 = LAND.incline[0], I1 = LAND.incline[1], up = 31.3, dn = 32.9;
   const ROUTES = [[[25.6, 3], [25.6, -230]], [[28.2, -230], [28.2, 3]], [[47.2, 140], [47.2, -150]], [[49.4, -150], [49.4, 140]],
@@ -4052,6 +4056,7 @@ const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion(), _cv = new THREE.V
 function updCoast(o){
   const dt = Math.min(.05, time - (updCoast.t ?? time)); updCoast.t = time;
   if (!coastCars || !o) return; const { cars, routes, body, cab } = coastCars, [ps, pt] = landST(o.x, o.y);
+  if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (Math.abs(pt) > 500 || ps < -300) return;   // (far away: the cars can wait)
   const where = (rt, d) => { for (const sg of rt.segs) if (d <= sg.at + sg.l){ const f = (d - sg.at)/sg.l; return [lerp(sg.a[0], sg.b[0], f), lerp(sg.a[1], sg.b[1], f), Math.atan2(sg.b[1] - sg.a[1], sg.b[0] - sg.a[0])]; } const sg = rt.segs[rt.segs.length - 1]; return [sg.b[0], sg.b[1], 0]; };
   cars.forEach((c, i) => { const rt = routes[c.r]; let [s, t, a] = where(rt, c.d);

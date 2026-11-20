@@ -3,7 +3,7 @@ const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:a
 const html = fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
 const start=html.indexOf('const SURF ='), end=html.indexOf('function updOcean(dt)',start);
 const button={firstChild:{},lastChild:{},addEventListener(){}};
-const shoreWorld={ISL:400,HOUSE:{x:1200,y:1800,r:360},neighbors:[{house:{x:2400,y:1800}}],CAT:{A:26,B:10},catLocal:(x,y)=>[(x+4000)/40,(y+4000)/40],EAGLE:{x:9000,y:9000,r:3}};
+const shoreWorld={ISL:400,HOUSE:{x:1200,y:1800,r:360},neighbors:[{house:{x:2400,y:1800}}],CAT:{A:26,B:10},catLocal:(x,y)=>[(x+4000)/40,(y+4000)/40],EAGLE:{x:9000,y:9000,r:3},coastS:()=>1e9};
 const ctx=vm.createContext({...shoreWorld,Math,time:0,U:1/40,mode:'ocean',paused:false,ocean:null,$:()=>button,coach(){},wantHeading:()=>null,angDiff:(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b)),clamp:(x,a,b)=>Math.max(a,Math.min(b,x))});
 vm.runInContext(html.slice(start,end)+'\nthis.api={shoreFactor,SURF,swellAt,surfStep,canSurf,toggleSurf};',ctx);
 const {shoreFactor,SURF,swellAt,surfStep,canSurf,toggleSurf}=ctx.api;
@@ -31,3 +31,10 @@ assert.equal(shoreFactor(-126,-100),0,'Protect long end of Catalina');
 assert.equal(shoreFactor(1000,0),1,'Keep full offshore swell');
 let previous=0; for(let x=14;x<=26;x+=.1){const factor=shoreFactor(-x,0);assert(factor>=previous);previous=factor;}
 console.log('Shore checks passed: pool, home, neighbor, Catalina, Eagle Rock and gradual offshore recovery.');
+// the mainland beach (the real coast from the game): no swell right at the sand, full swell well out to sea, rising steadily in between
+vm.runInContext(html.slice(html.indexOf('function coastX('),html.indexOf('function zoneAt('))+'\nthis.realCoast=coastS;',ctx);
+for(const zm of [-120,-60,60,140]){ const edge=ctx.coastX(zm*40)/40;
+ assert.equal(shoreFactor(edge-.5,zm),0,'No waves at the beach');
+ assert.equal(shoreFactor(edge-40,zm),1,'Full swell out to sea');
+ let prev=0; for(let x=edge;x>=edge-20;x-=.25){const f=shoreFactor(x,zm);assert(f>=prev-1e-9);prev=f;} }
+console.log('Beach checks passed: calm at the sand, full swell offshore.');

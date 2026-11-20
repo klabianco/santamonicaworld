@@ -8,7 +8,7 @@ function game(){
   save:{board:[{kind:'pearls',need:10,start:0},{kind:'bottle',x:10000,y:0},{kind:'treasure',x:20000,y:0}]},
   ocean:{x:0,y:0,depth:0,ang:0}, leagueGuide:true, homeGuide:true, ptr:{}, KRAKEN:{x:-900,y:3500}, JUNK:{x:9000,y:9000,floor:20},
   $:id=>{ if(!elements.has(id)) elements.set(id,{hidden:true,textContent:'',innerHTML:'',classList:{add(){},remove(){}},addEventListener(event,fn){this[event]=fn;}}); return elements.get(id); },
-  groundAt:()=>-10, depthAt:()=>20, onLeagueCourse:()=>false, LANDMARKS:[{name:'Island',x:30000,y:0}], LM_RENAME:{'Honu Bay':'Point Dume Rocks'},
+  groundAt:()=>-10, depthAt:()=>20, onLeagueCourse:()=>false, LANDMARKS:[{name:'Island',x:30000,y:0}], LM_RENAME:{'Honu Bay':'Point Dume Rocks'}, coastS:()=>1e9,
   persist(){events.push('persist');},flushCloud(){}, addCoins(n){events.push(['coins',n]);},addXP(){},sfx(){},
   banner(...m){messages.push(m);},say(...m){messages.push(m);},sideWord:()=> 'ahead',htmlText:t=>t,
   resetPick(){},showPick(){},graceAfterPause(){},initAudio(){},
@@ -62,4 +62,13 @@ for(const order of [['calf','shells'],['shells','calf']]){
  const merged=run('mergeSaves({xp:10,whaleQuest:{started:true,calf:true}},{xp:0,whaleQuest:{shells:true,reward:true}})');
  assert(merged.whaleQuest.calf && merged.whaleQuest.shells && merged.whaleQuest.reward);
  console.log('Passed: partial progress, active quest navigation, and cross-device reward merge');
+}
+{
+ // the beach: a saved quest spot that's on the sand now gets a new spot out at sea, and place quests follow their landmark
+ const {c,run}=game(); c.coastS=(x,y)=>5000-x;
+ c.save.board=[{kind:'bottle',x:10000,y:0,note:'old'},{kind:'place',name:'Island',x:1,y:1},{kind:'pearls',need:10,start:0}];
+ run('boardFix(ocean)');
+ const b=c.save.board.find(q=>q.kind==='bottle'); assert(b && b.note!=='old' && 5000-b.x>480, 'bottle moved off the beach');
+ const pl=c.save.board.find(q=>q.kind==='place'); assert.equal(pl.x,30000); assert.equal(c.save.board.length,3);
+ console.log('Passed: quests on the new beach move out to sea, and place quests follow their landmark');
 }

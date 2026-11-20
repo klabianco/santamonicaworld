@@ -577,7 +577,7 @@
     <div class="row2">
       <button id="resumeBtn" class="btn primary" type="button">Keep swimming</button>
       <button id="shopBtn" class="btn primary" type="button">Dive Shop</button>
-      <button id="homeBtn" class="btn primary" type="button" hidden>Swim home</button>
+      <button id="homeBtn" class="btn primary" type="button" hidden>Go to my island</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
       <button id="switchBtn" class="btn secondary" type="button" hidden>Switch swimmer</button>
@@ -2264,7 +2264,7 @@ function chestsNear(o){ const out = [], cx = Math.floor(o.x/CH), cy = Math.floor
   return out; }
 function jellyPos(j){ return [j.x + Math.cos(time*.1 + j.ph)*j.wr, j.y + Math.sin(time*.13 + j.ph)*j.wr, j.d0 + Math.sin(time*.35 + j.ph)*.5]; }
 const taken = new Set();
-const newOcean = () => ({ x:HOUSE.x, y:HOUSE.y + HOUSE.r - 110, vx:0, vy:0, ang:-Math.PI/2,   /* facing the house, so the camera behind you isn't inside it */ onLand:true, homeDone:true,   // everyone starts on their own island
+const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(HOME_APT.startS, HOME_APT.startT))), vx:0, vy:0, ang:-Math.PI/2,   /* home: outside apartment 303, facing the stairs down to 3rd Street */ onLand:true, homeDone:true,   // everyone starts on their own island
    zone:0, bg:[...ZONES[0].water], dark:0, limbs:newLimbs(), edgeMsg:0, saveT:0,
     hurtT:0, sharks:[], sharkSpawnT:2, beatT:0, ride:null, rideFrom:null, rideAway:null, rideTarget:null });
 function startOcean(){
@@ -2274,12 +2274,12 @@ function startOcean(){
   if (save.whaleQuest?.reward && !krakenBeaten()) ocean.held = 'sunstone';
   boardFix(ocean); for (const q of save.board) if (q.kind === 'calf' && q.state === 'lead'){ q.x = ocean.x; q.y = ocean.y + 4*METERS; }   // (the baby whale you were leading is right behind you)
   parts = []; setMode('ocean'); $('airChip').hidden = true;
-  banner('Your island!', 'Press Build to build, or swim out and explore Santa Monica Bay');
-  ocean.tripT = 0;
+  banner('Home! 1045 3rd Street, #303', 'Take the stairs down, walk down California Avenue to the cliffs, and take the California Incline to the beach');
+  ocean.tripT = 0; camHead = -Math.PI/2; camInit = false;
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
 }
-const OCEAN_HELLO = 'This is your island, right by the Santa Monica Pier! Press Build to build your dream house. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
+const OCEAN_HELLO = 'This is home: apartment 303 at 1045 3rd Street, a few blocks up from the beach in Santa Monica! Take the stairs down, walk down California Avenue to the cliffs, then take the California Incline down to the beach. Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
 // Waves and currents: the pool is calm, the ocean pushes you around.
 const CURRENT = [45, 60, 95, 70, 85, 55, 75];     // strength per world
 function currentAt(x, y, t){
@@ -2594,7 +2594,19 @@ function islandH(x, z){   // height of the ground above sea level (negative = un
    Malibu, and the pier bridge climbs from the beach to the 1941 neon arch at Ocean and Colorado. South of the pier the land stays low
    (Ocean Front Walk); far north the Malibu hills come down to a narrow beach, far south the cliffs of Palos Verdes rise out of the sea.
    Heights are squeezed like everything else (the bluffs are 12 m). The 3D land and walking both use landH, so what you see is what you stand on. */
-const LAND = { top: 12, pch: [24, 29.5], face: [29.5, 35], park: [35, 45], ave: [45, 51], incline: [-70, -20], inS: [30.2, 34], bridge: 2.4, bridgeS: [4, 35] };
+const LAND = { top: 12, pch: [24, 29.5], face: [29.5, 35], park: [35, 45], ave: [45, 51], incline: [-70, -20], inS: [30.2, 34], bridge: 2.4, bridgeS: [4, 35],
+  second: [67, 72], third: [85, 90], cal: [-20.4, -14] };   // (2nd St, 3rd St, and California Avenue, which runs inland from the top of the Incline)
+// Home: 1045 3rd Street, apartment 303 (Kevin's family lived here), on the corner of 3rd and California: the inland side of 3rd Street
+// (odd numbers), on the side of California Avenue away from the pier (the 1000 block). The building faces 3rd Street; an open walkway runs along the third floor past the doors of 301, 302 and 303,
+// and stairs at the far end go down to the sidewalk. Every swim starts right outside 303.
+const HOME_APT = { s0: 93, s1: 104, t0: -31, t1: -21.4, floors: 4, fh: 3, walk: [90.5, 93], stair: 7.5 };
+HOME_APT.startS = 91.8; HOME_APT.startT = HOME_APT.t1 - 2.6;   // (just past the door of 303, facing along the walkway to the stairs)
+function homeWalkH(s, t){   // the third-floor walkway and its stairs (meters above the street), or -99
+  const A = HOME_APT, lv = 2*A.fh + .15; if (s < A.walk[0] || s > A.walk[1]) return -99;
+  if (t >= A.t0 && t <= A.t1) return lv;
+  if (t >= A.t0 - A.stair && t < A.t0) return lv*(t - (A.t0 - A.stair))/A.stair;
+  return -99; }
+const onCal = (s, t) => t > LAND.cal[0] && t < LAND.cal[1] && s >= LAND.inS[1] && s < LAND.third[1] + 12;
 const landST = (x, y) => [(x - coastX(y))*U, y*U];
 const landXY = (s, t) => [coastX(t*METERS) + s*METERS, t*METERS];   // (back to units)
 function landH(s, t){   // the ground (what the 3D land shows)
@@ -2606,10 +2618,10 @@ function landH(s, t){   // the ground (what the 3D land shows)
   else if (s < LAND.face[0]) hN = 1.25 + Math.min(1, (s - 20)/3)*.15;
   else if (s < LAND.face[1]){ const k = (s - LAND.face[0])/(LAND.face[1] - LAND.face[0]); hN = 1.4 + (T - 1.4)*k*k*(3 - 2*k) + Math.sin(t*1.7 + s*2.3)*.35*k*(1 - k)*4; }
   else hN = T + (s - LAND.face[1])*.015;
-  if (t > LAND.incline[0] - 6 && t < LAND.incline[1] + 1 && s > LAND.inS[0] - .4 && s < LAND.inS[1] + .4){   // the California Incline, cut into the bluff
-    const r = 1.4 + (T - 1.4)*clamp((t - LAND.incline[0])/(LAND.incline[1] - LAND.incline[0]), 0, 1), e = Math.min(s - LAND.inS[0] + .4, LAND.inS[1] + .4 - s, LAND.incline[1] + 1 - t, (t - LAND.incline[0] + 6)/6)/.4;
+  if (t > LAND.incline[0] - 6 && t < LAND.cal[1] && s > LAND.inS[0] - .4 && s < LAND.inS[1] + .4){   // the California Incline, cut into the bluff (flat at the top, where California Avenue meets it)
+    const r = 1.4 + (T - 1.4)*clamp((t - LAND.incline[0])/(LAND.incline[1] - LAND.incline[0]), 0, 1), e = Math.min(s - LAND.inS[0] + .4, LAND.inS[1] + .4 - s, LAND.cal[1] - t, (t - LAND.incline[0] + 6)/6)/.4;
     hN = lerp(hN, r, clamp(e, 0, 1)); }
-  if (t > -23.5 && t < -16.5 && s >= LAND.inS[1] && s < LAND.ave[0]) hN = T;   // where the Incline crosses the park to Ocean Avenue
+  if (t > LAND.cal[0] && t < LAND.cal[1] && s >= LAND.inS[1] && s < LAND.ave[0]) hN = Math.max(hN, T);   // where the Incline crosses the park to Ocean Avenue (no dip at the top)
   if (t > 2.5 && s > LAND.pch[0] - .7 && s < LAND.face[1]) hN = lerp(hN, T, smooth(2.5, 3.2, t)*smooth(LAND.pch[0] - .7, LAND.pch[0] - .1, s));   // the McClure Tunnel: PCH goes under the bluff
   hN += smooth(110, 230, s)*smooth(-30, -130, t)*48*(.55 + .25*Math.sin(t*.045 + 1)*Math.cos(s*.05) + .2*Math.sin(t*.11 + s*.02)*Math.sin(s*.09));   // the Santa Monica Mountains, off toward Malibu (behind the city it's flat)
   const hM = .15 + Math.min(s, 8)*.1 + smooth(8, 70, s)*30*(.7 + .3*Math.sin(t*.05)) + smooth(90, 210, s)*30;
@@ -2622,15 +2634,18 @@ function walkH(x, y){   // what you stand on: the ground, the pier bridge, and r
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (Math.abs(t) < LAND.bridge && s > LAND.bridgeS[0] && s < LAND.ave[1]) h = Math.max(h, bridgeH(s));
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
+  if (s > HOME_APT.walk[0] - .1 && s < HOME_APT.walk[1] + .1){ const hw = homeWalkH(s, t); if (hw > -99) h = Math.max(h, landH(HOME_APT.walk[1], t) + hw); }
   return h;
 }
 function landName(x, y){
   const [s, t] = landST(x, y);
   if (t < -150) return 'Malibu'; if (t > 130) return 'Palos Verdes';
   if (Math.abs(t) < LAND.bridge && s > LAND.bridgeS[0] && s < LAND.face[1]) return 'The Pier Bridge';
+  if (s > HOME_APT.walk[0] - .3 && s < HOME_APT.s1 && t > HOME_APT.t0 - HOME_APT.stair && t < HOME_APT.t1 + .5) return 'Home · 1045 3rd Street';
   if (t < 6){ if (s < 20) return 'Santa Monica Beach'; if (s < 23) return 'The Beach Bike Path';
     if (t > LAND.incline[0] - 4 && t < LAND.incline[1] + 1 && s > LAND.inS[0] - .5 && s < LAND.inS[1] + 1) return 'The California Incline';
-    if (s < LAND.face[0]) return 'Pacific Coast Highway'; if (s < LAND.park[1]) return 'Palisades Park'; if (s < LAND.ave[1]) return 'Ocean Avenue'; return 'Santa Monica'; }
+    if (s < LAND.face[0]) return 'Pacific Coast Highway'; if (onCal(s, t) && s > LAND.ave[1]) return 'California Avenue'; if (s < LAND.park[1]) return 'Palisades Park'; if (s < LAND.ave[1]) return 'Ocean Avenue';
+    if (s > LAND.second[0] && s < LAND.second[1]) return '2nd Street'; if (s > LAND.third[0] && s < LAND.third[1]) return '3rd Street'; return 'Santa Monica'; }
   return s < 28 ? 'Santa Monica Beach' : s < 31 ? 'Ocean Front Walk' : 'Santa Monica';
 }
 function groundAt(x, y){
@@ -3023,14 +3038,19 @@ const islandPlants = () => plantsCache || (plantsCache = (() => { const R = mulb
 // On the mainland, ground steeper than this can't be walked up or down: the bluff, the cliffs, buildings and lifeguard towers.
 // Slide along it if you can; otherwise stay put. (Jumping, the jetpack and the glider still get you anywhere.)
 function steepStop(o, x0, y0){
-  const h0 = groundAt(x0, y0), ok = (x, y) => { const d = Math.hypot(x - x0, y - y0)*U; return Math.abs(groundAt(x, y) - h0) <= d*.9 + .004; };
-  if (ok(o.x, o.y)) return; if (ok(o.x, y0)){ o.y = y0; o.vy = 0; return; } if (ok(x0, o.y)){ o.x = x0; o.vx = 0; return; }
+  const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
+  const ok = (x, y) => { const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  if (ok(o.x, o.y)) return;
+  const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
+  for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you
+    if (ok(nx, ny)){ o.x = nx; o.y = ny; return; } }
+  if (Math.abs(dx) > len*.3 && ok(o.x, y0)){ o.y = y0; o.vy = 0; return; } if (Math.abs(dy) > len*.3 && ok(x0, o.y)){ o.x = x0; o.vx = 0; return; }
   o.x = x0; o.y = y0; o.vx = o.vy = 0; }
 function walkStep(o, dt){
   o.jumpY = 0; o.jumpV = 0;   // on your feet, never mid-leap
   const w = wantHeading(), walking = !!w;
   if (w) o.ang += clamp(angDiff(w.ang, o.ang), -6*dt, 6*dt);
-  const sp = walking ? 62*w.m : 0;                                             // about 1.5 m/s
+  const sp = walking ? (o.x > coastX(o.y) ? 110 : 62)*w.m : 0;                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
   if (walking && (o.stepSfx = (o.stepSfx || 0) - dt) <= 0){ o.stepSfx = .38; sfx(150 + Math.random()*40, .06, 'triangle', .03); }
   o.vx += (Math.cos(o.ang)*sp - o.vx)*Math.min(1, dt*8); o.vy += (Math.sin(o.ang)*sp - o.vy)*Math.min(1, dt*8);
   const wx0 = o.x, wy0 = o.y; o.x += o.vx*dt; o.y += o.vy*dt;
@@ -3898,13 +3918,13 @@ function bubble(x, y, vx, vy){ if (curDepth > .3){ sprayAt(x*U, -curDepth, y*U, 
 
 /* ---------- Scenery helpers ---------- */
 // The mainland in 3D: one big sheet of ground following the coast (sand, paths, roads, the bluff, grass, hills), then the things on it
-let coastGroup = null, coastCars = null, coastFill = null;
+let coastGroup = null, coastCars = null, coastFill = null, homeSign = null;
 function landColor(s, t, h, c){
   const n = Math.sin(s*1.7 + t*.9)*Math.sin(t*1.3 - s*.6), kn = 1 - smooth(6, 34, t), wild = Math.max(smooth(-150, -190, t), smooth(120, 160, t));
-  const inc = t > LAND.incline[0] - 6 && t < LAND.incline[1] + .6 && s > LAND.inS[0] - .1 && s < LAND.inS[1] + .1;
+  const inc = t > LAND.incline[0] - 6 && t < LAND.cal[1] - .4 && s > LAND.inS[0] - .1 && s < LAND.inS[1] + .1;
   if (s < 0) return c.setHex(0xb59f74);
   if (wild > .5) return h < 1.2 ? c.setHex(0xe2cf9e) : c.setHex(n > .2 ? 0x7d7a4c : 0x6b7140).lerp(c2.setHex(0x9a7d5a), smooth(15, 2, h) * (t > 0 ? 1 : 0));   // Malibu chaparral, Palos Verdes rock
-  if (s > 80) return c.setHex(0x74774a).lerp(c2.setHex(0x8c8a62), (n + 1)/2);                                     // the mountains, far off
+  { const mt = smooth(110, 230, s)*smooth(-30, -130, t); if (mt > .03) return c.setHex(0xb9b3a6).lerp(c2.setHex(0x74774a).lerp(c3.setHex(0x8c8a62), (n + 1)/2), smooth(.03, .25, mt)); }   // the mountains, off toward Malibu
   if (s < 1.2) return c.setHex(0xcbb68a);                                                                          // wet sand
   if (kn > .5){
     if (s < 20) return c.setHex(0xead8a8).lerp(c2.setHex(0xdfca96), (n + 1)*.25);
@@ -3914,10 +3934,12 @@ function landColor(s, t, h, c){
     if (s < LAND.face[0]) return s > LAND.pch[0] ? c.setHex(0x3c3f44) : c.setHex(0xb8b2a6);                      // PCH
     if (s < LAND.face[1]){ const m = Math.sin(t*.23 + 1.3)*Math.cos(t*.071) + Math.sin(s*.9 + t*.05)*.5;   // sandstone, with big soft patches of ice plant and brush
       return c.setHex(0xc8a46e).lerp(c2.setHex(0xaa8656), (n + 1)/4).lerp(c2.setHex(0x5f8a3a), smooth(.1, .7, m)*.85); }
-    if (t > -23.5 && t < -16.5 && s < LAND.ave[0]) return c.setHex(0x45484d);                                     // California Avenue across the park
+    if (onCal(s, t) && (s < LAND.ave[0] || s > LAND.ave[1] + 1.5) && t < 4) return c.setHex(0x45484d);             // California Avenue: across the park, and on inland
     if (s < LAND.park[1]) return s > 39.6 && s < 41 ? c.setHex(0xd6ccb4) : c.setHex(0x5a8f3c).lerp(c2.setHex(0x6c9e48), (n + 1)/2);   // the park and its walk
     if (s < LAND.ave[1]) return c.setHex(0x3c3f44);                                                                 // Ocean Avenue
     if (s < 53) return c.setHex(0xcfcac0);
+    if (t < 2 && ((s > LAND.second[0] && s < LAND.second[1]) || (s > LAND.third[0] && s < LAND.third[1]))) return c.setHex(0x3c3f44);   // 2nd and 3rd Streets
+    if (t < 2 && (Math.abs(s - LAND.second[0] + .9) < 1 || Math.abs(s - LAND.second[1] - .9) < 1 || Math.abs(s - LAND.third[0] + .9) < 1 || Math.abs(s - LAND.third[1] - .9) < 1)) return c.setHex(0xcfcac0);   // sidewalks
     return c.setHex(0xb9b3a6);
   }
   if (s < 28) return c.setHex(0xead8a8).lerp(c2.setHex(0xdfca96), (n + 1)*.25);
@@ -3925,7 +3947,7 @@ function landColor(s, t, h, c){
   if (s > LAND.ave[0] && s < LAND.ave[1]) return c.setHex(0x3c3f44);                                              // Ocean Avenue, south of the pier
   return c.setHex(0xb9b3a6).lerp(c2.setHex(0x8fa86a), n > .5 ? .7 : 0);
 }
-const c2 = new THREE.Color();
+const c2 = new THREE.Color(), c3 = new THREE.Color();
 function buildCoast(){
   const g = new THREE.Group(); coastGroup = g;
   // the ground: rows across the coast (s) and along it (t), finest where the bluff and the Incline are
@@ -3951,18 +3973,19 @@ function buildCoast(){
   const yel = lineMat(0xf2c230), wht = lineMat(0xf2f2ee);
   ribbon(26.75, -230, 2, .12, yel); ribbon(27.0, -230, 2, .12, yel); ribbon(24.4, -230, 2, .1, wht); ribbon(29.1, -230, 2, .1, wht);   // PCH
   ribbon(48.1, -150, 140, .12, yel); ribbon(48.35, -150, 140, .12, yel);                                                              // Ocean Avenue
+  for (const st of [LAND.second, LAND.third]) ribbon((st[0] + st[1])/2, -110, 1, .12, yel, undefined, 3);                             // 2nd and 3rd Streets
   ribbon(32.1, LAND.incline[0] - 4, LAND.incline[1], .12, yel);                                                                          // the Incline
   ribbon(21.6, -230, -3, .08, yel, undefined, 3);                                                                                        // the bike path's dashed line
   // the Incline's low wall on the ocean side, and the park's wooden rail along the edge of the bluff
   const wallM = std(0xd8d2c4, .8), railM = std(0x8a6a48, .9);
   { const p = [], ix = []; let n = 0; const s0 = LAND.inS[0] - .2, s1 = LAND.inS[0] + .1;   // one smooth wall following the ramp: two sides and a top
-    for (let t = LAND.incline[0] - 3; t <= LAND.incline[1] + .01; t += .5){ const h = landH(LAND.inS[0] + .5, t), [xa, ya] = landXY(s0, t), [xb, yb] = landXY(s1, t);
+    for (let t = LAND.incline[0] - 3; t <= LAND.cal[1] + .01; t += .5){ const h = landH(LAND.inS[0] + .5, t), [xa, ya] = landXY(s0, t), [xb, yb] = landXY(s1, t);
       p.push(xa*U, Math.min(h, landH(s0 - .3, t)) - .2, ya*U, xa*U, h + .75, ya*U, xb*U, h + .75, yb*U, xb*U, h - .1, yb*U);
       if (n) for (const [a, b] of [[0, 1], [1, 2], [2, 3]]) ix.push(n - 4 + a, n + a, n - 4 + b, n - 4 + b, n + a, n + b); n += 4; }
     const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); wg.setIndex(ix); wg.computeVertexNormals();
     const wm = new THREE.Mesh(wg, new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: .8, side: THREE.DoubleSide })); wm.castShadow = true; g.add(wm); }
   { const rail = new THREE.Group(); g.add(rail); const put = (o, s, t, lift) => { const [x, y] = landXY(s, t); o.position.set(x*U, landH(s, t) + lift, y*U); rail.add(o); };
-    for (let t = -3; t > -150; t -= 2){ if (t < LAND.incline[1] + 4 && t > LAND.incline[1] - 5) continue; put(new THREE.Mesh(new THREE.BoxGeometry(.08, .08, 2), railM), LAND.face[1] + .1, t - 1, .75);
+    for (let t = -3; t > -150; t -= 2){ if (t < LAND.cal[1] + 1.5 && t > LAND.cal[0] - 2.5) continue; put(new THREE.Mesh(new THREE.BoxGeometry(.08, .08, 2), railM), LAND.face[1] + .1, t - 1, .75);
       put(new THREE.Mesh(new THREE.BoxGeometry(.1, .8, .1), railM), LAND.face[1] + .1, t, .4); }
     mergeStatic(rail); }
   // palms: Mexican fan palms (tall and skinny) and Canary Island date palms (thick, with a big round crown), in rows along the park
@@ -3973,7 +3996,7 @@ function buildCoast(){
       const leaf = new THREE.Mesh(lg, leafM); leaf.rotation.set(-Math.PI/2 + (i % 2 ? .1 : .45), i/16*TAU, 0, 'YXZ'); leaf.position.y = h; p.add(leaf); }
     return p; };
   const palms = new THREE.Group(); g.add(palms); const PR = mulberry(7);
-  for (let t = 1; t > -150; t -= 5.5) for (const s of [36.6, 43.4]){ if (t > LAND.incline[1] - 5 && t < LAND.incline[1] + 3) continue;
+  for (let t = 1; t > -150; t -= 5.5) for (const s of [36.6, 43.4]){ if (t > LAND.cal[0] - 2.5 && t < LAND.cal[1] + 2) continue;
     const fan = (Math.round(t/5.5) + (s > 40 ? 1 : 0)) % 2 === 0, p = fan ? palm(9.5 + PR()*2.5) : canary(5.5 + PR()*1.5); const [x, y] = landXY(s, t); p.position.set(x*U, landH(s, t), y*U); p.rotation.y = PR()*TAU; palms.add(p); }
   for (let t = 14; t < 200; t += 13){ const p = palm(8 + PR()*3), [x, y] = landXY(30.5, t); p.position.set(x*U, landH(30.5, t), y*U); palms.add(p); }   // along Ocean Front Walk
   for (let t = -160; t > -230; t -= 9){ const p = palm(7 + PR()*3), [x, y] = landXY(13 + PR()*4, t); p.position.set(x*U, landH(13, t), y*U); palms.add(p); }
@@ -4001,8 +4024,36 @@ function buildCoast(){
     bx.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     const sm = s0 + d/2, tm = t0 + w/2, base = Math.min(landH(sm - d/2 + .5, tm), landH(sm + d/2 - .5, tm)); const [x, y] = landXY(sm, tm);
     bx.translate(x*U, base + h/2 - .2, y*U); parts.push(bx); LAND_BOXES.push([s0, t0, s0 + d, t0 + w, base + h]); };
-  for (let t = -3; t > -150;){ const w = 7 + BR()*7, h = 8 + BR()*16, turq = t < -6 && t > -26 && !parts.turq;
-    if (turq) parts.turq = true; building(54, t - w, w, 11 + BR()*6, turq ? 17 : h, turq ? 0x63c7bd : PAL[(BR()*PAL.length)|0]); t -= w + (BR() < .3 ? 6 : 1.2); }
+  const row = (s0, d0, d1, tEnd, h0, h1, first) => { for (let t = -3; t > tEnd;){ const w = 7 + BR()*6, d = d0 + BR()*(d1 - d0);
+      const hit = (a, b) => t - w < b + 1 && t > a - 1; if (hit(...LAND.cal)){ t = LAND.cal[0] - 1; continue; }
+      if (s0 > LAND.third[1] && hit(HOME_APT.t0 - HOME_APT.stair - 1, HOME_APT.t1 + .5)){ t = HOME_APT.t0 - HOME_APT.stair - 2.2; continue; }
+      const f = first && t === -3; building(s0, t - w, w, d, f ? 17 : h0 + BR()*(h1 - h0), f ? 0x63c7bd : PAL[(BR()*PAL.length)|0]); t -= w + (BR() < .3 ? 5 : 1.2); } };
+  row(54, 9, 12, -150, 8, 24, true);   // along Ocean Avenue (the turquoise Art Deco hotel nearest the pier)
+  row(LAND.second[1] + 1.5, 9, 10.5, -110, 6, 16);   // between 2nd and 3rd
+  row(LAND.third[1] + 1.5, 9, 12, -110, 6, 18);      // across 3rd
+  // home, 1045 3rd Street: a cream stucco apartment building, an open walkway along the third floor (doors 301, 302 and 303), stairs down to the street
+  { const A = HOME_APT, fh = A.fh, H = A.floors*fh + .4, w = A.t1 - A.t0, d = A.s1 - A.s0, tm = (A.t0 + A.t1)/2; building(A.s0, A.t0, w, d, H, 0xf3e7cf);
+    const hm = new THREE.Group(), white = std(0xf7f4ec, .6), rail = std(0x3b4a52, .5), base = landH(A.walk[1], tm), lv = 2*fh + .15, ww = A.walk[1] - A.walk[0];
+    // (built facing -x, toward 3rd Street; local x = across the street, z = along it)
+    const walk = new THREE.Mesh(new THREE.BoxGeometry(ww, .2, w), white); walk.position.set(-ww/2, lv - .1, 0); hm.add(walk);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, w), rail); r.position.set(-ww + .05, lv + 1, 0); hm.add(r);
+    for (let z = -w/2; z <= w/2 + .01; z += 1.2){ const p = new THREE.Mesh(new THREE.BoxGeometry(.05, 1, .05), rail); p.position.set(-ww + .05, lv + .5, z); hm.add(p); }
+    for (const z of [-w/2 + .4, w/2 - .4]){ const post = new THREE.Mesh(new THREE.BoxGeometry(.25, lv, .25), white); post.position.set(-ww + .2, lv/2, z); hm.add(post); }
+    for (let k = 0; k < 12; k++){ const f = (k + .5)/12, step = new THREE.Mesh(new THREE.BoxGeometry(ww, .16, A.stair/12 + .02), white); step.position.set(-ww/2, lv*f - .08, -w/2 - A.stair*(1 - f)); hm.add(step); }   // the stairs, going down toward Washington Avenue
+    { const sr = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, Math.hypot(A.stair, lv)), rail); sr.position.set(-ww + .05, lv/2 + 1, -w/2 - A.stair/2); sr.rotation.x = Math.atan2(lv, A.stair); hm.add(sr); }
+    const doorM = std(0x2f5d7c, .55); mergeStatic(hm);
+    const doors = [['301', -w/2 + 1.6], ['302', 0], ['303', w/2 - 1.6]];
+    for (const [num, z] of doors){ const dr = new THREE.Mesh(new THREE.BoxGeometry(.06, 2.1, 1), num === '303' ? std(0xb8452e, .5) : doorM); dr.position.set(-.03, lv + 1.05, z); hm.add(dr);
+      const plate = new THREE.Mesh(new THREE.PlaneGeometry(.6, .3), new THREE.MeshBasicMaterial({ map: labelTex(num, '#f7f4ec', '#22303c', 256, 128, 96) })); plate.position.set(-.07, lv + 2.35, z); plate.rotation.y = -Math.PI/2; hm.add(plate);
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .9), new THREE.MeshBasicMaterial({ color: num === '303' ? 0xffd36b : 0x5a6b78 })); win.position.set(-.04, lv + 1.4, z + 1.25*(z < 0 ? 1 : -1)); win.rotation.y = -Math.PI/2; hm.add(win); }
+    const nb = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .5), new THREE.MeshBasicMaterial({ map: labelTex('1045', '#22303c', '#f7f4ec', 256, 96, 72) })); nb.position.set(-.05, 2.6, w/2 - 1); nb.rotation.y = -Math.PI/2; hm.add(nb);   // the street number, by the front door
+    const fd = new THREE.Mesh(new THREE.BoxGeometry(.06, 2.2, 1.4), std(0x6b4a32, .6)); fd.position.set(-.03, 1.1, w/2 - 2.6); hm.add(fd);
+    const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); sign.position.set(2, H + 1.6, w/2 - 1.6); hm.add(sign);   // (up on the roof, over 303)
+    const [x, y] = landXY(A.walk[1], tm); hm.position.set(x*U, base, y*U); g.add(hm); homeSign = sign;
+    // street signs on the corner of 3rd and California
+    for (const [txt, ry, dz] of [['3RD ST', 0, 0], ['CALIFORNIA AVE', Math.PI/2, .2]]){ const sg = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x6f7a73, .5)); pole.position.y = 1.5; sg.add(pole);
+      const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .3), new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, 64), side: THREE.DoubleSide })); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry; sg.add(plate);
+      at(sg, LAND.third[1] + .7, LAND.cal[0] - .6); } }
   for (let t = 24; t < 200;){ const w = 6 + BR()*6; building(33 + BR(), t, w, 6 + BR()*4, 4 + BR()*5, PAL[(BR()*PAL.length)|0]); t += w + 1 + BR()*3; }
   delete parts.turq;
   { const m = new THREE.Mesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ map: winTex, vertexColors: true, roughness: .85 })); m.castShadow = false; m.receiveShadow = true; g.add(m); }
@@ -4044,8 +4095,8 @@ function buildCoast(){
   // cars: along PCH (into the tunnel), along Ocean Avenue, and up and down the Incline
   const I0 = LAND.incline[0], I1 = LAND.incline[1], up = 31.3, dn = 32.9;
   const ROUTES = [[[25.6, 3], [25.6, -230]], [[28.2, -230], [28.2, 3]], [[47.2, 140], [47.2, -150]], [[49.4, -150], [49.4, 140]],
-    [[47.2, -12], [46, -18.6], [36, -18.6], [dn, -24], [dn, I0 + 2], [27.5, I0 - 6], [25.6, I0 - 12], [25.6, -230]],
-    [[28.2, -230], [28.2, I0 - 10], [up, I0 - 2], [up, -24], [36, -21.4], [46, -21.4], [49.4, -14], [49.4, 140]]];
+    [[47.2, -10], [46, -15.6], [36, -15.6], [dn, -21], [dn, I0 + 2], [27.5, I0 - 6], [25.6, I0 - 12], [25.6, -230]],
+    [[28.2, -230], [28.2, I0 - 10], [up, I0 - 2], [up, -21], [36, -18.8], [46, -18.8], [49.4, -12], [49.4, 140]]];
   const routes = ROUTES.map(r => { const segs = []; let L = 0; for (let i = 0; i < r.length - 1; i++){ const l = Math.hypot(r[i + 1][0] - r[i][0], r[i + 1][1] - r[i][1]); segs.push({ a: r[i], b: r[i + 1], l, at: L }); L += l; } return { segs, L }; });
   const N = [5, 5, 4, 4, 2, 2], cars = [], body = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0xffffff, .35, .3), 22), cab = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0x22303c, .2, .4), 22);
   const CC = [0xd33a2c, 0xf4f4f0, 0x2b5fa8, 0x1d1d1f, 0xb8bcc2, 0xf2c230, 0x3f8a5a, 0x8a8f96];
@@ -4055,6 +4106,7 @@ function buildCoast(){
 const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion(), _cv = new THREE.Vector3(), _cs = new THREE.Vector3(), _cu = new THREE.Vector3(0, 1, 0);
 function updCoast(o){
   const dt = Math.min(.05, time - (updCoast.t ?? time)); updCoast.t = time;
+  if (homeSign) homeSign.position.y = HOME_APT.floors*HOME_APT.fh + 2 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
   if (!coastCars || !o) return; const { cars, routes, body, cab } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (Math.abs(pt) > 500 || ps < -300) return;   // (far away: the cars can wait)

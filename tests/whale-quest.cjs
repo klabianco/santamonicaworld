@@ -8,7 +8,7 @@ function game(){
   save:{board:[{kind:'pearls',need:10,start:0},{kind:'bottle',x:10000,y:0},{kind:'treasure',x:20000,y:0}]},
   ocean:{x:0,y:0,depth:0,ang:0}, leagueGuide:true, homeGuide:true, ptr:{}, KRAKEN:{x:-900,y:3500}, JUNK:{x:9000,y:9000,floor:20},
   $:id=>{ if(!elements.has(id)) elements.set(id,{hidden:true,textContent:'',innerHTML:'',classList:{add(){},remove(){}},addEventListener(event,fn){this[event]=fn;}}); return elements.get(id); },
-  groundAt:()=>-10, depthAt:()=>20, onLeagueCourse:()=>false, LANDMARKS:[{name:'Island',x:30000,y:0}],
+  groundAt:()=>-10, depthAt:()=>20, onLeagueCourse:()=>false, LANDMARKS:[{name:'Island',x:30000,y:0}], LM_RENAME:{'Honu Bay':'Point Dume Rocks'},
   persist(){events.push('persist');},flushCloud(){}, addCoins(n){events.push(['coins',n]);},addXP(){},sfx(){},
   banner(...m){messages.push(m);},say(...m){messages.push(m);},sideWord:()=> 'ahead',htmlText:t=>t,
   resetPick(){},showPick(){},graceAfterPause(){},initAudio(){},

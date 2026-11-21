@@ -32,7 +32,7 @@ assert.equal(shoreFactor(1000,0),1,'Keep full offshore swell');
 let previous=0; for(let x=14;x<=26;x+=.1){const factor=shoreFactor(-x,0);assert(factor>=previous);previous=factor;}
 console.log('Shore checks passed: pool, home, neighbor, Catalina, Eagle Rock and gradual offshore recovery.');
 // the mainland beach (the real coast from the game): no swell right at the sand, full swell well out to sea, rising steadily in between
-vm.runInContext(html.slice(html.indexOf('function coastX('),html.indexOf('function zoneAt('))+'\nthis.realCoast=coastS;',ctx);
+vm.runInContext(html.slice(html.indexOf('function bayY('),html.indexOf('\n',html.indexOf('function worldY(')))+'\n'+html.slice(html.indexOf('function coastX('),html.indexOf('function zoneAt('))+'\nthis.realCoast=coastS;',ctx);
 for(const zm of [-120,-60,60,140]){ const edge=ctx.coastX(zm*40)/40;
  assert.equal(shoreFactor(edge-.5,zm),0,'No waves at the beach');
  assert.equal(shoreFactor(edge-40,zm),1,'Full swell out to sea');

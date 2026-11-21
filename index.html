@@ -2287,16 +2287,17 @@ function startOcean(){
   updShipChest();
   if (save.char !== 'swimmer'){ save.char = 'swimmer'; persist(); }   // you always start at home as yourself, a person (change into an animal in the Menu)
   syncHouse(); placeLighthouse(); ocean = newOcean(); save.houseFound = true;
+  { const [s, t] = PROM_START, [x, y] = landXY(s, t), [dx, dy] = landXY(PROM_DINOS[2][0], PROM_DINOS[2][1]); Object.assign(ocean, { x, y, gh: landH(s, t), ang: Math.atan2(dy - y, dx - x) }); }   // (Kevin's pick: start on the Promenade, not at home)
   awardWhalePrize(ocean);
   if (save.whaleQuest?.reward && !krakenBeaten()) ocean.held = 'sunstone';
   boardFix(ocean); for (const q of save.board) if (q.kind === 'calf' && q.state === 'lead'){ q.x = ocean.x; q.y = ocean.y + 4*METERS; }   // (the baby whale you were leading is right behind you)
   parts = []; setMode('ocean'); $('airChip').hidden = true;
-  banner('Home! 1045 3rd Street, #303', 'Take the stairs down, walk down California Avenue to the cliffs, and take the California Incline to the beach');
-  ocean.tripT = 0; camHead = Math.PI; camInit = false;
+  banner('3rd Street Promenade', 'At Wilshire Boulevard, by the triceratops fountain');
+  ocean.tripT = 0; camHead = ocean.ang; camInit = false;
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
 }
-const OCEAN_HELLO = 'This is home: apartment 303 at 1045 3rd Street, a few blocks up from the beach in Santa Monica, and everything here is real size! Take the stairs down, walk down California Avenue to the cliffs, then take the California Incline down to the beach (hold Run to go faster, or hop in the red car parked right out front). The 3rd Street Promenade, with its dinosaur fountains, is just down 3rd Street past Wilshire. Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
+const OCEAN_HELLO = 'You\'re on the 3rd Street Promenade at Wilshire, right by the triceratops fountain, and everything here is real size! Shops and dinosaur fountains run three blocks down to Broadway. Home (1045 3rd Street, #303) is the other way up 3rd Street, just past California Avenue, with the red car parked out front. For the beach, walk down California Avenue to the cliffs and take the California Incline down (hold Run to go faster). Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
 // Waves and currents: the pool is calm, the ocean pushes you around.
 const CURRENT = [45, 60, 95, 70, 85, 55, 75];     // strength per world
 function currentAt(x, y, t){
@@ -4292,6 +4293,7 @@ function buildCoast(){
     parkCar({ x, y, ang: Math.atan2(y2 - y, x2 - x), h: walkH(x, y), color: col }); }
 }
 // ---- the 3rd Street Promenade: shopfronts with awnings and signs, the dinosaur topiary fountains, benches, lamps, bollards and people ----
+const PROM_START = [651, -813];   // where every trip starts: the Wilshire end of the Promenade, facing the triceratops
 const PROM_DINOS = [[649.5, -240, 'tri'], [656.5, -520, 'stego'], [656.5, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
 function buildPromenade(g, P3, at, instanceOf){
   const shops = new THREE.Group(), atlas = (() => { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 1024; const x = cv.getContext('2d');

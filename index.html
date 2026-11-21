@@ -140,6 +140,14 @@
   #movieCanvas{width:min(100%,1100px);aspect-ratio:16/9;background:#021526;border-radius:8px}
   #grabBtn{background:#d8f5c9;top:calc(env(safe-area-inset-top,0px) + 152px)}
   #useBtn{background:#ffe7b0;top:calc(env(safe-area-inset-top,0px) + 212px)}
+  #buyBtn{background:#ffd6e7;top:calc(env(safe-area-inset-top,0px) + 152px)}
+  #treatBtn{background:#ffe7b0;top:calc(env(safe-area-inset-top,0px) + 212px)}
+  .item .em{font-size:40px;line-height:1}
+  .item .sw{width:44px;height:36px;border-radius:50%;box-shadow:inset -5px -5px 0 rgba(0,0,0,.1)}
+  .cone{display:flex;flex-direction:column;align-items:center;min-height:96px;justify-content:flex-end;gap:2px}
+  .cone i{width:62px;height:48px;border-radius:50%;margin-bottom:-16px;box-shadow:inset -6px -6px 0 rgba(0,0,0,.08)}
+  .cone b{width:0;height:0;border-left:28px solid transparent;border-right:28px solid transparent;border-top:64px solid #d9a35b}
+  .cone p{margin:6px 0 0;font-weight:800;font-size:14px;text-align:center}
   #krakenBtn{background:#ffd23f;top:calc(env(safe-area-inset-top,0px) + 212px);font-size:26px}
   .chip.boats{background:#c9f0e0;font-family:var(--display);font-size:17px}
   .speedbar{position:fixed;left:calc(env(safe-area-inset-left,0px) + 14px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;
@@ -361,6 +369,8 @@
 <button id="casinoBtn" class="ridebtn" type="button" hidden>Play<small>U</small></button>
 <button id="grabBtn" class="ridebtn" type="button" hidden>Pick up<small>G</small></button>
 <button id="useBtn" class="ridebtn" type="button" hidden>Use<small>U</small></button>
+<button id="buyBtn" class="ridebtn" type="button" hidden>Buy something<small>G</small></button>
+<button id="treatBtn" class="ridebtn" type="button" hidden>Eat<small>U</small></button>
 <button id="krakenBtn" class="ridebtn" type="button" hidden>Hold it up<small>U</small></button>
 <div id="speedFx" aria-hidden="true"></div>
 <div id="sleepFade" aria-hidden="true"><div class="moon"></div><div class="zzz">Z<span>z</span><span>z</span></div></div>
@@ -519,6 +529,16 @@
     <p class="savechip" id="shopNote"></p>
     <div class="shop" id="shopItems"></div>
     <div class="row2"><button id="shopClose" class="btn secondary" type="button">Back to swimming</button></div>
+  </div>
+</div>
+
+<div id="storePanel" class="overlay" hidden>
+  <div class="panel">
+    <div><p class="kicker">3rd Street Promenade</p><h2 id="storeName">Shop</h2></div>
+    <p class="savechip" id="storeNote"></p>
+    <div class="cone" id="storeCone" hidden></div>
+    <div class="shop" id="storeItems"></div>
+    <div class="row2"><button id="storeClose" class="btn secondary" type="button">Back to the Promenade</button></div>
   </div>
 </div>
 
@@ -734,8 +754,8 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
   if (k === 't' && !e.repeat) talkToFriend();
   if (k === 'z' && !e.repeat) goToSleep();
   if (k === 'r' && !e.repeat) startClimb();
-  if (k === 'g' && !e.repeat) grabItem();
-  if (k === 'u' && !e.repeat){ if (!$('krakenBtn').hidden) useOnKraken(); else if (!$('casinoBtn').hidden) casinoAct(); else useItem(); }
+  if (k === 'g' && !e.repeat){ if (!$('buyBtn').hidden) openStoreHere(); else grabItem(); }
+  if (k === 'u' && !e.repeat){ if (!$('krakenBtn').hidden) useOnKraken(); else if (!$('casinoBtn').hidden) casinoAct(); else if (!$('treatBtn').hidden) useTreat(); else useItem(); }
   if (k === 'v' && !e.repeat && mode === 'ocean' && !paused) boatsButton();
   if (k === 'm' && !e.repeat && mode === 'ocean'){ if ($('mapPanel').hidden) openMap(); else closeMap(); }
   if (k === 'q' && !e.repeat && mode === 'ocean'){ if ($('questPanel').hidden) openQuests(); else closeQuests(); }
@@ -752,6 +772,7 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
   if (k === 'escape' && !e.repeat){ if (!closeTopWindow() && playing() && !paused) openPanel(); } });
 function closeTopWindow(){
   if (!$('shopPanel').hidden) closeShop();
+  else if (!$('storePanel').hidden) closeStore();
   else if (!$('leaguePanel').hidden) closeLeague();
   else if (!$('questPanel').hidden) closeQuests();
   else if (!$('mapPanel').hidden) closeMap();
@@ -2741,7 +2762,7 @@ let LAND_BOXES = [];   // other solid things on land, [s0, t0, s1, t1, top]: lif
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)) h = Math.max(h, pierDeckH(s));
-  if (s > PROM.s0 - 11 && s < PROM.s1 + 11 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? r.floor : landH(s, t); }   // in a shop on the Promenade (or its doorway)
+  if (s > PROM.s0 - 11 && s < PROM.s1 + 11 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? r.floor + roomTop(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
   if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
@@ -3032,8 +3053,8 @@ $('arcDone').onclick = () => { arc = null; $('arcadePanel').hidden = true; pause
 // the movie: a short film on the big screen, "Ocean Wonders"
 const MOVIE = [[0, 4, null, 'OCEAN WONDERS'], [4, 11, '🐠', 'A school of fish swims together to stay safe.'], [11, 18, '🐋', 'Blue whales are the biggest animals that ever lived.'],
   [18, 25, '🐢', 'Sea turtles can live for more than 80 years.'], [25, 32, '🐙', 'An octopus has three hearts and blue blood!'], [32, 39, '🐬', 'Dolphins call each other by name with whistles.'], [39, 44, null, 'THE END']];
-let movieT = -1, movieLast = 0;
-function playMovie(){ paused = true; ptr.down = false; $('moviePanel').hidden = false; movieT = 0; movieLast = performance.now(); resetPick(); requestAnimationFrame(movieLoop); }
+let movieT = -1, movieLast = 0, movieBy = 'an Avalon Casino picture';
+function playMovie(by = 'an Avalon Casino picture'){ movieBy = by; paused = true; ptr.down = false; $('moviePanel').hidden = false; movieT = 0; movieLast = performance.now(); resetPick(); requestAnimationFrame(movieLoop); }
 function movieLoop(now){
   if (movieT < 0 || $('moviePanel').hidden) return; const dt = Math.min(.05, (now - movieLast)/1000); movieLast = now; const before = movieT; movieT += dt;
   if (Math.floor(movieT*1.5) !== Math.floor(before*1.5) && movieT < 44) sfx([392, 440, 523, 587, 523, 440][Math.floor(movieT*1.5) % 6], .5, 'sine', .03);   // soft music
@@ -3043,7 +3064,7 @@ function movieLoop(now){
   if (sc[2] === '🐠') for (let i = 0; i < 12; i++) emo(c, '🐠', lerp(-80, 720, k) - (i % 4)*40 + Math.sin(movieT*3 + i)*6, 120 + ((i/4)|0)*50 + Math.sin(movieT*2 + i)*8, 40);
   else if (sc[2]){ c.save(); c.translate(lerp(sc[2] === '🐋' ? 760 : -80, sc[2] === '🐋' ? -120 : 720, k), 170 + Math.sin(movieT*1.5)*14); if (sc[2] === '🐋') c.scale(-1, 1); emo(c, sc[2], 0, 0, sc[2] === '🐋' ? 170 : 110); c.restore(); }
   c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
-  if (!sc[2]){ c.font = '400 56px "Titan One", Nunito, sans-serif'; c.fillText(sc[3], 320, 170); if (sc[3] !== 'THE END'){ c.font = '700 18px Nunito, sans-serif'; c.fillText('an Avalon Casino picture', 320, 225); } }
+  if (!sc[2]){ c.font = '400 56px "Titan One", Nunito, sans-serif'; c.fillText(sc[3], 320, 170); if (sc[3] !== 'THE END'){ c.font = '700 18px Nunito, sans-serif'; c.fillText(movieBy, 320, 225); } }
   else { c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(0, 300, 640, 60); c.fillStyle = '#fff'; c.font = '800 22px Nunito, sans-serif'; c.fillText(sc[3], 320, 330); }
   requestAnimationFrame(movieLoop); }
 $('movieDone').onclick = () => { movieT = -1; $('moviePanel').hidden = true; paused = false; graceAfterPause(); resetPick(); };
@@ -3157,7 +3178,8 @@ const islandPlants = () => plantsCache || (plantsCache = (() => { const R = mulb
 // Slide along it if you can; otherwise stay put. (Jumping, the jetpack and the glider still get you anywhere.)
 function steepStop(o, x0, y0){
   const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
-  const ok = (x, y) => { const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  const shop = x0 > coastX(y0) && roomAt(...landST(x0, y0), true);   // (in a shop you can hop down off a table or the counter)
+  const ok = (x, y) => { const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
   if (ok(o.x, o.y)) return;
   const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
   for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you
@@ -3788,7 +3810,15 @@ function buildSwimmer(){
   const hair = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 16, 0, TAU, 0, Math.PI*.56), hairM);
   hair.scale.setScalar(1.14); hair.rotation.z = -1.02; hair.position.copy(head.position); hair.castShadow = true; body.add(hair); street.push(hair);
   for (const o of street) o.visible = false;
-  root.userData = { kind:'swimmer', body, arms, legs, float:-.09, gear:{ goggles, capM, cap, street } };
+  // things you can buy on the Promenade and wear: a cap, sunglasses, sneakers (and the T-shirt's color)
+  const wearM = { hat: std(0xe53935, .7), shades: std(0x111111, .12, .5), shoes: std(0xf4f4f0, .7) }, wear = { hat: [], shades: [], shoes: [] };
+  { const h = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 12, 0, TAU, 0, Math.PI*.52), wearM.hat); h.scale.setScalar(1.2); h.rotation.z = -.8; h.position.copy(head.position); h.castShadow = true; body.add(h); wear.hat.push(h);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .014, 20), wearM.hat); brim.scale.set(1, 1, .95); brim.rotation.z = Math.PI/2 - .15; brim.position.set(.735, -.1, 0); body.add(brim); wear.hat.push(brim); }
+  for (const s of [-1, 1]){ const l = ellip(.034, .8, .55, 1.1, wearM.shades, 14); l.position.set(.7, -.093, s*.045); body.add(l); wear.shades.push(l); }
+  { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
+  for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); }
+  for (const k in wear) for (const o of wear[k]) o.visible = false;
+  root.userData = { kind:'swimmer', body, arms, legs, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
   return root;
 }
@@ -3912,14 +3942,16 @@ function addKit(root, k, have = {}){
 }
 // show what's equipped (`has` says whether a gear id is on)
 const WET_GEAR = new Set(['fins', 'snorkel', 'scuba']);
-function showGear(m, has, dry = false){   // (dry: walking around on land, in street clothes)
+function showGear(m, has, dry = false, wear = null){   // (dry: walking around on land, in street clothes)
   const kit = m.userData.kit; if (kit) for (const id in kit) for (const o of kit[id]) o.visible = has(id) && !(dry && WET_GEAR.has(id));
   const g = m.userData.gear; if (!g) return;
   for (const q of g.goggles) q.visible = !has('snorkel') && !dry;
   if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry;
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
+  if (g.wear){ const w = (dry && wear) || {}; if (g.shirtM.userData.c !== (w.shirt || '#3f9fd2')){ g.shirtM.userData.c = w.shirt || '#3f9fd2'; g.shirtM.color.set(g.shirtM.userData.c); }   // what you bought on the Promenade (on land only)
+    for (const k in g.wear){ const on = !!w[k]; for (const o of g.wear[k]) o.visible = on; if (on) g.wearM[k].color.set(w[k]); } }
 }
-function updateGearLook(m, dry){ showGear(m, hasGear, dry); }
+function updateGearLook(m, dry){ showGear(m, hasGear, dry, save.wear); }
 let diveLight = null;
 // The dive light switches itself on when it gets dark (deep water, dark places, inside the wreck) and off again when it's bright.
 let lightOn = false;
@@ -4340,6 +4372,121 @@ const STORE_HELLO = { clothes: 'Racks and racks of clothes', shoes: 'Shoes all t
   gym: 'Treadmills and weights', theatre: 'A little stage for plays', gift: 'Little treasures on every shelf' };
 let PROM_ROOMS = null;
 const GENERIC_SHOPS = [['Gift Shop', 'gift'], ['Café', 'food'], ['Surf Shop', 'clothes'], ['Shoe Store', 'shoes'], ['Bookstore', 'books'], ['Toy Store', 'toys'], ['Clothing', 'clothes'], ['Sunglasses', 'shades'], ['Candy Shop', 'candy'], ['Bakery', 'bakery'], ['Ice Cream', 'icecream']];   // (for shopfronts whose real shop isn't in OpenStreetMap)
+// ---- buying things in the shops: walk up to the counter and tap Buy. Food you eat, clothes you wear, a movie ticket gets you into the film ----
+const SCOOPS = { "McConnell's": [['Sea Salt Cream & Cookies', '#efe6da'], ['Salted Caramel Chip', '#d9a35b'], ['Santa Barbara Strawberry', '#f3a6b8'], ['Eureka Lemon & Marionberries', '#f6e27a'], ['Mint Chip', '#a8e0c2'], ['Dutch Chocolate', '#5a3524'],
+    ['Double Peanut Butter Chip', '#c9925a'], ['Turkish Coffee', '#a77b57'], ['Churros con Leche', '#e8c48f'], ['Honey & Cornbread Cookies', '#f0cf7a'], ['Vanilla Bean', '#fbf3df'], ['Golden State Pistachio', '#b9d48a']],   // (McConnell's real flavors, as far as I know them: they change with the seasons)
+  '': [['Vanilla', '#fbf3df'], ['Chocolate', '#5a3524'], ['Strawberry', '#f3a6b8'], ['Mint Chip', '#a8e0c2'], ['Cookies & Cream', '#e4ddd3'], ['Cotton Candy', '#a9d8f5'], ['Rocky Road', '#7a4e36'], ['Birthday Cake', '#fff3b0']] };
+const SCOOP_PRICE = [0, 8, 12, 15];   // one, two or three scoops
+const M = (e, n, p, act = 'eat', x = {}) => ({ e, n, p, act, ...x });
+const COLORS = [['Red', '#e53935'], ['Yellow', '#fdd835'], ['Green', '#43a047'], ['Blue', '#1e88e5'], ['Purple', '#8e24aa'], ['Pink', '#f06292'], ['Black', '#222222'], ['White', '#f4f4f0']];
+const CAPS = COLORS.slice(0, 7).map(([c, h]) => M('🧢', `${c} cap`, 30, 'wear', { slot: 'hat', col: h }));
+const STORE_MENU = {
+  food: [M('🍔', 'Burger', 12), M('🍟', 'Fries', 6), M('🍕', 'Pizza slice', 8), M('🍋', 'Lemonade', 5, 'drink')],
+  bakery: [M('🧁', 'Cupcake', 8), M('🍪', 'Cookie', 5), M('🥐', 'Croissant', 6), M('🍰', 'Slice of cake', 10)],
+  candy: [M('🍭', 'Giant lollipop', 10), M('🍬', 'Gummy bears', 6), M('🍫', 'Chocolate bar', 6), M('🌈', 'Rainbow sour belts', 6)],
+  clothes: [...COLORS.map(([c, h]) => M('👕', `${c} T-shirt`, 40, 'wear', { slot: 'shirt', col: h })), CAPS[0], CAPS[3]],
+  shoes: [['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h })),
+  shades: [['Black', '#111111'], ['Pink', '#f06292'], ['Gold', '#d4a020'], ['Blue mirror', '#2f80ed'], ['Red', '#e53935']].map(([c, h]) => M('🕶️', `${c} sunglasses`, 30, 'wear', { slot: 'shades', col: h })),
+  books: [M('📘', 'Ocean Animals book', 15, 'read', { kind: 'fact' }), M('📗', 'Joke book', 15, 'read', { kind: 'joke' }), M('📕', 'Dinosaur book', 15, 'read', { kind: 'dino' })],
+  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
+  tech: [M('📱', 'Phone', 150, 'selfie'), M('🎧', 'Headphones', 80, 'tune'), M('⌚', 'Watch', 100, 'time')],
+  beauty: [M('🌸', 'Perfume', 25, 'spritz'), M('💅', 'Nail polish', 15, 'play', { say: 'Your nails look amazing!' }), M('💄', 'Lip gloss', 15, 'play', { say: 'So shiny!' })],
+  gift: [M('🔮', 'Snow globe', 20, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('🐚', 'Shell necklace', 15, 'play', { say: 'So pretty!' }), M('🔑', 'Keychain', 8, 'play', { say: 'Jingle jingle!' }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
+  gym: [M('🥤', 'Smoothie', 8, 'drink'), M('💧', 'Water bottle', 3, 'drink'), M('🍌', 'Banana', 3)],
+  movies: [M('🎟️', 'Ticket: Ocean Wonders', 10, 'movie'), M('🍿', 'Popcorn', 8), M('🥤', 'Soda', 5, 'drink'), M('🍫', 'Movie candy', 5)],
+  theatre: [M('🎟️', 'Ticket to the show', 10, 'movie'), M('🍪', 'Cookie', 5)] };
+const BRAND_MENU = {   // what the real places sell (a few favorites each)
+  'Starbucks': [M('🍫', 'Hot chocolate', 6, 'drink'), M('🥤', 'Pink Drink', 7, 'drink'), M('🍭', 'Cake pop', 4), M('🥤', 'Frappuccino', 8, 'drink')],
+  'The Coffee Bean & Tea Leaf': [M('🥤', 'Ice Blended', 8, 'drink'), M('🍫', 'Hot cocoa', 6, 'drink'), M('🍪', 'Cookie', 4)],
+  'Chipotle': [M('🌯', 'Burrito', 12), M('🌮', 'Tacos', 10), M('🥑', 'Chips & guac', 6)],
+  "Raising Cane's": [M('🍗', 'Chicken fingers', 12), M('🍟', 'Crinkle fries', 5), M('🍋', 'Lemonade', 4, 'drink')],
+  "Wetzel's Pretzels": [M('🥨', 'Pretzel', 6), M('🌭', 'Wetzel Dog', 7), M('🍋', 'Lemonade', 4, 'drink')],
+  'Johnny Rockets': [M('🍔', 'Burger', 12), M('🍟', 'Fries', 5), M('🥤', 'Milkshake', 8, 'drink')],
+  "Stefano's Pizzeria": [M('🍕', 'Cheese slice', 6), M('🍕', 'Pepperoni slice', 7)],
+  "Carlo's Bake Shop": [M('🧁', 'Cupcake', 6), M('🍰', 'Rainbow cake slice', 10), M('🍪', 'Cookie', 4)],
+  'HOLEY MOLLY': [M('🍩', 'Donut', 5), M('🍩', 'Sprinkle donut', 6)],
+  'Silver Lake Ramen': [M('🍜', 'Ramen', 14), M('🥟', 'Dumplings', 8)],
+  'Cabo Cantina': [M('🌮', 'Tacos', 10), M('🧀', 'Nachos', 9)], 'Casa Martin': [M('🌮', 'Tacos', 10), M('🌯', 'Burrito', 12)], 'Azulé Taqueria': [M('🌮', 'Tacos', 9), M('🥑', 'Chips & guac', 6)],
+  'Hummus Bar Express': [M('🥙', 'Falafel wrap', 10), M('🫓', 'Hummus & pita', 8)], "Barney's Beanery": [M('🍔', 'Burger', 12), M('🍲', 'Chili', 8)],
+  'Bruxie': [M('🧇', 'Waffle sandwich', 10), M('🍦', 'Frozen custard', 5)], 'Trastevere': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12)],
+  "IT'SUGAR": [M('🐻', 'Giant gummy bear', 15), M('🍭', 'Giant lollipop', 10), M('🍫', 'Chocolate bar', 6), M('🌈', 'Sour belts', 6)],
+  'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
+  'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
+  'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')],
+  'JOHN REED Fitness': [M('🥤', 'Protein smoothie', 8, 'drink'), M('💧', 'Water bottle', 3, 'drink'), M('🍌', 'Banana', 3)] };
+const ACT_DO = { lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
+const ACT_SAY = { eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
+const JOKES = ['Why did the fish blush? Because it saw the ocean\'s bottom!', 'What do you call a dinosaur that is sleeping? A dino-snore!', 'Why don\'t crabs share? Because they\'re shellfish!', 'What did the ocean say to the beach? Nothing, it just waved.',
+  'What do you call a fish with no eyes? A fsh!', 'Why did the cookie go to the doctor? It was feeling crummy.', 'What\'s an ice cream\'s favorite day? Sundae!', 'How do you make an octopus laugh? With ten-tickles!'];
+const DINO_FACTS = ['Triceratops had three horns and a big bony frill.', 'Stegosaurus had a brain about the size of a lime!', 'T. rex had teeth as long as bananas.', 'Some dinosaurs had feathers, just like birds. Birds ARE dinosaurs!', 'The biggest dinosaurs were as long as three school buses.'];
+let treat = null, treatObj = null, storeAt = null, cone = [];
+const storeMenu = r => (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
+function atCounter(o){   // the shop whose counter you're standing at (or null)
+  if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 11 || s > PROM.s1 + 11) return null;
+  const r = roomAt(s, t, true); return r && (s - r.fs)*r.inw > r.D - 3.9 ? r : null; }
+function openStoreHere(){ const r = atCounter(ocean); if (!r || paused) return; initAudio(); storeAt = r; cone = []; paused = true; ptr.down = false; renderStore(); $('storePanel').hidden = false; pick = Math.max(0, menuBtns().indexOf($('storeClose'))); showPick(); }
+function closeStore(){ $('storePanel').hidden = true; paused = false; graceAfterPause(); showPick(); }
+function payFor(price, what){ if ((save.coins || 0) < price){ sfx(200, .2, 'square', .04); $('storeNote').textContent = `You need ${price - (save.coins || 0)} more coins for ${what}. Pearls, races and treasure chests get you coins!`; return false; }
+  save.coins -= price; persist(); flushCloud(); $('coinVal').textContent = save.coins; [784, 988, 1319].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.07)); return true; }
+function renderStore(){
+  const r = storeAt, menu = storeMenu(r), box = $('storeItems'), cv = $('storeCone'); $('storeName').textContent = r.name; box.innerHTML = '';
+  $('storeNote').textContent = `You have ${save.coins || 0} coins.` + (menu === 'scoops' ? ` Pick up to 3 scoops: 1 for ${SCOOP_PRICE[1]}, 2 for ${SCOOP_PRICE[2]}, 3 for ${SCOOP_PRICE[3]} coins.` : '');
+  const card = (html, label, onclick, disabled = false, cls = 'primary') => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = html; const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.disabled = disabled; b.onclick = onclick; d.appendChild(b); box.appendChild(d); return d; };
+  cv.hidden = menu !== 'scoops';
+  if (menu === 'scoops'){ const fl = SCOOPS[r.name] || SCOOPS[''];
+    cv.innerHTML = cone.map(i => `<i style="background:${fl[i][1]}"></i>`).reverse().join('') + '<b></b>' + `<p>${cone.length ? cone.map(i => fl[i][0]).join(' + ') : 'Your cone is empty. Pick a flavor!'}</p>`;
+    const buy = document.createElement('div'); buy.className = 'row2';
+    for (const [label, fn, dis, cls] of [[cone.length ? `Buy your cone · ${SCOOP_PRICE[cone.length]} coins` : 'Buy your cone', () => { if (!cone.length || !payFor(SCOOP_PRICE[cone.length], 'that cone')) return;
+        treat = { e: '🍦', n: cone.map(i => fl[i][0]).join(' + '), act: 'lick', scoops: cone.map(i => fl[i][1]), licks: 0 }; closeStore(); banner(`${cone.length > 1 ? `${cone.length} scoops` : 'One scoop'}: yum!`, `${treat.n}. Tap Lick to lick it`); }, !cone.length, 'primary'],
+      ['Start over', () => { cone = []; renderStore(); }, !cone.length, 'secondary']]){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.disabled = dis; b.onclick = fn; buy.appendChild(b); }
+    cv.appendChild(buy);
+    fl.forEach(([n, c], i) => card(`<div class="sw" style="background:${c}"></div><h3>${htmlText(n)}</h3>`, cone.length >= 3 ? 'Your cone is full' : 'Add a scoop', () => { if (cone.length < 3){ cone.push(i); sfx(600 + cone.length*120, .08, 'triangle', .05); renderStore(); } }, cone.length >= 3, 'secondary'));
+    return; }
+  const worn = save.wear || {};
+  for (const it of menu){ const on = it.act === 'wear' && worn[it.slot] === it.col;
+    card(`<div class="em">${it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
+      if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
+      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
+      if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
+      treat = { ...it, bites: it.act === 'drink' ? 4 : 3 }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
+  const slots = [...new Set(menu.filter(it => it.act === 'wear').map(it => it.slot))].filter(k => worn[k]);   // take off what you're wearing (for free)
+  for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
+    const w = { ...save.wear }; delete w[k]; save.wear = w; persist(); flushCloud(); sfx(520, .08, 'triangle', .05); renderStore(); }, false, 'secondary');
+}
+function useTreat(){ const o = ocean, it = treat; if (!it || paused || !o) return; initAudio();
+  const done = (t, s) => { treat = null; banner(t, s); };
+  if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
+    if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
+  else if (it.act === 'eat' || it.act === 'drink'){ it.bites--; if (it.act === 'eat') sfx(180 + Math.random()*60, .07, 'square', .03); else sfx(500, .15, 'sine', .04, 0, -200);
+    if (it.bites <= 0) done(it.act === 'eat' ? 'Yum! All gone' : 'Ahh! All gone', `That ${it.n.toLowerCase()} was so good`); }
+  else if (it.act === 'hug'){ o.hugT = time + 2.6; heartsAt = time; banner('Big hug!', 'Your teddy bear loves you'); [784, 988, 1175].forEach((f, i) => sfx(f, .15, 'sine', .04, i*.1)); }
+  else if (it.act === 'read'){ const L = it.kind === 'joke' ? JOKES : it.kind === 'dino' ? DINO_FACTS : ZONES.flatMap(z => z.facts); coach(L[(Math.random()*L.length)|0], 8); sfx(600, .06, 'triangle', .03); }
+  else if (it.act === 'play'){ banner(it.e + ' ' + it.n, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
+  else if (it.act === 'selfie') takePhoto();
+  else if (it.act === 'tune'){ [523, 659, 784, 659, 880, 784, 659, 523].forEach((f, i) => sfx(f, .22, 'triangle', .04, i*.2)); banner('🎶 Music!', 'You love this song'); }
+  else if (it.act === 'time'){ banner(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'is the time right now'); sfx(1200, .05, 'square', .03); }
+  else if (it.act === 'spritz'){ heartsAt = time; banner('Spritz!', 'Mmm, smells lovely'); sfx(3000, .2, 'sawtooth', .01, 0, -1500); } }
+const treatTex = {};
+function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
+  if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
+  const tb = $('treatBtn'), tt = treat && o.onLand && !o.car && !paused ? `${treat.e} ${ACT_DO[treat.act]}` : '';
+  if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
+  const r = paused ? null : atCounter(o), bb = $('buyBtn'), bt = !r ? '' : storeMenu(r) === 'scoops' ? '🍦 Order ice cream' : r.cat === 'movies' ? '🎟️ Buy a ticket' : r.kind === 1 ? '🍴 Order food' : '🛍️ Buy something';
+  if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
+  if (!treatObj){ treatObj = new THREE.Group(); const cn = new THREE.Mesh(new THREE.ConeGeometry(.05, .17, 14), std(0xd9a35b, .8)); cn.rotation.x = Math.PI; cn.position.y = -.07; treatObj.add(cn);
+    const sc = [0, 1, 2].map(i => { const s = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), std(0xffffff, .6)); s.position.y = .03 + i*.075; treatObj.add(s); return s; });
+    const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp }; }
+  if (treatObj.parent !== oceanScene) oceanScene.add(treatObj);
+  const show = !!treat && o.onLand && !o.car && m.visible; treatObj.visible = show; if (!show) return;
+  const { cn, sc, sp } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick';
+  cn.visible = cone3; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
+  if (!cone3){ if (!treatTex[treat.e]) treatTex[treat.e] = canvasTex(96, 96, (c, w, h) => emo(c, treat.e, w/2, h/2 + 4, 76), false); if (sp.material.map !== treatTex[treat.e]){ sp.material.map = treatTex[treat.e]; sp.material.needsUpdate = true; } }
+  if (human && !(o.hugT > time) && o.sitting == null){ const a = u.arms.ra; a.sh.rotation.set(0, 0, Math.PI + .6); a.el.rotation.set(0, 0, 1.2); }   // hold it up in front of you
+  m.updateMatrixWorld(true);
+  if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
+  treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
+  if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
+$('buyBtn').onclick = () => openStoreHere(); $('treatBtn').onclick = () => useTreat(); $('storeClose').onclick = closeStore;
 function promRooms(){   // (worked out once: where each shop's sign, door and room go)
   if (PROM_ROOMS) return PROM_ROOMS; bldIndex(); PROM_ROOMS = [];
   const L = PROM_STORES.map(([side, t, name, kind], i) => ({ i, side, t, name, kind, cat: STORE_KIND[name] || (kind === 1 ? 'food' : kind === 2 ? 'movies' : 'clothes') }));
@@ -4368,6 +4515,7 @@ function promRooms(){   // (worked out once: where each shop's sign, door and ro
           for (let k = 0; k < n; k++){ const ta = a + k*w, tb = ta + w, h = Math.abs(Math.round(ta*7 + side*13)) % GENERIC_SHOPS.length, [name, cat] = GENERIC_SHOPS[h];
             room({ i: 1000 + PROM_ROOMS.length, t: (ta + tb)/2, name, kind: cat === 'food' ? 1 : 0, cat, generic: true }, side, own, ta, tb); } } } } }
   return PROM_ROOMS; }
+function roomTop(r, s, t){ const G = r.grid; if (!G) return 0; const i = Math.floor((s - r.fs)*r.inw/.2), j = Math.floor((t - r.t0)/.2); return i < 0 || j < 0 || i >= G.n || j >= G.m ? 0 : G.top[i*G.m + j]; }   // (the counter, a table, a shelf...)
 function roomAt(s, t, inside){   // the shop you're in (or in the doorway of)
   if (s < PROM.s0 - 11 || s > PROM.s1 + 11 || t < PROM.t0 || t > PROM.t1) return null;
   for (const r of promRooms()){ if (t < r.t0 || t > r.t1) continue;
@@ -4394,7 +4542,11 @@ function buildRooms(g, P3){
     quad(shell, P3(back, T0, y0), P3(back, T0, y1), P3(back, T1, y1), P3(back, T1, y0), wall);
     for (const tt of [T0, T1]) quad(shell, P3(front, tt, y0), P3(back, tt, y0), P3(back, tt, y1), P3(front, tt, y1), wall);
     for (let d = 1.5; d < r.D - .5; d += 2.5) lit.push(...P3(S(d), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 + .6, y1 - .02), ...P3(S(d), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 + .6, y1 - .02), ...P3(S(d), (T0 + T1)/2 + .6, y1 - .02));   // ceiling lights
-    const B = (da, db, ta, tb, ha, hb, hex) => box(props, S(da), S(db), ta, tb, y0 + ha, y0 + hb, hex), pick = () => BRIGHT[(R()*BRIGHT.length)|0];
+    // the furniture is solid: a grid of 20 cm cells over the room, each as high as the tallest thing standing there (see roomTop)
+    const G = r.grid = { n: Math.ceil(r.D/.2) + 1, m: Math.ceil((r.t1 - r.t0)/.2) + 1 }; G.top = new Float32Array(G.n*G.m);
+    const solid = (da, db, ta, tb, hb) => { const P = .16, i0 = Math.max(0, Math.floor((Math.min(da, db) - P)/.2)), i1 = Math.min(G.n - 1, Math.floor((Math.max(da, db) + P)/.2)), j0 = Math.max(0, Math.floor((ta - P - r.t0)/.2)), j1 = Math.min(G.m - 1, Math.floor((tb + P - r.t0)/.2));
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) G.top[i*G.m + j] = Math.max(G.top[i*G.m + j], hb); };
+    const B = (da, db, ta, tb, ha, hb, hex) => { box(props, S(da), S(db), ta, tb, y0 + ha, y0 + hb, hex); if (ha < 1.9 && hb - ha > .02) solid(da, db, ta, tb, hb); }, pick = () => BRIGHT[(R()*BRIGHT.length)|0];
     // the counter at the back, and someone working there
     const counter = (hex = 0xf2ede2) => { B(r.D - 2.4, r.D - 1.6, T0 + .8, T1 - 2.2, 0, 1.05, hex); B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58);
       B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, pick()); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, [0xf1c9a5, 0xc99a74, 0x8d5a3b][r.i % 3]); };
@@ -4402,8 +4554,8 @@ function buildRooms(g, P3){
       B(.8, r.D - .3, ta, tb, h, h + .04, 0x8a6a48); for (let d = 1; d < r.D - .6; d += .45) if (R() < .85) item(d, ta, tb, h + .04); } };
     switch (r.cat){
       case 'clothes': case 'gift':
-        for (let k = 0; k < 2; k++){ const tm = T0 + W*(k + 1)/3; B(1.6, r.D - 3, tm - .03, tm + .03, 1.45, 1.5, 0x9aa0a6);   // racks, with clothes hanging on them
-          for (let d = 1.8; d < r.D - 3.1; d += .22) B(d, d + .1, tm - .35, tm + .35, .55, 1.42, pick()); B(1.6, 1.66, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); B(r.D - 3.06, r.D - 3, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); }
+        for (let k = 0; k < 2; k++){ const tm = T0 + W*(k + 1)/3; B(1.6, r.D - 3.5, tm - .03, tm + .03, 1.45, 1.5, 0x9aa0a6);   // racks, with clothes hanging on them
+          for (let d = 1.8; d < r.D - 3.6; d += .22) B(d, d + .1, tm - .35, tm + .35, .55, 1.42, pick()); B(1.6, 1.66, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); B(r.D - 3.06, r.D - 3.5, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); }
         wallShelves(3, (d, ta, tb, h) => B(d, d + .35, ta + .05, tb - .05, h, h + .22, pick()));
         B(1, 1.4, T0 + W/2 - .2, T0 + W/2 + .2, 0, 1.2, 0xe8dcc8); B(1.05, 1.35, T0 + W/2 - .25, T0 + W/2 + .25, 1.2, 1.75, pick()); B(1.1, 1.3, T0 + W/2 - .12, T0 + W/2 + .12, 1.75, 2, 0xe8dcc8);   // a mannequin
         counter(); break;
@@ -4414,31 +4566,32 @@ function buildRooms(g, P3){
         for (let t = T0 + .9; t < T1 - .9; t += .45) B(r.D - 2.3, r.D - 1.9, t, t + .35, 1.05, r.cat === 'food' ? 1.1 : 1.3, r.cat === 'icecream' ? [0xf8bbd0, 0xfff59d, 0xa5d6a7, 0x8d6e63, 0xffffff][((t*3)|0) % 5] : r.cat === 'bakery' ? [0xd7a86e, 0xf3d9b1, 0x8d5a3b][((t*3)|0) % 3] : 0xc9c4ba);
         B(r.D - .12, r.D - .05, T0 + .8, T1 - .8, 1.9, 2.9, 0x22303c); for (let k = 0; k < 4; k++) B(r.D - .13, r.D - .12, T0 + 1, T1 - 1, 2.05 + k*.2, 2.12 + k*.2, 0xfff2c4);
         B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
-        for (let d = 1.4; d < r.D - 3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
+        for (let d = 1.4; d + 1.65 < r.D - 3.3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
           for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); } break; }
       case 'books': for (const [ta, tb] of [[T0, T0 + .45], [T1 - .45, T1]]) for (let k = 0; k < 6; k++){ const h = .1 + k*.42; B(.6, r.D - .3, ta, tb, h, h + .04, 0x6b4a32);
           for (let d = .65; d < r.D - .4;){ const w = .04 + R()*.05; B(d, d + w, ta + .04, tb - .04, h + .04, h + .3 + R()*.06, pick()); d += w + .005; } }   // book after book after book
-        for (let d = 1.6; d < r.D - 2.5; d += 2.2) B(d, d + 1.2, T0 + W/2 - .5, T0 + W/2 + .5, 0, .8, 0x8a6a48); counter(0x6b4a32); break;
+        for (let d = 1.6; d + 1.2 < r.D - 3.3; d += 2.2) B(d, d + 1.2, T0 + W/2 - .5, T0 + W/2 + .5, 0, .8, 0x8a6a48); counter(0x6b4a32); break;
       case 'tech': for (let d = 1.4; d < r.D - 1.5; d += 2.3) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1.6, tm - .45, tm + .45, 0, .85, 0xd9c7a2);   // long wooden tables with phones and laptops on them
           for (let k = 0; k < 3; k++) B(d + .2 + k*.5, d + .5 + k*.5, tm - .15, tm + .15, .85, .87, 0x1d1d1f); }
         B(r.D - .1, r.D - .05, T0 + 1, T1 - 1, 1, 2.8, 0x1d1d1f); break;   // a big screen on the back wall
       case 'toys': wallShelves(4, (d, ta, tb, h) => { const k = R(); if (k < .5) B(d, d + .3, ta + .08, tb - .1, h, h + .3, pick()); else B(d + .05, d + .3, ta + .12, tb - .12, h, h + .22, pick()); });
-        for (let d = 1.6; d < r.D - 3; d += 1.6) B(d, d + 1, T0 + W/2 - .6, T0 + W/2 + .6, 0, .7, 0x8a6a48);
-        for (let d = 1.7; d < r.D - 3.1; d += .35) B(d, d + .25, T0 + W/2 - .4, T0 + W/2 + .4, .7, .7 + .1 + R()*.3, pick());   // puzzles and games stacked on the tables
-        { const tm = T0 + W/2, d = r.D - 3.2; B(d, d + .9, tm - .45, tm + .45, 0, .9, 0x8d5a3b); B(d + .1, d + .8, tm - .35, tm + .35, .9, 1.55, 0x8d5a3b); for (const tt of [-.3, .3]) B(d + .3, d + .5, tm + tt - .08, tm + tt + .08, 1.55, 1.75, 0x8d5a3b); }   // a big teddy bear
+        for (let d = 2.2; d + 1 < r.D - 3.3; d += 1.6){ B(d, d + 1, T0 + W/2 - .6, T0 + W/2 + .6, 0, .7, 0x8a6a48);
+          for (let k = 0; k < 3; k++) B(d + .05 + k*.32, d + .3 + k*.32, T0 + W/2 - .4, T0 + W/2 + .4, .7, .7 + .1 + R()*.3, pick()); }   // puzzles and games stacked on the tables
+        { const tm = Math.abs(r.door - (T0 + .9)) > Math.abs(r.door - (T1 - .9)) ? T0 + .9 : T1 - .9, d = .9;   // (the teddy sits by the window, away from the door)
+          B(d, d + .9, tm - .45, tm + .45, 0, .9, 0x8d5a3b); B(d + .1, d + .8, tm - .35, tm + .35, .9, 1.55, 0x8d5a3b); for (const tt of [-.3, .3]) B(d + .3, d + .5, tm + tt - .08, tm + tt + .08, 1.55, 1.75, 0x8d5a3b); }   // a big teddy bear
         counter(); break;
-      case 'candy': for (let d = 1.3; d < r.D - 2.5; d += 1.4) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1, tm - .4, tm + .4, 0, .9, 0xf4f4f0); for (let k = 0; k < 4; k++) B(d + .05 + k*.24, d + .25 + k*.24, tm - .35, tm + .35, .9, 1, pick()); }   // bins of candy
+      case 'candy': for (let d = 1.3; d + 1 < r.D - 3.3; d += 1.4) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1, tm - .4, tm + .4, 0, .9, 0xf4f4f0); for (let k = 0; k < 4; k++) B(d + .05 + k*.24, d + .25 + k*.24, tm - .35, tm + .35, .9, 1, pick()); }   // bins of candy
         wallShelves(4, (d, ta, tb, h) => B(d, d + .3, ta + .08, tb - .08, h, h + .25, pick()));
         { const tm = T0 + W/2; B(1.2, 1.3, tm - .05, tm + .05, 0, 1.6, 0xf4f4f0); B(1, 1.5, tm - .25, tm + .25, 1.6, 2.1, 0xff3e8a); } counter(); break;   // a giant lollipop
       case 'beauty': case 'shades': wallShelves(5, (d, ta, tb, h) => B(d, d + .12, ta + .15, tb - .15, h, h + .14, r.cat === 'shades' ? 0x1d1d1f : pick()));
-        for (let d = 1.6; d < r.D - 2.5; d += 2.2) B(d, d + 1.3, T0 + W/2 - .45, T0 + W/2 + .45, 0, .95, 0xf4f4f0); counter(0x1d1d1f); break;
+        for (let d = 1.6; d + 1.3 < r.D - 3.3; d += 2.2) B(d, d + 1.3, T0 + W/2 - .45, T0 + W/2 + .45, 0, .95, 0xf4f4f0); counter(0x1d1d1f); break;
       case 'movies': B(r.D - 2.6, r.D - 1.6, T0 + .6, T1 - .6, 0, 1.05, 0xa0101e); { const tm = T0 + 1.2; B(r.D - 2.4, r.D - 1.8, tm, tm + .7, 1.05, 1.9, 0xfdd835); B(r.D - 2.35, r.D - 1.85, tm + .05, tm + .65, 1.9, 2, 0xffffff); }   // the snack bar and the popcorn machine
         for (let k = 0; k < 3; k++) for (const tt of [T0 + .02, T1 - .08]) B(1.2 + k*2, 2.4 + k*2, tt, tt + .06, 1, 2.8, pick());   // movie posters
         B(r.D - .9, r.D - .5, T0 + W - 2.2, T0 + W - 1.6, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + W - 2.25, T0 + W - 1.55, 1.1, 1.75, 0xa0101e); B(r.D - .82, r.D - .58, T0 + W - 2.05, T0 + W - 1.75, 1.8, 2.1, 0xc99a74); break;
       case 'gym': for (let d = 1.4; d < r.D - 1.5; d += 1.8) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1.6, tm - .35, tm + .35, 0, .25, 0x1d1d1f); B(d + 1.4, d + 1.55, tm - .35, tm + .35, .25, 1.3, 0x3a444c); }   // treadmills
         for (let k = 0; k < 5; k++) B(r.D - .6, r.D - .2, T0 + .5 + k*.5, T0 + .8 + k*.5, .2 + (k % 2)*.4, .45 + (k % 2)*.4, 0x222222); break;
       case 'theatre': B(r.D - 2.5, r.D - .1, T0 + .3, T1 - .3, 0, .6, 0x6b4a32); B(r.D - .1, r.D - .05, T0 + .3, T1 - .3, .6, 3.3, 0xa0101e);   // the stage and its red curtain
-        for (let d = 1.2; d < r.D - 3.2; d += 1) for (let t = T0 + .5; t < T1 - .8; t += .7) B(d, d + .5, t, t + .5, 0, .45, 0xa0101e); break; } }   // rows of seats
+        for (let d = 1.2; d < r.D - 3.2; d += 1) for (let t = T0 + .5; t < T1 - .8; t += .7) if (Math.abs(t + .25 - (T0 + T1)/2) > .75) B(d, d + .5, t, t + .5, 0, .45, 0xa0101e); break; } }   // rows of seats, with an aisle down the middle
   const mk = (o, mat) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); };
   mk(shell, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85, side: THREE.DoubleSide })); mk(props, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .7, side: THREE.DoubleSide }));
   { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(lit, 3)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xfff6dc, side: THREE.DoubleSide }))); }
@@ -6380,7 +6533,7 @@ function render3D(dt){
         m.rotation.order = 'YXZ'; m.rotation.set(human ? Math.PI : 0, -ocean.ang, 0); poseWalk(m, 0, false); }
       else if (ocean.sitting != null){ m.position.set(px, gy + (human ? .78 : .5), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // sitting on the chair
         if (human) for (const l of ['ll', 'rl']){ m.userData.legs[l].hp.rotation.z = 1.5; m.userData.legs[l].kn.rotation.z = -1.5; } }
-      else if (ocean.hugT > time && heldItem === 'teddy'){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
+      else if (ocean.hugT > time && (heldItem === 'teddy' || treat?.act === 'hug')){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
         if (human){ const u = m.userData; u.arms.la.sh.rotation.set(HUG.sx, HUG.sy, HUG.sz); u.arms.ra.sh.rotation.set(-HUG.sx, -HUG.sy, HUG.sz); u.arms.la.el.rotation.set(HUG.ex, HUG.ey, HUG.ez); u.arms.ra.el.rotation.set(-HUG.ex, -HUG.ey, HUG.ez); }
         drawHearts(px, gy + 2, pz, dt); }
       else if (ocean.dancing && !ocean.walking){ m.position.set(px, gy + (human ? 1.13 : .12) + Math.abs(Math.sin(time*6.5))*.08, pz); m.rotation.set(0, -ocean.ang + Math.sin(time*2)*.6, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // dancing
@@ -6404,7 +6557,7 @@ function render3D(dt){
       m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
-    drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); if (!(ocean.hugT > time)) hideHearts(); followSun(oceanSun, px, pz); updSpray(dt, wy);
+    drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); if (!(ocean.hugT > time) && !(treat && time - heartsAt < 2.6)) hideHearts(); followSun(oceanSun, px, pz); updSpray(dt, wy);
     fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? landY(ocean) + .6 + (ocean.climb?.h || 0) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
@@ -6438,7 +6591,7 @@ let mode = 'title', time = 0, paused = false;
 const MODE = () => mode;
 function setMode(m){ if (m !== 'ocean') engineSound(false);
   if (m !== 'ocean' && m !== 'dead' && typeof mpLeave === 'function') mpLeave();
-  mode = m; paused = false; renderGadgetBar(); if (m !== 'ocean'){ $('mphChip').hidden = $('questChip').hidden = $('leagueChip').hidden = $('holdChip').hidden = $('krakenBtn').hidden = $('grabBtn').hidden = $('useBtn').hidden = $('casinoBtn').hidden = true; $('speedFx').style.opacity = '0'; }
+  mode = m; paused = false; renderGadgetBar(); if (m !== 'ocean'){ $('mphChip').hidden = $('questChip').hidden = $('leagueChip').hidden = $('holdChip').hidden = $('krakenBtn').hidden = $('buyBtn').hidden = $('treatBtn').hidden = $('grabBtn').hidden = $('useBtn').hidden = $('casinoBtn').hidden = true; $('speedFx').style.opacity = '0'; }
   if (m === 'title'){ startArmed = false; arrangeTitle(); hItems = null; heldItem = null; }
   $('title').hidden = m !== 'title'; $('choose').hidden = m !== 'choose'; $('results').hidden = m !== 'results' && m !== 'dead'; $('panel').hidden = true;
   $('hud').hidden = !playing(); $('limbs').hidden = !playing(); $('speedBar').hidden = !(m === 'ocean' || m === 'pool'); if (m === 'ocean' || m === 'pool') showSpeedBar(); $('strokeBtn').hidden = m !== 'race'; $('diveBtn').hidden = m === 'race'; if (m !== 'ocean') $('surfBtn').hidden = $('jumpBtn').hidden = $('sonarBtn').hidden = true; diveBtnHeld = false; if (m !== 'ocean') $('talkBtn').hidden = true; if (m !== 'ocean') $('rideBtn').hidden = true; if (m !== 'ocean') $('carBtn').hidden = $('hornBtn').hidden = true;
@@ -6541,7 +6694,7 @@ function limbsNow(){ return mode === 'race' ? race && race.limbs : mode === 'poo
 
 /* ---------- Keyboard menus: up/down to choose, Space or Enter to press ---------- */
 let pick = 0;
-function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
+function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
 function menuBtns(){ const el = menuEl(); return el ? [...el.querySelectorAll('.btn')].filter(b => !b.disabled) : []; }
 function showPick(){ const bs = menuBtns(); bs.forEach((b,i) => b.classList.toggle('picked', i === pick)); }
 function resetPick(){ pick = 0; showPick(); }

@@ -2264,7 +2264,7 @@ function chestsNear(o){ const out = [], cx = Math.floor(o.x/CH), cy = Math.floor
   return out; }
 function jellyPos(j){ return [j.x + Math.cos(time*.1 + j.ph)*j.wr, j.y + Math.sin(time*.13 + j.ph)*j.wr, j.d0 + Math.sin(time*.35 + j.ph)*.5]; }
 const taken = new Set();
-const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(HOME_APT.startS, HOME_APT.startT))), gh: homeFloor(3), vx:0, vy:0, ang:-Math.PI/2,   /* home: outside apartment 303, facing the stairs down to 3rd Street */ onLand:true, homeDone:true,   // everyone starts on their own island
+const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(...homeST(HOME_APT.startU, HOME_APT.startV)))), gh: homeFloor(3), vx:0, vy:0, ang:Math.PI,   /* home: outside apartment 303, facing the stairs down to 3rd Street */ onLand:true, homeDone:true,   // everyone starts on their own island
    zone:0, bg:[...ZONES[0].water], dark:0, limbs:newLimbs(), edgeMsg:0, saveT:0,
     hurtT:0, sharks:[], sharkSpawnT:2, beatT:0, ride:null, rideFrom:null, rideAway:null, rideTarget:null });
 function startOcean(){
@@ -2275,7 +2275,7 @@ function startOcean(){
   boardFix(ocean); for (const q of save.board) if (q.kind === 'calf' && q.state === 'lead'){ q.x = ocean.x; q.y = ocean.y + 4*METERS; }   // (the baby whale you were leading is right behind you)
   parts = []; setMode('ocean'); $('airChip').hidden = true;
   banner('Home! 1045 3rd Street, #303', 'Take the stairs down, walk down California Avenue to the cliffs, and take the California Incline to the beach');
-  ocean.tripT = 0; camHead = -Math.PI/2; camInit = false;
+  ocean.tripT = 0; camHead = Math.PI; camInit = false;
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
 }
@@ -2596,27 +2596,36 @@ function islandH(x, z){   // height of the ground above sea level (negative = un
    Heights are squeezed like everything else (the bluffs are 12 m). The 3D land and walking both use landH, so what you see is what you stand on. */
 const LAND = { top: 12, pch: [24, 29.5], face: [29.5, 35], park: [35, 45], ave: [45, 51], incline: [-70, -20], inS: [30.2, 34], bridge: 2.4, bridgeS: [4, 35],
   second: [67, 72], third: [85, 90], cal: [-20.4, -14] };   // (2nd St, 3rd St, and California Avenue, which runs inland from the top of the Incline)
-// Home: 1045 3rd Street, apartment 303 (Kevin's family lived here), on the corner of 3rd and California: the inland side of 3rd Street
-// (odd numbers), on the side of California Avenue away from the pier (the 1000 block). Like the real one: you come out of 303 onto the
-// third-floor catwalk, walk along it to the stairwell at the far end, go down the stairwell past the second floor to the first, walk out
-// onto the front stoop and down the steps to 3rd Street. Then left to California, and right, down California past 2nd Street and Ocean Avenue.
-// The catwalks and stairs are stacked over each other, so walking picks the floor you're on (walkRef, see homeLayers).
-const HOME_APT = { s0: 93.5, s1: 104, t0: -29.4, t1: -21.4, front: 92, towerS: [92, 96], tower: [-36.2, -31.6], land: [-31.6, -29.6], steps: 90, f1: 1, fh: 3, rise: 1.5,
-  doors: [['01', -27.2], ['02', -25.3], ['03', -23.4]] };   // (doors along the catwalk: 301, 302, 303 upstairs, 201-203 below)
-HOME_APT.startS = 92.75; HOME_APT.startT = -23.4;   // right outside 303, facing along the catwalk toward the stairwell
-let walkRef = Infinity;
-function inHomeBuilding(o){ if (!o || !o.onLand || !(o.gh > homeBase() + .5)) return false; const [s, t] = landST(o.x, o.y); return s > HOME_APT.steps && s < HOME_APT.s1 && t > HOME_APT.tower[0] - .5 && t < HOME_APT.t1 + .5; }   // (up on the stoop, the stairs or a catwalk)   // how high the walker is standing now: picks the floor in the stacked parts of home (Infinity: the top one)
-function homeBase(){ return homeBase.v ?? (homeBase.v = landH(90.5, -26)); }
-function homeFloor(n){ return homeBase() + HOME_APT.f1 + (n - 1)*HOME_APT.fh; }   // floor n's level (the first floor is a few steps up from the street)
+// Home: 1045 3rd Street, apartment 303 (Kevin's family lived here): the second building up 3rd Street from California Avenue, on the inland side.
+// Laid out from the satellite view and Street View: a light gray stucco block about 23 m along 3rd Street and 31 m deep, three floors of
+// apartments over a half-sunken garage, blue-gray balcony bands across the front, a brown tile edge on the roof. Wide steps go up from the
+// sidewalk between two lamp pillars into a passage through the front of the building to a long, narrow courtyard open to the sky (about
+// 4 m by 12 m). Every apartment door faces the courtyard; on the 2nd and 3rd floors the doors open onto catwalks running all the way around
+// it. The stairwell (under a little tile roof) is at the street end of the courtyard, beside the passage. So you come out of 303 at the far end,
+// walk along the catwalk to the stairwell, go down past the 2nd floor to the 1st, walk out through the passage and down the steps to 3rd Street.
+// Plan coordinates: u = meters back from the front wall, v = meters along 3rd Street from the middle of the front (negative is away from California).
+// The catwalks, stairs and courtyard are stacked over each other, so walking picks the floor you're on (walkRef, see homeLayers).
+const HOME_APT = { front: 94.5, mid: -44.9, len: 23, deep: 31, f1: 1.5, fh: 3, steps: 2.6, pass: 1.4, court: [10, 22.4], cv: 2, cw: 1.2,
+  stair: { u0: 6, mid: 6.8, u1: 9, v0: -5.4, v1: -1.4 } };
+HOME_APT.doors = [['01', 13.5, -2, 'n'], ['02', 18.5, -2, 'n'], ['03', 22.4, 0, 'b'], ['04', 18.5, 2, 's'], ['05', 13.5, 2, 's']];   // [number, u, v, which wall]
+HOME_APT.startU = 21.6; HOME_APT.startV = .2;   // outside 303, at the far end of the courtyard, facing the way to the stairwell
+const homeST = (u, v) => [HOME_APT.front + u, HOME_APT.mid + v];
+let walkRef = Infinity;   // how high the walker is standing now: picks the floor in the stacked parts of home (Infinity: the top one)
+function inHomeBuilding(o){ if (!o || !o.onLand || !(o.gh > homeBase() + .5)) return false; const [s, t] = landST(o.x, o.y), u = s - HOME_APT.front, v = t - HOME_APT.mid;   // (up the steps, in the passage, the courtyard or the stairwell, or on a catwalk)
+  return u > -HOME_APT.steps && u < HOME_APT.deep && Math.abs(v) < HOME_APT.len/2; }
+function homeBase(){ return homeBase.v ?? (homeBase.v = landH(HOME_APT.front - 3, HOME_APT.mid)); }
+function homeFloor(n){ return homeBase() + HOME_APT.f1 + (n - 1)*HOME_APT.fh; }   // floor n's level (the first floor is up the front steps, over the garage)
 function homeLayers(s, t){   // every walkable surface of the building over this spot, lowest to highest
-  const A = HOME_APT, out = [], [S0, S1] = A.towerS, [L0, L1] = A.land, [T0] = A.tower, midL = T0 + 1, half = (S0 + S1)/2;
-  if (s >= S0 && s <= S1){
-    if (t >= L0 && t <= L1) for (const n of [1, 2, 3]) out.push(homeFloor(n));   // the landings outside each floor (the first floor's is the front stoop)
-    if (t >= T0 && t < L0) for (const n of [2, 3]){ const F = homeFloor(n);   // the stairwell: two flights a floor, with a landing halfway
-      if (t < midL) out.push(F - A.rise);
-      else { const f = (L0 - t)/(L0 - midL); out.push(s < half ? F - A.rise*f : F - 2*A.rise + A.rise*f); } } }
-  if (s >= A.front && s < A.s0 && t >= L0 && t <= A.t1) for (const n of [2, 3]) out.push(homeFloor(n));   // the catwalks
-  if (s >= A.steps && s < S0 && t >= L0 && t <= L1) out.push(homeBase() + A.f1*(s - A.steps)/(S0 - A.steps));   // the front steps down to 3rd Street
+  const H = HOME_APT, u = s - H.front, v = t - H.mid, F = homeFloor, [c0, c1] = H.court, S = H.stair, out = [];
+  if (u >= -H.steps && u < 0 && Math.abs(v) <= 1.5) out.push(homeBase() + H.f1*(u + H.steps)/H.steps);   // the front steps
+  if (u >= 0 && u < c0 && Math.abs(v) <= H.pass) out.push(F(1));                                          // the passage through to the courtyard
+  if (u >= c0 && u <= c1 && Math.abs(v) <= H.cv){ out.push(F(1));                                         // the courtyard
+    if (Math.abs(v) >= H.cv - H.cw || u <= c0 + H.cw || u >= c1 - H.cw) out.push(F(2), F(3)); }          // the catwalks all the way around it
+  if (v >= S.v0 && v <= S.v1){                                                                             // the stairwell
+    if (u >= S.u1 && u <= c0) out.push(F(1), F(2), F(3));                                                  //   its landing at each floor
+    else if (u >= S.u0 && u < S.u1) for (const n of [2, 3]){ const Fn = F(n);                              //   two flights a floor, with a landing halfway
+      if (u < S.mid) out.push(Fn - H.fh/2);
+      else { const f = (S.u1 - u)/(S.u1 - S.mid); out.push(v < (S.v0 + S.v1)/2 ? Fn - H.fh/2*f : Fn - H.fh + H.fh/2*f); } } }
   return out; }
 const onCal = (s, t) => t > LAND.cal[0] && t < LAND.cal[1] && s >= LAND.inS[1] && s < LAND.third[1] + 12;
 const landST = (x, y) => [(x - coastX(y))*U, y*U];
@@ -2646,7 +2655,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier bridge, and r
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (Math.abs(t) < LAND.bridge && s > LAND.bridgeS[0] && s < LAND.ave[1]) h = Math.max(h, bridgeH(s));
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
-  if (s > HOME_APT.steps - .1 && s < HOME_APT.s1 && t > HOME_APT.tower[0] - .1 && t < HOME_APT.t1 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
+  if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
     if (L.length){ L.push(h); const below = L.filter(v => v <= walkRef + .6); h = below.length ? Math.max(...below) : Math.min(...L); } }
   return h;
 }
@@ -2654,11 +2663,11 @@ function landName(x, y){
   const [s, t] = landST(x, y);
   if (t < -150) return 'Malibu'; if (t > 130) return 'Palos Verdes';
   if (Math.abs(t) < LAND.bridge && s > LAND.bridgeS[0] && s < LAND.face[1]) return 'The Pier Bridge';
-  if (s > HOME_APT.steps - .2 && s < HOME_APT.s1 && t > HOME_APT.tower[0] - .3 && t < HOME_APT.t1 + .3) return 'Home · 1045 3rd Street';
+  if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return 'Home · 1045 3rd Street';
   if (t < 6){ if (s < 20) return 'Santa Monica Beach'; if (s < 23) return 'The Beach Bike Path';
     if (t > LAND.incline[0] - 4 && t < LAND.incline[1] + 1 && s > LAND.inS[0] - .5 && s < LAND.inS[1] + 1) return 'The California Incline';
     if (s < LAND.face[0]) return 'Pacific Coast Highway'; if (onCal(s, t) && s > LAND.ave[1]) return 'California Avenue'; if (s < LAND.park[1]) return 'Palisades Park'; if (s < LAND.ave[1]) return 'Ocean Avenue';
-    if (s > LAND.second[0] && s < LAND.second[1]) return '2nd Street'; if (s > LAND.third[0] && s < LAND.third[1]) return '3rd Street'; return 'Santa Monica'; }
+    if (s > LAND.second[0] && s < LAND.second[1]) return '2nd Street'; if (s > LAND.third[0] - 1.5 && s < LAND.third[1] + 1.5) return '3rd Street'; return 'Santa Monica'; }
   return s < 28 ? 'Santa Monica Beach' : s < 31 ? 'Ocean Front Walk' : 'Santa Monica';
 }
 function groundAt(x, y){
@@ -4040,43 +4049,69 @@ function buildCoast(){
     bx.translate(x*U, base + h/2 - .2, y*U); parts.push(bx); LAND_BOXES.push([s0, t0, s0 + d, t0 + w, base + h]); };
   const row = (s0, d0, d1, tEnd, h0, h1, first) => { for (let t = -3; t > tEnd;){ const w = 7 + BR()*6, d = d0 + BR()*(d1 - d0);
       const hit = (a, b) => t - w < b + 1 && t > a - 1; if (hit(...LAND.cal)){ t = LAND.cal[0] - 1; continue; }
-      if (s0 > LAND.third[1] && hit(HOME_APT.tower[0] - 1, HOME_APT.t1 + .5)){ t = HOME_APT.tower[0] - 2.2; continue; }
+      if (s0 > LAND.third[1] && hit(HOME_APT.mid - HOME_APT.len/2 - 1, HOME_APT.mid + HOME_APT.len/2 + 1)){ t = HOME_APT.mid - HOME_APT.len/2 - 2.2; continue; }
       const f = first && t === -3; building(s0, t - w, w, d, f ? 17 : h0 + BR()*(h1 - h0), f ? 0x63c7bd : PAL[(BR()*PAL.length)|0]); t -= w + (BR() < .3 ? 5 : 1.2); } };
   row(54, 9, 12, -150, 8, 24, true);   // along Ocean Avenue (the turquoise Art Deco hotel nearest the pier)
   row(LAND.second[1] + 1.5, 9, 10.5, -110, 6, 16);   // between 2nd and 3rd
   row(LAND.third[1] + 1.5, 9, 12, -110, 6, 18);      // across 3rd
-  // home, 1045 3rd Street: cream stucco, three floors over a raised first floor, catwalks along the front, an open stairwell at the far end
-  { const A = HOME_APT, B = homeBase(), F = homeFloor, hm = new THREE.Group(), stucco = std(0xf1e4c8, .85), conc = std(0xd6d0c4, .85), rail = std(0x3b4a52, .5), cap = std(0xe2d6bb, .8);
-    const [S0, S1] = A.towerS, [L0, L1] = A.land, [T0] = A.tower, midL = T0 + 1, half = (S0 + S1)/2, top = F(3) + A.fh + .4;
-    const box = (s0, s1, t0, t1, y0, y1, m) => { const [x, y] = landXY((s0 + s1)/2, (t0 + t1)/2), b = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m); b.position.set(x*U, (y0 + y1)/2, y*U); hm.add(b); return b; };
-    building(A.s0, A.t0, A.t1 - A.t0, A.s1 - A.s0, top - B, 0xf1e4c8);
-    for (const n of [2, 3]){ box(A.front, A.s0, L0, A.t1, F(n) - .25, F(n), conc);   // the catwalks, with a railing on the street side
-      box(A.front, A.front + .06, L0, A.t1, F(n) + 1, F(n) + 1.06, rail); for (let t = L0; t <= A.t1 + .01; t += 1.1) box(A.front, A.front + .05, t - .025, t + .025, F(n), F(n) + 1, rail); }
-    for (const t of [L0 + .1, A.t1 - .15]) box(A.front, A.front + .25, t - .12, t + .12, B, F(3) + 1, stucco);   // posts holding them up
-    for (const n of [1, 2, 3]) box(S0, S1, L0, L1, n === 1 ? B : F(n) - .25, F(n), conc);   // the landing outside each floor (the first one is the front stoop)
-    for (const n of [2, 3]){ const Fn = F(n);   // the stairwell: down, a landing halfway, and down again
-      box(S0, S1, T0, midL, Fn - A.rise - .25, Fn - A.rise, conc);
-      for (let k = 0; k < 8; k++){ const ta = L0 - (L0 - midL)*k/8, tb = L0 - (L0 - midL)*(k + 1)/8, hA = Fn - A.rise*(k + 1)/8, hB = Fn - 2*A.rise + A.rise*(k + 1)/8;
-        box(S0, half, tb, ta, hA - .22, hA, conc); box(half, S1, ta - (ta - tb), ta, hB - .22, hB, conc); } }
-    box(S0, S1, T0 - .25, T0, B, top, stucco); box(S1, S1 + .25, T0 - .25, L1, B, top, stucco);   // the stairwell's walls: the far end and the back
-    for (const n of [1, 2, 3]) box(S0 - .2, S0, T0, L0, n === 1 ? B : F(n) - .3, (n === 1 ? F(1) : F(n)) + 1.05, stucco);   // low walls on the street side at each floor
-    box(S0 - .25, S1 + .25, T0 - .25, L1, top - .35, top, cap);   // its roof
-    box(half - .06, half + .06, T0 + 1, L0, B, top - .35, stucco);   // the wall between the flights
-    for (let k = 0; k < 5; k++){ const sa = A.steps + (S0 - A.steps)*k/5; box(sa, S0, L0 + .2, L1 - .2, B, B + A.f1*(k + 1)/5, conc); }   // the front steps
-    for (const t of [L0 + .15, L1 - .15]) box(A.steps + .1, S0, t - .03, t + .03, B + 1, B + 1.06, rail);
+  // home, 1045 3rd Street (see HOME_APT): gray stucco around a courtyard, catwalks, the stairwell under its tile roof, the passage and front steps
+  { const H = HOME_APT, B = homeBase(), F = homeFloor, [c0, c1] = H.court, S = H.stair, roofY = F(3) + H.fh + .1, hm = new THREE.Group();
+    const stucco = std(0xcfd3d3, .85), trim = std(0x7f97ab, .6), conc = std(0xd4d2cc, .85), rail = std(0x5d7387, .5), tile = std(0x8b5a3c, .8), base = std(0x50685e, .85), dark = new THREE.MeshBasicMaterial({ color: 0x15181a });
+    const at3 = (u, v) => { const [x, y] = landXY(...homeST(u, v)); return [x*U, y*U]; };
+    const box = (u0, u1, v0, v1, y0, y1, m) => { const [x, z] = at3((u0 + u1)/2, (v0 + v1)/2), b = new THREE.Mesh(new THREE.BoxGeometry(u1 - u0, y1 - y0, v1 - v0), m); b.position.set(x, (y0 + y1)/2, z); hm.add(b); return b; };
+    const plane = (u, v, y, w, h, m, face) => { const [x, z] = at3(u, v), p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); p.position.set(x, y, z); p.rotation.y = face; hm.add(p); return p; };
+    // the building itself: stucco blocks with windows around the open parts (you can't walk into these), from the garage level up to the roof
+    const block = (u0, u1, v0, v1, y0 = B - .3, solid = true) => { const [ss0] = homeST(u0, 0), [, tt0] = homeST(0, v0), d = u1 - u0, w = v1 - v0, h = roofY - y0, bx = new THREE.BoxGeometry(d, h, w).toNonIndexed(), uv = bx.attributes.uv, cols = [], cc = new THREE.Color(0xd3d7d8);
+      for (let k = 0; k < uv.count; k++){ const f = Math.floor(k/6), side = f === 2 || f === 3; uv.setXY(k, side ? .02 : uv.getX(k)*(f < 2 ? w : d)/3.2, side ? .02 : uv.getY(k)*h/3); cols.push(cc.r, cc.g, cc.b); }
+      bx.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); const [x, z] = at3((u0 + u1)/2, (v0 + v1)/2); bx.translate(x, y0 + h/2, z); parts.push(bx);
+      if (solid) LAND_BOXES.push([ss0, tt0, ss0 + d, tt0 + w, roofY]); };
+    const L2 = H.len/2;
+    block(0, H.deep, -L2, S.v0); block(0, S.u0, S.v0, -H.pass); block(0, c0, H.pass, L2); block(c0, H.deep, H.cv, L2); block(c0, H.deep, S.v0, -H.cv); block(c1, H.deep, -H.cv, H.cv);
+    block(0, c0, -H.pass, H.pass, F(2) - .3, false);   // over the passage
+    block(S.u0, c0, S.v0, S.v1, roofY - .4, false);   // over the stairwell...
+    { const [x, z] = at3((S.u0 + c0)/2, (S.v0 + S.v1)/2), hip = new THREE.Mesh(new THREE.ConeGeometry(3.1, 1.3, 4), tile); hip.position.set(x, roofY + .6, z); hip.rotation.y = Math.PI/4; hm.add(hip); }   // ...its little tile roof
+    // the front: a dark green garage band at the bottom (the garage door at the far end), balconies across all three floors, a tile edge on the roof
+    box(-.15, 0, -L2, L2, B - .3, F(1) - .1, base); plane(-.17, -L2 + 2.6, B + .6, 4, 1.6, dark, -Math.PI/2);
+    for (const n of [1, 2, 3]){ for (const [a, b] of [[-L2, -1.9], [1.9, L2]]){ box(-1.3, 0, a, b, F(n) - .25, F(n), conc); box(-1.32, -1.24, a, b, F(n) + .55, F(n) + .9, trim); box(-1.32, -1.24, a, b, F(n), F(n) + .1, trim); }
+      for (let v = -L2 + 2; v < L2; v += 3.8) if (Math.abs(v) > 2.2) box(-1.3, -1.18, v - .06, v + .06, F(n), F(n) + .9, rail); }
+    box(-.5, .2, -L2 - .2, L2 + .2, roofY - .2, roofY + .45, tile);
+    // the front steps between two lamp pillars, a low wall and planters along the sidewalk
+    for (let k = 0; k < 8; k++){ const u = -H.steps + H.steps*k/8; box(u, 0, -1.5, 1.5, B, B + H.f1*(k + 1)/8, conc); }
+    for (const v of [-1.75, 1.75]){ box(-H.steps, -H.steps + .45, v - .22, v + .22, B, B + 1.7, stucco); const lamp = box(-H.steps + .1, -H.steps + .35, v - .12, v + .12, B + 1.7, B + 2.05, new THREE.MeshBasicMaterial({ color: 0xfff1c8 })); }
+    for (const [a, b] of [[-L2, -2], [2, L2]]) box(-H.steps - .3, -H.steps, a, b, B, B + .55, std(0xbcc0c0, .85));
+    const green = std(0x5d8a3e, .8), tan = std(0xc7a76a, .9);
+    for (let v = -L2 + .8; v < L2; v += 1.1) if (Math.abs(v) > 2.2){ const tuft = new THREE.Mesh(new THREE.ConeGeometry(.35, .8, 6), v % 2.2 < 1.1 ? tan : green); const [x, z] = at3(-1.9, v); tuft.position.set(x, B + .4, z); hm.add(tuft); }
+    for (const v of [-2.6, 2.6]){ const yu = new THREE.Group(); for (let k = 0; k < 9; k++){ const leaf = new THREE.Mesh(new THREE.ConeGeometry(.05, 1.1, 4), green); leaf.position.y = .5; leaf.rotation.set(Math.cos(k*2.4)*.7, 0, Math.sin(k*2.4)*.7); yu.add(leaf); }
+      const [x, z] = at3(-.9, v); yu.position.set(x, B + 1.2, z); hm.add(yu); }
+    // the courtyard: plants down on the ground floor, catwalks around it on the 2nd and 3rd floors (railings on the open side)
+    for (const [u, v] of [[12.5, -.8], [15.5, .9], [18.5, -.6], [21, .7]]){ const bush = new THREE.Mesh(new THREE.SphereGeometry(.55, 8, 6), green); const [x, z] = at3(u, v); bush.position.set(x, F(1) + .45, z); bush.scale.y = .8; hm.add(bush); }
+    box(c0, c1, -H.cv, H.cv, B, F(1), conc); box(0, c0, -H.pass, H.pass, B, F(1), conc);   // (the courtyard floor and the passage floor)
+    for (const n of [2, 3]){ const y = F(n), cw = H.cw, cv = H.cv;
+      box(c0, c1, -cv, -cv + cw, y - .25, y, conc); box(c0, c1, cv - cw, cv, y - .25, y, conc); box(c0, c0 + cw, -cv, cv, y - .25, y, conc); box(c1 - cw, c1, -cv, cv, y - .25, y, conc);
+      box(c0 + cw, c1 - cw, -cv + cw - .05, -cv + cw, y + .95, y + 1.02, rail); box(c0 + cw, c1 - cw, cv - cw, cv - cw + .05, y + .95, y + 1.02, rail);
+      box(c0 + cw - .05, c0 + cw, -cv + cw, cv - cw, y + .95, y + 1.02, rail); box(c1 - cw, c1 - cw + .05, -cv + cw, cv - cw, y + .95, y + 1.02, rail);
+      for (let u = c0 + cw; u <= c1 - cw + .01; u += 1.1) for (const v of [-cv + cw, cv - cw]) box(u - .025, u + .025, v - .025, v + .025, y, y + 1, rail); }
+    // the stairwell: a floor landing on each level, then two flights a floor with a landing halfway (and a wall between the flights)
+    for (const n of [1, 2, 3]) box(S.u1, c0, S.v0, S.v1, F(n) - .25, F(n), conc);
+    for (const n of [2, 3]){ const Fn = F(n), hv = (S.v0 + S.v1)/2; box(S.u0, S.mid, S.v0, S.v1, Fn - H.fh/2 - .25, Fn - H.fh/2, conc);
+      for (let k = 0; k < 7; k++){ const ua = S.u1 - (S.u1 - S.mid)*k/7, ub = S.u1 - (S.u1 - S.mid)*(k + 1)/7;
+        box(ub, ua, S.v0, hv, Fn - H.fh/2*(k + 1)/7 - .2, Fn - H.fh/2*(k + 1)/7, conc); box(ub, ua, hv, S.v1, Fn - H.fh + H.fh/2*(k + 1)/7 - .2, Fn - H.fh + H.fh/2*(k + 1)/7, conc); } }
+    box(S.mid, S.u1, (S.v0 + S.v1)/2 - .06, (S.v0 + S.v1)/2 + .06, B, roofY - .4, stucco);
     mergeStatic(hm);
-    const flat = (txt, bg, fg, w, h, s, t, y, face = -Math.PI/2) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(txt, bg, fg, 256, 128, 90) })); const [x, yy] = landXY(s, t); m.position.set(x*U, y, yy*U); m.rotation.y = face; hm.add(m); return m; };
-    for (const n of [2, 3]) for (const [d, t] of A.doors){ const num = n + d, mine = num === '303';
-      box(A.s0 - .06, A.s0, t - .5, t + .5, F(n), F(n) + 2.1, mine ? std(0xb8452e, .5) : std(0x2f5d7c, .55)); flat(num, '#f7f4ec', '#22303c', .5, .25, A.s0 - .08, t, F(n) + 2.3);
-      const [wx, wy] = landXY(A.s0 - .04, t + 1); const win = new THREE.Mesh(new THREE.PlaneGeometry(.8, .9), new THREE.MeshBasicMaterial({ color: mine ? 0xffd36b : 0x5a6b78 })); win.position.set(wx*U, F(n) + 1.4, wy*U); win.rotation.y = -Math.PI/2; hm.add(win); }
-    box(S0 + .6, S0 + 1.8, A.t0 - .06, A.t0, F(1), F(1) + 2.2, std(0x6b4a32, .6));   // the lobby door, onto the stoop
-    flat('1045', '#22303c', '#f7f4ec', 1.1, .45, S0 - .22, L1 - .9, F(1) + 1.6);       // the street number, over the steps
-    const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, y] = landXY(A.s0 + 2, -23.4); sign.position.set(x*U, top + 1.6, y*U); } hm.add(sign);   // up on the roof, over 303
+    // doors onto the courtyard (and the catwalks), with numbers; 303's is red and its window is lit
+    const wallFace = { n: 0, s: Math.PI, b: -Math.PI/2 }, faceOff = { n: [0, .04], s: [0, -.04], b: [-.04, 0] };
+    for (const n of [1, 2, 3]) for (const [d, u, v, w] of H.doors){ const num = n + d, mine = num === '303', [du, dv] = faceOff[w], along = w === 'b' ? [0, 1] : [1, 0];
+      plane(u + du, v + dv, F(n) + 1.05, .95, 2.1, std(mine ? 0xb8452e : [0x2f5d7c, 0x6b4a32, 0x3f6b4a][(n + +d) % 3], .55), wallFace[w]);
+      plane(u + du*1.5 + along[0]*.0, v + dv*1.5, F(n) + 2.3, .5, .25, new THREE.MeshBasicMaterial({ map: labelTex(num, '#f7f4ec', '#22303c', 256, 128, 90) }), wallFace[w]);
+      plane(u + du + along[0]*1.3, v + dv + along[1]*1.3, F(n) + 1.4, .8, .8, new THREE.MeshBasicMaterial({ color: mine ? 0xffd36b : 0x4d5e6b }), wallFace[w]); }
+    plane(-.18, 0, F(1) + 2.7, 1.2, .45, new THREE.MeshBasicMaterial({ map: labelTex('1045', '#22303c', '#f7f4ec', 256, 96, 72) }), -Math.PI/2);   // the street number, over the entrance
+    const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, z] = at3(c1 + 1, 0); sign.position.set(x, roofY + 2, z); } hm.add(sign);   // up on the roof, over 303
     g.add(hm); homeSign = sign; }
   // street signs at the corners down California Avenue: 3rd Street, 2nd Street, Ocean Avenue
   for (const [s, name] of [[LAND.third[1] + .7, '3RD ST'], [LAND.second[1] + .7, '2ND ST'], [LAND.ave[1] + .9, 'OCEAN AVE']])
     for (const [txt, ry, dz] of [[name, 0, 0], ['CALIFORNIA AVE', Math.PI/2, .2]]){ const sg = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x6f7a73, .5)); pole.position.y = 1.5; sg.add(pole);
-      const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .3), new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, 64), side: THREE.DoubleSide })); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry; sg.add(plate);
+      const mat = new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, 64) });
+      for (const flip of [0, Math.PI]){ const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, .3), mat); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry + flip; plate.translateZ(.01); sg.add(plate); }   // (reads right from both sides)
       at(sg, s, LAND.cal[0] - .6); }
   for (let t = 24; t < 200;){ const w = 6 + BR()*6; building(33 + BR(), t, w, 6 + BR()*4, 4 + BR()*5, PAL[(BR()*PAL.length)|0]); t += w + 1 + BR()*3; }
   delete parts.turq;
@@ -4130,7 +4165,7 @@ function buildCoast(){
 const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion(), _cv = new THREE.Vector3(), _cs = new THREE.Vector3(), _cu = new THREE.Vector3(0, 1, 0);
 function updCoast(o){
   const dt = Math.min(.05, time - (updCoast.t ?? time)); updCoast.t = time;
-  if (homeSign) homeSign.position.y = homeFloor(3) + HOME_APT.fh + 2 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
+  if (homeSign) homeSign.position.y = homeFloor(3) + HOME_APT.fh + 2.2 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
   if (!coastCars || !o) return; const { cars, routes, body, cab } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (Math.abs(pt) > 500 || ps < -300) return;   // (far away: the cars can wait)

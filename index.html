@@ -6860,10 +6860,7 @@ function drawOthers(t){
     o.sx += (o.x - o.sx)*k; o.sy += (o.y - o.sy)*k; o.sw += ((o.w ?? 0) - o.sw)*k; o.sa = lerpAngle(o.sa, o.a ?? 0, k);
     const m = o.model, u = m.userData; m.visible = true;
     m.position.set(o.sx*U, o.sw, o.sy*U); m.rotation.set(0, -o.sa, o.p ?? 0);
-    showGear(m, id => (o.g || '').split(',').includes(id));
-    if (u.gear){ const on = id => (o.g || '').split(',').includes(id);
-      for (const f of u.gear.fins) f.visible = on('fins'); u.gear.mask.visible = u.gear.snork.visible = on('snorkel'); u.gear.tank.visible = on('scuba');
-      for (const q of u.gear.goggles) q.visible = !on('snorkel'); u.gear.capM.color.set(on('goldcap') ? 0xf5c030 : 0x1f5fe0); }
+    { const gear = (o.g || '').split(','); showGear(m, id => gear.includes(id), o.l === 1); }   // (their kit, and street clothes when they're walking around on land)
     if (o.l && u.kind === 'swimmer') poseWalk(m, moving ? t*8 : 0, moving); else poseModel(m, moving ? null : RIDE_POSE, t*1.2);
     o.tag.position.set(o.sx*U, o.sw + (o.l ? 1.2 : .9), o.sy*U); }
 }

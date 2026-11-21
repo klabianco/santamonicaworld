@@ -351,10 +351,11 @@
 <div id="gadgetBar" class="gadgetbar" hidden></div>
 <div id="limbs" class="limbs" hidden>
   <div id="stickPad" class="stickpad" aria-label="Joystick: drag to swim"><div id="stickKnob" class="knob"></div></div>
-  <div class="rightbtns"><button class="limb stroke" id="strokeBtn" type="button" hidden>Stroke<small>on the beat</small></button><button class="limb jump" id="sonarBtn" type="button" hidden>Sonar<small>P</small></button><button class="limb jump" id="surfBtn" type="button" hidden>Surf<small>B · board</small></button><button class="limb jump" id="jumpBtn" type="button" hidden>Jump<small>J</small></button><button class="limb jump gadgetuse" id="gadgetUse" type="button" hidden>Use<small>F</small></button><button class="limb jump" id="upBtn" type="button" hidden>Up<small>hold</small></button><button class="limb dive" id="diveBtn" type="button">Dive<small>hold</small></button></div>
+  <div class="rightbtns"><button class="limb stroke" id="strokeBtn" type="button" hidden>Stroke<small>on the beat</small></button><button class="limb jump" id="sonarBtn" type="button" hidden>Sonar<small>P</small></button><button class="limb jump" id="surfBtn" type="button" hidden>Surf<small>B · board</small></button><button class="limb jump" id="jumpBtn" type="button" hidden>Jump<small>J</small></button><button class="limb jump gadgetuse" id="gadgetUse" type="button" hidden>Use<small>F</small></button><button class="limb jump" id="upBtn" type="button" hidden>Up<small>hold</small></button><button class="limb jump" id="hornBtn" type="button" hidden>Horn<small>H</small></button><button class="limb dive" id="diveBtn" type="button">Dive<small>hold</small></button></div>
 </div>
 <button id="rideBtn" class="ridebtn" type="button" hidden>Ride the dolphin<small>E</small></button>
 <button id="talkBtn" class="ridebtn" type="button" hidden>Talk<small>T</small></button>
+<button id="carBtn" class="ridebtn" type="button" hidden>Drive the car<small>F</small></button>
 <button id="sleepBtn" class="ridebtn" type="button" hidden>Sleep<small>Z</small></button>
 <button id="climbBtn" class="ridebtn" type="button" hidden>Climb the rope<small>R</small></button>
 <button id="casinoBtn" class="ridebtn" type="button" hidden>Play<small>U</small></button>
@@ -743,6 +744,8 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
   if (k === 'b' && !e.repeat && !paused) toggleSurf();
   if (/^[1-3]$/.test(k) && !e.repeat && mode === 'ocean' && !paused){ const id = ownedGadgets()[+k - 1]; if (id) holdGadget(id); }
   if (k === 'f' && heldGadget){ gadgetHeld = true; $('gadgetUse').classList.add('on'); }
+  else if (k === 'f' && !e.repeat && mode === 'ocean') carKey();
+  if (k === 'h' && !e.repeat && mode === 'ocean') horn();
   if (k === 'p' && !e.repeat) sonarPing();
   // Escape closes whatever window is open (shop, map, menu, where-to-swim); with nothing open it opens the Menu
   if (k === 'escape' && !e.repeat){ if (!closeTopWindow() && playing() && !paused) openPanel(); } });
@@ -1688,6 +1691,8 @@ function jumpStep(o, dt){
   return true;
 }
 $('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); dolphinJump(); });
+$('hornBtn').addEventListener('pointerdown', e => { e.preventDefault(); horn(); });
+$('carBtn').onclick = () => { initAudio(); carKey(); };
 $('sonarBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); sonarPing(); });
 /* Dolphin sonar: a ping that shows nearby pearls and treasure chests on the minimap for a while. */
 let sonarUntil = 0, sonarReadyAt = 0, sonarHits = [];
@@ -3166,7 +3171,7 @@ function updOcean(dt){
   else if (!o.onLand && o.jumpY > 0 && !o.ride && !o.vehicle){ jumpStep(o, dt); }   // flying (a jump, the jetpack, the paraglider)
   else if (o.onShip){ shipWalk(o, dt); $('airChip').hidden = true; }
   else if (o.onBoat){ boatWalk(o, dt); $('airChip').hidden = true; }
-  else if (o.onLand){ if (o.sleeping) sleepStep(o); else if (o.sitting != null) sitStep(o); else if (o.bison) bisonStep(o, dt); else walkStep(o, dt); $('airChip').hidden = true;
+  else if (o.onLand){ if (o.car) carStep(o, dt); else if (o.sleeping) sleepStep(o); else if (o.sitting != null) sitStep(o); else if (o.bison) bisonStep(o, dt); else walkStep(o, dt); $('airChip').hidden = true;
     if (groundAt(o.x, o.y) < -.45){ o.onLand = false; o.idle = 0; o.vx *= .5; o.vy *= .5; o.blockH = o.blockShow = 0;         // walked back into the sea
       if (Math.hypot(o.x - EAGLE.x, o.y - EAGLE.y) < (EAGLE.r + 1.5)*METERS){ o.jumpY = EAGLE.top; o.jumpV = 1.5; } }         // (off the edge of Eagle Rock: fall, then splash)
     if (Math.hypot(o.x - HOUSE.x, o.y - HOUSE.y) < 118 + 40 && o.wentFar){ madeItHome(o); return; }
@@ -3251,6 +3256,10 @@ function updOcean(dt){
   { const f = friendNear(o), tb = $('talkBtn'); if (tb.hidden === !!f) tb.hidden = !f;
     if (f){ const t = f.person ? ({ keeper:'Talk to the lighthouse keeper', captain:'Talk to the pirate captain', gunner:'Talk to the gunner', lookout:'Talk to the lookout', deckhand:'Talk to the deckhand' }[f.person] || 'Talk to the fisherman') : `Talk to the ${SPECIES_NAME[f.id].toLowerCase()}`; if (tb.firstChild.textContent !== t) tb.firstChild.textContent = t; } }
   { const bb = $('buildBtn'), showB = !!o.onLand && onHome(o); if (bb.hidden === showB) bb.hidden = !showB; }
+  { const cb = $('carBtn'), showC = !!o.car || !!carNear(o); if (cb.hidden === showC) cb.hidden = !showC;   // hop into a car / get out
+    const ct = o.car ? 'Get out' : 'Drive the car'; if (cb.firstChild.textContent !== ct) cb.firstChild.textContent = ct;
+    const hb = $('hornBtn'); if (hb.hidden === !!o.car) hb.hidden = !o.car;
+    const db = $('diveBtn'), dt2 = o.car ? 'Drift' : 'Dive'; if (db.firstChild.textContent !== dt2) db.firstChild.textContent = dt2; }   // (in a car, the Dive button is the handbrake)
   { const bb = $('boatBtn'), showBt = !!o.vehicle || (canBoard(o) && ownedBoats().length > 0); if (bb.hidden === showBt) bb.hidden = !showBt;
     const bt = o.vehicle ? 'Get out' : 'Boats'; if (bb.textContent !== bt) bb.textContent = bt;
     const ub = $('upBtn'), showU = !!VEH[o.vehicle]?.sub; if (ub.hidden === showU) ub.hidden = !showU; }
@@ -4172,28 +4181,170 @@ function buildCoast(){
     [[47.2, -10], [46, -15.6], [36, -15.6], [dn, -21], [dn, I0 + 2], [27.5, I0 - 6], [25.6, I0 - 12], [25.6, -230]],
     [[28.2, -230], [28.2, I0 - 10], [up, I0 - 2], [up, -21], [36, -18.8], [46, -18.8], [49.4, -12], [49.4, 140]]];
   const routes = ROUTES.map(r => { const segs = []; let L = 0; for (let i = 0; i < r.length - 1; i++){ const l = Math.hypot(r[i + 1][0] - r[i][0], r[i + 1][1] - r[i][1]); segs.push({ a: r[i], b: r[i + 1], l, at: L }); L += l; } return { segs, L }; });
-  const N = [5, 5, 4, 4, 2, 2], cars = [], body = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0xffffff, .35, .3), 22), cab = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), std(0x22303c, .2, .4), 22);
-  const CC = [0xd33a2c, 0xf4f4f0, 0x2b5fa8, 0x1d1d1f, 0xb8bcc2, 0xf2c230, 0x3f8a5a, 0x8a8f96];
-  N.forEach((n, ri) => { for (let k = 0; k < n; k++){ const i = cars.length; cars.push({ r: ri, d: routes[ri].L*k/n + Math.random()*8, v: 7 + Math.random()*3 }); body.setColorAt(i, new THREE.Color(CC[i % CC.length])); } });
-  body.count = cab.count = cars.length; body.castShadow = true; g.add(body, cab); coastCars = { cars, routes, body, cab };
+  const N = [5, 5, 4, 4, 2, 2], cars = [], G = carGeo(), body = new THREE.InstancedMesh(G.paint, CAR_MAT.paint.clone(), 22), cab = new THREE.InstancedMesh(mergeGeometries([G.dark, G.wheels]), CAR_MAT.dark, 22), lights = new THREE.InstancedMesh(G.lights, CAR_MAT.lights, 22);
+  N.forEach((n, ri) => { for (let k = 0; k < n; k++){ const i = cars.length; cars.push({ r: ri, d: routes[ri].L*k/n + Math.random()*8, v: 7 + Math.random()*3, color: CAR_COLORS[i % CAR_COLORS.length] }); body.setColorAt(i, new THREE.Color(cars[i].color)); } });
+  body.count = cab.count = lights.count = cars.length; body.castShadow = true; g.add(body, cab, lights); coastCars = { cars, routes, body, cab, lights };
+  // parked cars you can hop into: outside home on 3rd Street, on California, along Ocean Avenue and in the lot on the beach by the pier
+  for (const [ps, pt, toT, col] of [[89.1, -31.5, 1, 0xd33a2c], [89.1, -58.6, 1, 0x2b5fa8], [85.9, -64, -1, 0xf4f4f0], [68.9, -36, -1, 0x1d1d1f], [60, -14.9, 0, 0xf2c230], [45.9, -40, -1, 0x3f8a5a], [45.9, 30, -1, 0xb8bcc2], [16, 24, 2, 0xff7a2f], [16, 27.5, 2, 0x8a3fd1]]){
+    const [x, y] = landXY(ps, pt), [x2, y2] = toT === 0 ? landXY(ps - 1, pt) : toT === 2 ? landXY(ps + 1, pt) : landXY(ps, pt + toT);
+    parkCar({ x, y, ang: Math.atan2(y2 - y, x2 - x), h: walkH(x, y), color: col }); }
 }
+// ---------- Cars you can drive (hop into any car in Santa Monica: a parked one, or one driving by) ----------
+// A car is about 4.3 m long and 1.8 m wide; its own frame has +x forward, y up, the ground at y = 0.
+const CAR_COLORS = [0xd33a2c, 0xf4f4f0, 0x2b5fa8, 0x1d1d1f, 0xb8bcc2, 0xf2c230, 0x3f8a5a, 0x8a8f96];
+const CAR = { top: 27, rev: 8, acc: 9.5, brake: 24, grip: 8, drift: 1.1, len: 4.3, wid: 1.8, wheelR: .34 };   // m/s (27 m/s is about 60 mph), m/s², meters
+const CAR_MAT = { paint: new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .28, metalness: .45 }), dark: std(0x1c2229, .25, .3),
+  lights: new THREE.MeshBasicMaterial({ vertexColors: true }), tire: std(0x16181b, .85), hub: std(0xc9ccd0, .3, .8) };
+function carGeo(){
+  if (carGeo.g) return carGeo.g;
+  const box = (w, h, d, x, y, z, col) => { const b = new THREE.BoxGeometry(w, h, d); b.translate(x, y, z); if (col){ const c = new THREE.Color(col), a = []; for (let i = 0; i < b.attributes.position.count; i++) a.push(c.r, c.g, c.b); b.setAttribute('color', new THREE.Float32BufferAttribute(a, 3)); } return b; };
+  const wheel = (x, z) => { const w = new THREE.CylinderGeometry(CAR.wheelR, CAR.wheelR, .26, 16); w.rotateX(Math.PI/2); w.translate(x, CAR.wheelR, z); return w; };
+  const paint = mergeGeometries([box(4.3, .58, 1.8, 0, .6, 0), box(1.25, .1, 1.74, 1.45, .92, 0), box(1.95, .08, 1.5, -.35, 1.47, 0),   // body, hood, roof
+    box(.12, .52, .1, .6, 1.17, .74), box(.12, .52, .1, .6, 1.17, -.74), box(.14, .52, .1, -1.28, 1.17, .74), box(.14, .52, .1, -1.28, 1.17, -.74),   // pillars
+    box(.18, .12, .16, .55, .98, .98), box(.18, .12, .16, .55, .98, -.98)]);   // mirrors
+  const dark = mergeGeometries([box(1.85, .52, 1.42, -.35, 1.17, 0), box(.12, .26, 1.84, 2.16, .42, 0), box(.12, .26, 1.84, -2.16, .42, 0), box(4.1, .12, 1.84, 0, .3, 0)]);   // windows, bumpers, the dark sill under the doors
+  const lights = mergeGeometries([box(.06, .15, .42, 2.15, .72, .6, 0xfff4cf), box(.06, .15, .42, 2.15, .72, -.6, 0xfff4cf), box(.06, .14, .36, -2.15, .74, .62, 0xc81e1e), box(.06, .14, .36, -2.15, .74, -.62, 0xc81e1e)]);
+  const WH = [[1.36, .84], [1.36, -.84], [-1.36, .84], [-1.36, -.84]];
+  return carGeo.g = { paint, dark, lights, wheels: mergeGeometries(WH.map(([x, z]) => wheel(x, z))), WH }; }
+function makeCarModel(color){
+  const G = carGeo(), g = new THREE.Group(), paint = CAR_MAT.paint.clone(); paint.color.set(color);
+  const b = new THREE.Mesh(G.paint, paint); b.castShadow = true; g.add(b, new THREE.Mesh(G.dark, CAR_MAT.dark), new THREE.Mesh(G.lights, CAR_MAT.lights));
+  const tailM = new THREE.MeshBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0 }), tail = new THREE.Mesh(new THREE.BoxGeometry(.08, .2, 1.6), tailM); tail.position.set(-2.18, .74, 0); g.add(tail);   // brake lights (glow when you brake)
+  const wheels = G.WH.map(([x, z]) => { const piv = new THREE.Group(); piv.position.set(x, CAR.wheelR, z); const spin = new THREE.Group(); piv.add(spin);
+    const t = new THREE.Mesh(new THREE.CylinderGeometry(CAR.wheelR, CAR.wheelR, .26, 16), CAR_MAT.tire); t.rotation.x = Math.PI/2; t.castShadow = true; spin.add(t);
+    const h = new THREE.Mesh(new THREE.BoxGeometry(.38, .38, .28), CAR_MAT.hub); h.scale.set(1, .25, 1); spin.add(h); g.add(piv); return { piv, spin, front: x > 0 }; });
+  g.userData = { paint, tailM, wheels }; return g; }
+const parked = [];   // cars standing still: [{ x, y (units), ang, h (ground height), color, model }]
+function parkCar(p){ p.model = makeCarModel(p.color); oceanWorld.add(p.model); poseCar(p.model, p.x, p.y, p.h, p.ang, 0, 0); parked.push(p); return p; }
+function poseCar(m, x, y, h, ang, roll, pitch){   // sit the car on the ground, tilted with the slope
+  const fx = Math.cos(ang), fy = Math.sin(ang), hf = carGround(x + fx*1.4*METERS, y + fy*1.4*METERS, h), hb = carGround(x - fx*1.4*METERS, y - fy*1.4*METERS, h);
+  m.position.set(x*U, h, y*U); m.rotation.order = 'YXZ'; m.rotation.set(roll, -ang, Math.atan2(hf - hb, 2.8) + pitch); }
+function carGround(x, y, h){ walkRef = h + .6; return walkH(x, y); }   // (the ground under a car that's at height h: the road, the pier bridge, a roof)
+let myCar = null, camShake = 0, carTold = false, driftT = 0;
+const skids = { mesh: null, i: 0 };
+function trafficCars(){   // the cars driving around right now, where they are (units) and which way they face
+  if (!coastCars) return []; return coastCars.cars.filter(c => c.vis && !c.gone).map(c => ({ kind: 'traffic', c, x: c.wx, y: c.wy, ang: c.wa, h: c.wh, color: c.color })); }
+function carNear(o){   // a car close enough to hop into
+  if (!o || mode !== 'ocean' || !o.onLand || o.car || o.onShip || o.onBoat || o.sleeping || o.sitting != null || o.bison || o.climb || o.inHouse || inHomeBuilding(o) || !onMainland(o.x, o.y)) return null;
+  let best = null, bd = 3.3; for (const p of [...parked.map(p => ({ kind: 'parked', p, ...p })), ...trafficCars()]){ const d = Math.hypot(p.x - o.x, p.y - o.y)/METERS; if (d < bd && Math.abs(p.h - (o.gh ?? p.h)) < 1.5){ bd = d; best = p; } }
+  return best; }
+function carKey(){ const o = ocean; if (!o || paused) return; if (o.car) getOutOfCar(); else getInCar(); }
+function getInCar(){
+  const o = ocean, p = carNear(o); if (!p) return; initAudio();
+  if (p.kind === 'traffic'){ p.c.gone = time; banner('The driver hops out', '"Sure, take it for a spin!"'); }
+  else { parked.splice(parked.indexOf(p.p), 1); p.p.model.removeFromParent(); }
+  if (!myCar){ myCar = makeCarModel(p.color); oceanWorld.add(myCar); }
+  myCar.userData.paint.color.set(p.color); myCar.visible = true;
+  o.car = { x: p.x, y: p.y, h: p.h, ang: p.ang, vx: 0, vy: 0, vz: 0, gv: 0, steer: 0, yaw: 0, air: false, color: p.color, wheel: 0, brake: 0 };
+  o.x = p.x; o.y = p.y; o.ang = p.ang; o.vx = o.vy = 0; o.walking = false; camInit = false; camHead = p.ang;
+  sfx(180, .08, 'square', .05); sfx(120, .25, 'sawtooth', .04, .12, 60);   // the door, the engine starting
+  if (!carTold){ carTold = true; coach(stick.active || 'ontouchstart' in window ? 'Driving! Push the stick up for gas, down to brake and back up, and left and right to steer. Hold Drift to slide round corners, tap Horn to honk, and Get out when you\'re done.'
+    : 'Driving! W or ↑ for gas, S or ↓ to brake and back up, A and D to steer. Hold Space to drift round corners, H honks the horn, and F gets you out.', 9); } }
+function getOutOfCar(){
+  const o = ocean, c = o.car; if (!c || c.air) return;
+  const fx = Math.cos(c.ang), fy = Math.sin(c.ang); let spot = null;
+  for (const side of [1, -1]){ const x = c.x + fy*side*1.7*METERS, y = c.y - fx*side*1.7*METERS, g = carGround(x, y, c.h);   // out the driver's side if there's room
+    if (Math.abs(g - c.h) < .6 && landST(x, y)[0] > .5){ spot = [x, y]; break; } }
+  const [x, y] = spot || [c.x, c.y];
+  parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color });
+  o.car = null; myCar.visible = false; o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = c.h + .6; o.gh = groundAt(x, y); o.ang = c.ang; camInit = false;
+  sfx(160, .08, 'square', .05); engineSound(false); }
+function carHits(c, x, y, ang = c.ang){   // how many spots around the car's edge are in something (a building, a wall, the bluff, the sea)
+  const fx = Math.cos(ang), fy = Math.sin(ang); let n = 0;
+  for (const [a, b] of [[2.1, 0], [2, .78], [2, -.78], [-2.05, .78], [-2.05, -.78], [0, .85], [0, -.85]]){
+    const px = x + (fx*a - fy*b)*METERS, py = y + (fy*a + fx*b)*METERS;
+    if (landST(px, py)[0] < .5 || !onMainland(px, py) || carGround(px, py, c.h) > c.h + .85) n++; }
+  return n; }
+function carBlocked(c, x, y){ const n = carHits(c, x, y); return n > 0 && n > carHits(c, c.x, c.y); }   // (already scraping a wall? you can slide along it, or back away)
+function crash(impact){ if (impact < 2.5) return; camShake = Math.min(.5, impact*.025); sfx(70 + Math.random()*30, .35, 'sawtooth', Math.min(.14, .03 + impact*.006), 0, -40); sfx(260, .12, 'square', .04); if (impact > 9) sfx(900, .18, 'triangle', .03, .05, -500); }
+function horn(){ if (!ocean?.car) return; initAudio(); sfx(392, .38, 'square', .045); sfx(494, .38, 'square', .045); for (const t of trafficCars()) if (Math.hypot(t.x - ocean.x, t.y - ocean.y) < 25*METERS) t.c.stopT = 0; }   // (honk and the cars in your way get going)
+function carStep(o, dt){
+  const c = o.car, inp = moveInput(), thr = inp.y, hb = diveHeld(); camFollowOK = true;
+  c.steer += clamp(inp.x - c.steer, -dt*4.5, dt*4.5);   // (you turn the wheel; it isn't instant)
+  const a0 = c.ang, f0x = Math.cos(a0), f0y = Math.sin(a0); let vf = c.vx*f0x + c.vy*f0y, vl = -c.vx*f0y + c.vy*f0x;   // speed forward and sideways, m/s
+  c.brake = 0;
+  if (!c.air){
+    if (thr > .05){ if (vf < -.5){ vf = Math.min(0, vf + CAR.brake*thr*dt); c.brake = 1; } else vf += CAR.acc*thr*(1 - .8*clamp(vf/CAR.top, 0, 1))*dt; }
+    else if (thr < -.05){ if (vf > .5){ vf = Math.max(0, vf + CAR.brake*thr*dt); c.brake = 1; } else vf = Math.max(-CAR.rev, vf + CAR.acc*.7*thr*dt); }
+    else vf -= Math.sign(vf)*Math.min(Math.abs(vf), (1.4 + Math.abs(vf)*.05)*dt);   // rolling to a stop
+    if (hb){ vf -= Math.sign(vf)*Math.min(Math.abs(vf), 6*dt); c.brake = 1; }
+    vf = clamp(vf, -CAR.rev, CAR.top);
+    const sp = Math.abs(vf), yaw = c.steer*2.4*clamp(sp/4, 0, 1)*(1 - .42*clamp(sp/CAR.top, 0, 1))*(hb ? 1.55 : 1)*(vf < 0 ? -1 : 1);
+    const na = c.ang + yaw*dt; if (carHits(c, c.x, c.y, na) <= carHits(c, c.x, c.y)) c.ang = na; c.yaw = yaw; }   // (no turning your nose into a wall)
+  // the car swings round but keeps sliding the old way a moment: the tires pull it back into line (slowly on the handbrake: a drift)
+  const wx = vf*f0x - vl*f0y, wy = vf*f0y + vl*f0x, f1x = Math.cos(c.ang), f1y = Math.sin(c.ang);
+  let nf = wx*f1x + wy*f1y, nl = -wx*f1y + wy*f1x; if (!c.air) nl *= Math.exp(-(hb ? CAR.drift : CAR.grip)*dt);
+  c.vx = nf*f1x - nl*f1y; c.vy = nf*f1y + nl*f1x; c.slip = nl;
+  // move, sliding along walls
+  const nx = c.x + c.vx*METERS*dt, ny = c.y + c.vy*METERS*dt;
+  if (!carBlocked(c, nx, ny)){ c.x = nx; c.y = ny; }
+  else if (!carBlocked(c, nx, c.y)){ c.x = nx; crash(Math.abs(c.vy)); c.vy *= -.25; }
+  else if (!carBlocked(c, c.x, ny)){ c.y = ny; crash(Math.abs(c.vx)); c.vx *= -.25; }
+  else { crash(Math.hypot(c.vx, c.vy)); c.vx *= -.3; c.vy *= -.3; }
+  // bump into other cars (two circles a car, front and back)
+  for (const t of [...trafficCars(), ...parked]){ if (Math.hypot(t.x - c.x, t.y - c.y) > 6*METERS) continue;
+    for (const a of [1.15, -1.15]) for (const b of [1.15, -1.15]){
+      const ax = c.x + Math.cos(c.ang)*a*METERS, ay = c.y + Math.sin(c.ang)*a*METERS, bx = t.x + Math.cos(t.ang)*b*METERS, by = t.y + Math.sin(t.ang)*b*METERS, d = Math.hypot(ax - bx, ay - by)/METERS;
+      if (d < 1.85 && d > 1e-4){ const nx = (ax - bx)/(d*METERS), ny = (ay - by)/(d*METERS), push = (1.85 - d)*METERS; c.x += nx*push; c.y += ny*push;
+        const vn = c.vx*nx + c.vy*ny; if (vn < 0){ crash(-vn); c.vx -= 1.4*vn*nx; c.vy -= 1.4*vn*ny; } if (t.c){ t.c.stopT = time + 2.5; } } } }
+  // up and down hills, and flying off edges
+  const g = carGround(c.x, c.y, c.h);
+  if (c.air){ c.vz -= 22*dt; c.h += c.vz*dt; if (c.h <= g){ if (c.vz < -5){ crash(-c.vz*.8); } c.h = g; c.vz = 0; c.air = false; } }
+  else if (g < c.h - Math.max(.3, Math.hypot(c.vx, c.vy)*dt*.7)){ c.air = true; c.vz = Math.max(0, c.gv); }   // drove off an edge: you fly!
+  else { c.gv = lerp(c.gv, (g - c.h)/Math.max(dt, .001), .5); c.h = g; }
+  // skid marks and squealing tires
+  const skid = !c.air && (Math.abs(c.slip) > 2.6 || (c.brake && Math.abs(vf) > 9));
+  if (skid && (driftT -= dt) <= 0){ driftT = .1; sfx(700 + Math.random()*150, .12, 'sawtooth', .018, 0, -250); }
+  if (skid) for (const z of [.84, -.84]) skidMark(c.x - f1x*1.36*METERS - f1y*z*METERS, c.y - f1y*1.36*METERS + f1x*z*METERS, c.h, c.ang);
+  c.wheel += vf*dt/CAR.wheelR;
+  o.x = c.x; o.y = c.y; o.ang = c.ang; o.vx = c.vx*METERS; o.vy = c.vy*METERS; o.gh = c.h; o.walking = false; o.depth = 0; o.vd = 0; o.idle = 0; o.air = airMax(); o.jumpY = 0;
+}
+function skidMark(x, y, h, ang){
+  if (!skids.mesh){ const geo = new THREE.PlaneGeometry(.55, .24); geo.rotateX(-Math.PI/2);
+    skids.mesh = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }), 300);
+    skids.mesh.frustumCulled = false; _cs.set(0, 0, 0); _cm.compose(_cv.set(0, -99, 0), _cq.identity(), _cs); for (let i = 0; i < 300; i++) skids.mesh.setMatrixAt(i, _cm); oceanWorld.add(skids.mesh); }
+  _cq.setFromAxisAngle(_cu, -ang); _cs.set(1, 1, 1); _cm.compose(_cv.set(x*U, carGround(x, y, h) + .03, y*U), _cq, _cs); skids.mesh.setMatrixAt(skids.i, _cm); skids.i = (skids.i + 1) % 300; skids.mesh.instanceMatrix.needsUpdate = true; }
+let eng = null;
+function engineSound(on, rpm = 50, load = 0){   // a running engine: two buzzing oscillators through a low-pass filter, pitched by speed and gear
+  if (!ac) return; const t = ac.currentTime;
+  if (!eng && on){ const o1 = ac.createOscillator(), o2 = ac.createOscillator(), f = ac.createBiquadFilter(), gn = ac.createGain(); o1.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; gn.gain.value = 0;
+    o1.connect(f); o2.connect(f); f.connect(gn).connect(ac.destination); o1.start(); o2.start(); eng = { o1, o2, f, gn }; }
+  if (!eng) return;
+  eng.gn.gain.setTargetAtTime(on ? .028 + .03*load : 0, t, .08); if (!on) return;
+  eng.o1.frequency.setTargetAtTime(rpm, t, .05); eng.o2.frequency.setTargetAtTime(rpm*.502, t, .05); eng.f.frequency.setTargetAtTime(260 + rpm*5 + load*300, t, .08); }
+function drawCar(o, dt){   // your car, and its engine
+  const c = o?.car; if (myCar) myCar.visible = !!c; if (!c){ engineSound(false); if (camera.fov !== 55){ camera.fov = 55; camera.updateProjectionMatrix(); } return; }
+  const u = myCar.userData, sp = Math.hypot(c.vx, c.vy);
+  poseCar(myCar, c.x, c.y, c.h, c.ang, clamp(-c.yaw*sp*.012, -.09, .09), c.air ? clamp(c.vz*.02, -.25, .25) : c.brake ? -.025 : 0);
+  for (const w of u.wheels){ w.spin.rotation.z = -c.wheel; w.piv.rotation.y = w.front ? -c.steer*.5 : 0; }
+  u.tailM.opacity += ((c.brake ? .95 : .25) - u.tailM.opacity)*Math.min(1, dt*12);
+  const gearTop = [0, 7, 13, 19.5, 27], s = Math.abs(c.vx*Math.cos(c.ang) + c.vy*Math.sin(c.ang)); let gi = 0; while (gi < 3 && s > gearTop[gi + 1]) gi++;
+  const frac = clamp((s - gearTop[gi])/(gearTop[gi + 1] - gearTop[gi]), 0, 1), thr = Math.max(0, Math.abs(moveInput().y));
+  engineSound(mode === 'ocean' && !paused, 42 + frac*80 + gi*9 + (c.air ? 30*thr : 0), thr);
+  const fov = 55 + 13*clamp(sp/CAR.top, 0, 1); if (Math.abs(camera.fov - fov) > .05){ camera.fov += (fov - camera.fov)*Math.min(1, dt*3); camera.updateProjectionMatrix(); } }
 const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion(), _cv = new THREE.Vector3(), _cs = new THREE.Vector3(), _cu = new THREE.Vector3(0, 1, 0);
 function updCoast(o){
   const dt = Math.min(.05, time - (updCoast.t ?? time)); updCoast.t = time;
   if (homeSign) homeSign.position.y = homeFloor(3) + HOME_APT.fh + 2.2 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
-  if (!coastCars || !o) return; const { cars, routes, body, cab } = coastCars, [ps, pt] = landST(o.x, o.y);
+  drawCar(o, dt);
+  if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (Math.abs(pt) > 500 || ps < -300) return;   // (far away: the cars can wait)
   const where = (rt, d) => { for (const sg of rt.segs) if (d <= sg.at + sg.l){ const f = (d - sg.at)/sg.l; return [lerp(sg.a[0], sg.b[0], f), lerp(sg.a[1], sg.b[1], f), Math.atan2(sg.b[1] - sg.a[1], sg.b[0] - sg.a[0])]; } const sg = rt.segs[rt.segs.length - 1]; return [sg.b[0], sg.b[1], 0]; };
   cars.forEach((c, i) => { const rt = routes[c.r]; let [s, t, a] = where(rt, c.d);
-    const ahead = [s + Math.cos(a)*3.5, t + Math.sin(a)*3.5], blocked = o.onLand && Math.hypot(ps - ahead[0], pt - ahead[1]) < 2.6;   // a car waits for you to cross
-    if (!blocked){ c.d += c.v*dt; if (c.d > rt.L) c.d -= rt.L; [s, t, a] = where(rt, c.d); }
-    const hidden = (c.r < 2 && t > 2.5) || c.d < .5 || c.d > rt.L - .5, [x, y] = landXY(s, t), [x2, y2] = landXY(s + Math.cos(a)*.6, t + Math.sin(a)*.6), h = landH(s, t), h2 = landH(s + Math.cos(a)*.6, t + Math.sin(a)*.6);
-    const yaw = Math.atan2((y2 - y)*U, (x2 - x)*U), pitch = Math.atan2(h2 - h, .6);
+    if (c.gone && time - c.gone > 25 && Math.hypot(ps - where(rt, 0)[0], pt - where(rt, 0)[1]) > 40){ c.gone = 0; c.d = 0; }   // (a while after you take one, another comes along)
+    const ahead = [s + Math.cos(a)*3.8, t + Math.sin(a)*3.8], far = [s + Math.cos(a)*4.4, t + Math.sin(a)*4.4], inWay = (qs, qt) => Math.hypot(qs - far[0], qt - far[1]) < 2.2;
+    const blocked = (o.onLand && !o.car && Math.hypot(ps - ahead[0], pt - ahead[1]) < 2.6) || (o.car && inWay(ps, pt)) || time < (c.stopT || 0)   // a car waits for you to cross (and for your car to get out of the way),
+      || parked.some(p => inWay(...landST(p.x, p.y)))                                                                                         //   doesn't drive through a car you left in the road,
+      || cars.some(q => q !== c && q.r === c.r && !q.gone && ((q.d - c.d + rt.L) % rt.L) > .1 && ((q.d - c.d + rt.L) % rt.L) < 6.5);   //   and keeps its distance from the car in front
+    if (blocked && o.car && inWay(ps, pt)){ if ((c.waitT = (c.waitT || 0) + dt) > 2.5){ c.waitT = -2; sfx(330, .3, 'square', .02); sfx(415, .3, 'square', .02); } } else c.waitT = 0;   // beep beep!
+    if (!blocked && !c.gone){ c.d += c.v*dt; if (c.d > rt.L) c.d -= rt.L; [s, t, a] = where(rt, c.d); }
+    const hidden = !!c.gone || (c.r < 2 && t > 2.5) || c.d < .5 || c.d > rt.L - .5, [x, y] = landXY(s, t), [x2, y2] = landXY(s + Math.cos(a)*.6, t + Math.sin(a)*.6), h = landH(s, t), h2 = landH(s + Math.cos(a)*1.4, t + Math.sin(a)*1.4);
+    const yaw = Math.atan2((y2 - y)*U, (x2 - x)*U), pitch = Math.atan2(h2 - h, 1.4);
+    c.vis = !hidden; c.wx = x; c.wy = y; c.wa = yaw; c.wh = h;
     _cq.setFromEuler(new THREE.Euler(0, -yaw, pitch, 'YZX'));
-    _cv.set(x*U, h + .55, y*U); _cs.set(hidden ? 0 : 2.9, .7, 1.45); _cm.compose(_cv, _cq, _cs); body.setMatrixAt(i, _cm);
-    _cv.set(x*U - Math.cos(yaw)*.15, h + 1.12, y*U - Math.sin(yaw)*.15); _cs.set(hidden ? 0 : 1.6, .5, 1.3); _cm.compose(_cv, _cq, _cs); cab.setMatrixAt(i, _cm); });
-  body.instanceMatrix.needsUpdate = cab.instanceMatrix.needsUpdate = true;
+    _cv.set(x*U, h, y*U); _cs.setScalar(hidden ? 0 : 1); _cm.compose(_cv, _cq, _cs); body.setMatrixAt(i, _cm); cab.setMatrixAt(i, _cm); lights.setMatrixAt(i, _cm); });
+  body.instanceMatrix.needsUpdate = cab.instanceMatrix.needsUpdate = lights.instanceMatrix.needsUpdate = true;
 }
 // Catalina Island in 3D: hilly terrain (sand by the water, grass above), the Casino at Avalon, palms, moored boats and grazing bison
 // inside the Casino (its own frame, meters from its middle, door toward +z): arcade games on the left, slot machines on the right
@@ -5715,7 +5866,7 @@ function underwaterLook(scene, mats, under, uwCol, uwD, col, d){
 }
 let fpPitch = 0, fpEye = .1, camAir = 0;   // camAir: how high a dolphin leap is right now
 function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
-  camHead = camMode === 'first' ? heading : !camInit ? heading : camFollowOK && time > camHoldT ? lerpAngle(camHead, heading, Math.min(1, dt*2.2)) : camHead;
+  camHead = camMode === 'first' ? heading : !camInit ? heading : camFollowOK && time > camHoldT ? lerpAngle(camHead, heading, Math.min(1, dt*(kind === 'car' ? 3.2 : 2.2))) : camHead;
   const fx = Math.cos(camHead), fz = Math.sin(camHead);
   if (kind !== 'title' && camMode === 'first'){   // through your own eyes
     const p = fpPitch, eye = _tp.set(px + fx*.62, py + fpEye, pz + fz*.62);
@@ -5725,6 +5876,8 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   else if (camMode === 'top' && sub > 0){ _tp.set(px, py + 6, pz + 2); _tl.set(px, py, pz - .5); }
   else if (camMode === 'top'){ _tp.set(px, 15, pz + 4.5); _tl.set(px, 0, pz - 1); }
   else if (kind === 'house'){ _tp.set(px - fx*2.6, py + 3.6, pz - fz*2.6); _tl.set(px + fx*1.2, py - .5, pz + fz*1.2); }   // inside your house: look down over the lowered walls
+  else if (kind === 'car'){ const sp = clamp(Math.hypot(ocean.car.vx, ocean.car.vy)/CAR.top, 0, 1), d = 6.3 + sp*1.8, h = 2.3 + sp*.4;   // driving: a chase camera that swings round behind the car
+    _tp.set(px - fx*d, py + h, pz - fz*d); _tl.set(px + fx*4, py + .5, pz + fz*4); }
   else if (kind === 'vehicle'){ const [d, h] = VEH[ocean.vehicle].cam; _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py + .3, pz + fz*3.2); }
   else if (kind === 'ocean' && camAir > 1){ const d = 4.8 + camAir*.35, h = 2.4 + camAir*.2;   // leaping high: pull back so the whole jump stays on screen
     _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*2, py + camAir*.12, pz + fz*2); }
@@ -5739,6 +5892,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   if (kind !== 'title' && kind !== 'house' && _tp.x/U > coastX(_tp.z/U) - 300){ const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh; }   // (never inside the bluff)
   const k = camInit ? 1 - Math.exp(-dt*(kind === 'ocean' && camAir > .5 ? 14 : 5)) : 1; camPos.lerp(_tp, k); camLook.lerp(_tl, k); camInit = true;   // follow fast during a big leap
   camera.position.copy(camPos); camera.lookAt(camLook);
+  if (camShake > .001){ camera.position.x += (Math.random() - .5)*camShake; camera.position.y += (Math.random() - .5)*camShake; camShake = Math.max(0, camShake - dt*1.6); }   // (a crash shakes the camera)
 }
 function toScreen(x, y, z){ const v = _tp.set(x, y, z).project(camera); return [ (v.x + 1)/2*W, (1 - v.y)/2*H, v.z < 1 ]; }
 // A rounded longboard, with deck stripe and fin; shared for every playable creature.
@@ -5841,9 +5995,9 @@ function render3D(dt){
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
     drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); if (!(ocean.hugT > time)) hideHearts(); followSun(oceanSun, px, pz); updSpray(dt, wy);
-    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
+    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
-    placeCamera(px, ocean.onLand ? landY(ocean) + .6 + (ocean.climb?.h || 0) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
+    placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? landY(ocean) + .6 + (ocean.climb?.h || 0) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
     const cUnder = camera.position.y < waveH(camera.position.x, camera.position.z, OC.amp, 1) - .02;
     WATERU.under.value = cUnder ? 1 : 0; WATERU.tint.value.copy(OC.deep).lerp(OC.sh, .45).multiplyScalar(.9); WATERU.k.value = [.11, .22, .16, .11, .26, .15, .5][ocean.zone] || .15;
     underwaterLook(oceanScene, [oceanWater], cUnder, tmpC2.copy(OC.deep).lerp(OC.sh, .35).multiplyScalar(Math.exp(-dep*.09)*(ocean.wIn ? .45 : 1)), (OC.dark > .5 ? .14 : .075)*(hasGear('snorkel') ? .65 : 1), OC.fog, .0105*(1 + superK()*1.5));
@@ -5872,12 +6026,12 @@ function charThumb(id){
    ================================================================= */
 let mode = 'title', time = 0, paused = false;
 const MODE = () => mode;
-function setMode(m){
+function setMode(m){ if (m !== 'ocean') engineSound(false);
   if (m !== 'ocean' && m !== 'dead' && typeof mpLeave === 'function') mpLeave();
   mode = m; paused = false; renderGadgetBar(); if (m !== 'ocean'){ $('mphChip').hidden = $('questChip').hidden = $('leagueChip').hidden = $('holdChip').hidden = $('krakenBtn').hidden = $('grabBtn').hidden = $('useBtn').hidden = $('casinoBtn').hidden = true; $('speedFx').style.opacity = '0'; }
   if (m === 'title'){ startArmed = false; arrangeTitle(); hItems = null; heldItem = null; }
   $('title').hidden = m !== 'title'; $('choose').hidden = m !== 'choose'; $('results').hidden = m !== 'results' && m !== 'dead'; $('panel').hidden = true;
-  $('hud').hidden = !playing(); $('limbs').hidden = !playing(); $('speedBar').hidden = !(m === 'ocean' || m === 'pool'); if (m === 'ocean' || m === 'pool') showSpeedBar(); $('strokeBtn').hidden = m !== 'race'; $('diveBtn').hidden = m === 'race'; if (m !== 'ocean') $('surfBtn').hidden = $('jumpBtn').hidden = $('sonarBtn').hidden = true; diveBtnHeld = false; if (m !== 'ocean') $('talkBtn').hidden = true; if (m !== 'ocean') $('rideBtn').hidden = true;
+  $('hud').hidden = !playing(); $('limbs').hidden = !playing(); $('speedBar').hidden = !(m === 'ocean' || m === 'pool'); if (m === 'ocean' || m === 'pool') showSpeedBar(); $('strokeBtn').hidden = m !== 'race'; $('diveBtn').hidden = m === 'race'; if (m !== 'ocean') $('surfBtn').hidden = $('jumpBtn').hidden = $('sonarBtn').hidden = true; diveBtnHeld = false; if (m !== 'ocean') $('talkBtn').hidden = true; if (m !== 'ocean') $('rideBtn').hidden = true; if (m !== 'ocean') $('carBtn').hidden = $('hornBtn').hidden = true;
   if (!playing()) coach('');
   if (m === 'title'){ syncHouse(); placeLighthouse(); ocean = newOcean(); }   // the title floats over the real ocean, by Pool Island
   ptr.down = false; refreshLevelChip(); resetPick();

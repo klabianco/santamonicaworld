@@ -2735,6 +2735,7 @@ let LAND_BOXES = [];   // other solid things on land, [s0, t0, s1, t1, top]: lif
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)) h = Math.max(h, pierDeckH(s));
+  if (s > PROM.s0 - 11 && s < PROM.s1 + 11 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? r.floor : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
   if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
@@ -2747,6 +2748,7 @@ function landName(x, y){
   if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return 'Home · 1045 3rd Street';
   if (onPierDeck(s, t)) return s > PIER_L.s1 ? 'The Pier Bridge' : 'Santa Monica Pier';
   if (s > PIER_L.s2 - 1 && s < AVES.ocean - 9 && Math.abs(t) < 9) return 'The Pier Bridge';
+  { const r = roomAt(s, t, true); if (r) return r.name; }
   if (s > PROM.s0 && s < PROM.s1 && t > PROM.t0 - 9 && t < PROM.t1 + 9) return '3rd Street Promenade';
   const inc = inclineAt(s, t); if (inc && inc.d < INCLINE.w + .5) return 'The California Incline';
   const r = roadAt(s, t); if (r) return r.name === 'Santa Monica Beach Path' ? 'The Beach Bike Path' : r.name === 'Palisades Beach Road' ? 'Pacific Coast Highway' : r.name;
@@ -4129,11 +4131,21 @@ function buildCoast(){
   const extrude = (p, base, top, color, roofHex) => { const tk = Math.floor(p[0][1]/200), arr = tiles.get(tk) || tiles.set(tk, { pos: [], uv: [], col: [] }).get(tk); cc.setHex(color); rc.setHex(roofHex ?? color).multiplyScalar(.82);
     const H = top - base; let along = 0;
     for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
+      const cut = promWallCut(a, b);
+      if (cut){ for (const [f0, f1, yb] of cut){ const pa = [lerp(a[0], b[0], f0), lerp(a[1], b[1], f0)], pb = [lerp(a[0], b[0], f1), lerp(a[1], b[1], f1)], y0 = yb ?? base, u0 = (along + f0*L)/3.2, u1 = (along + f1*L)/3.2, va = (y0 - base)/3, v1 = H/3;
+          arr.pos.push(...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], top)); arr.uv.push(u0, va, u1, va, u1, v1, u0, va, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); }
+        along += L; continue; }   // (over a shop, the wall starts above its ceiling: the shopfront below is glass you can see into)
       const A0 = P3(a[0], a[1], base), A1 = P3(a[0], a[1], top), B0 = P3(b[0], b[1], base), B1 = P3(b[0], b[1], top), u0 = along/3.2, u1 = (along + L)/3.2, v1 = H/3;
       arr.pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1); arr.uv.push(u0, 0, u1, 0, u1, v1, u0, 0, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); along += L; }
     const tri = THREE.ShapeUtils.triangulateShape(p.map(([s, t]) => new THREE.Vector2(s, t)), []);
     for (const [i, j, k] of tri) for (const v of [p[i], p[k], p[j]]){ arr.pos.push(...P3(v[0], v[1], top)); arr.uv.push(.02, .02); arr.col.push(rc.r, rc.g, rc.b); } };
   const hashOf = b => Math.abs(Math.round(b.p[0][0]*7 + b.p[0][1]*13)), pavilions = [];
+  const promWallCut = (a, b) => {   // a building wall along the Promenade, split where shops are: [from, to (0-1 along the wall), the wall's bottom there (null: the ground)]
+    if (Math.abs(a[0] - b[0]) > .6 || Math.abs(a[1] - b[1]) < .5) return null; const sm = (a[0] + b[0])/2, side = Math.abs(sm - PROM.s0) < 2.6 ? -1 : Math.abs(sm - PROM.s1) < 2.6 ? 1 : 0; if (!side) return null;
+    const R = promRooms().filter(r => r.side === side && r.t1 > Math.min(a[1], b[1]) && r.t0 < Math.max(a[1], b[1])); if (!R.length) return null;
+    const f = t => clamp((t - a[1])/(b[1] - a[1]), 0, 1), fs = [0, 1]; for (const r of R) fs.push(f(r.t0), f(r.t1)); const F = [...new Set(fs)].sort((x, y) => x - y), out = [];
+    for (let i = 0; i < F.length - 1; i++){ if (F[i + 1] - F[i] < 1e-4) continue; const tm = lerp(a[1], b[1], (F[i] + F[i + 1])/2), r = R.find(r => tm > r.t0 && tm < r.t1); out.push([F[i], F[i + 1], r ? r.floor + 3.5 : null]); }
+    return out; };
   for (const b of CITY.bldgs){ const [s0, t0, s1, t1] = b.box, sc = (s0 + s1)/2, tc = (t0 + t1)/2;
     if (onPierDeck(sc, tc) ? sc < 10 : sc < 60 && tc > -30 && tc < 90) continue;   // (the far end of the real pier is out over the water, where Pool Island's pier is)
     if (s1 > HOME_APT.front - 1 && s0 < HOME_APT.front + HOME_APT.deep && t1 > HOME_APT.mid - HOME_APT.len/2 - 1 && t0 < HOME_APT.mid + HOME_APT.len/2 + 1) continue;   // (home is built by hand)
@@ -4310,8 +4322,108 @@ function buildCoast(){
 }
 // ---- the 3rd Street Promenade: shopfronts with awnings and signs, the dinosaur topiary fountains, benches, lamps, bollards and people ----
 const PROM_STORES = [[-1,-801.0,"JOHN REED Fitness",0],[-1,-777.3,"1212 Santa Monica",1],[-1,-763.1,"Chipotle",1],[-1,-687.4,"Cabo Cantina",1],[-1,-672.7,"Sephora",0],[-1,-604.8,"Stefano's Pizzeria",1],[-1,-593.0,"AMC Santa Monica 7",2],[-1,-572.0,"The Coffee Bean & Tea Leaf",1],[-1,-557.1,"Athleta",0],[-1,-557.0,"Barnes & Noble",0],[-1,-542.3,"Johnny Rockets",1],[-1,-524.3,"Skechers",0],[-1,-508.8,"Sunglass Hut",0],[-1,-493.8,"Superdry",0],[-1,-480.6,"Zara",0],[-1,-459.9,"Carlo's Bake Shop",1],[-1,-451.7,"Starbucks",1],[-1,-428.1,"Trastevere",0],[-1,-394.5,"Anthropologie",0],[-1,-365.4,"T-Mobile",0],[-1,-352.8,"Bruxie",1],[-1,-342.4,"Cotton On",0],[-1,-332.6,"Alo",0],[-1,-317.3,"Tillys",0],[-1,-286.1,"Urban Outfitters",0],[-1,-260.3,"H&M",0],[-1,-247.0,"PacSun",0],[-1,-242.1,"Aldo",0],[-1,-230.7,"McConnell's",1],[-1,-224.8,"Google Store",0],[-1,-221.9,"Cult",1],[0,-636.8,"iSno",1],[0,-395.7,"Ugo",1],[1,-655.0,"Casa Martin",1],[1,-638.3,"Foot Locker",0],[1,-602.2,"Victoria's Secret",0],[1,-593.9,"American Childrens Theatre",0],[1,-554.4,"HOLEY MOLLY",1],[1,-549.3,"Azulé Taqueria",1],[1,-539.1,"Silver Lake Ramen",1],[1,-527.9,"Dodgers Clubhouse",0],[1,-520.5,"Abercrombie & Fitch",0],[1,-510.3,"Adidas",0],[1,-498.3,"Hummus Bar Express",1],[1,-476.4,"Patagonia",0],[1,-462.0,"Madewell",0],[1,-453.0,"Barney's Beanery",1],[1,-397.5,"Raising Cane's",1],[1,-392.6,"Wetzel's Pretzels",1],[1,-387.8,"See Sea",0],[1,-383.0,"Sunsations",0],[1,-375.9,"Levi's",0],[1,-368.0,"Puzzle Zoo",0],[1,-365.0,"Lids",0],[1,-360.9,"Brandy Melville",0],[1,-346.0,"Apple Store",0],[1,-322.9,"IT'SUGAR",1],[1,-290.3,"Hollister",0],[1,-269.7,"AMC Broadway 4",2],[1,-258.9,"Rip Curl",0],[1,-249.8,"MAC Cosmetics",0],[1,-221.9,"Lululemon",0]];   // the shops on the Promenade (OpenStreetMap): [side (-1 ocean side, 1 inland, 0 the pavilions down the middle), t, name, 1 food / 2 movies]
-const PROM_START = [651, -813];   // where every trip starts: the Wilshire end of the Promenade, facing the triceratops
-const PROM_DINOS = [[649.5, -240, 'tri'], [656.5, -520, 'stego'], [656.5, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
+const PROM_START = [653, -813];   // where every trip starts: the Wilshire end of the Promenade, facing the triceratops
+const PROM_DINOS = [[653, -240, 'tri'], [653, -520, 'stego'], [653, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
+// Walk into the shops: each one on the Promenade has a room behind its storefront (as deep as the building lets it, up to 9 m), with a door in
+// the glass front and the inside of that kind of shop. Inside, walkH is the shop floor; the walls between shops are the building itself.
+const STORE_KIND = { 'JOHN REED Fitness': 'gym', 'Sephora': 'beauty', 'MAC Cosmetics': 'beauty', 'Sunglass Hut': 'shades', 'Sunsations': 'shades', 'Skechers': 'shoes', 'Foot Locker': 'shoes', 'Aldo': 'shoes',
+  'Barnes & Noble': 'books', 'T-Mobile': 'tech', 'Apple Store': 'tech', 'Google Store': 'tech', 'Puzzle Zoo': 'toys', "IT'SUGAR": 'candy', "McConnell's": 'icecream', 'American Childrens Theatre': 'theatre',
+  'See Sea': 'gift', 'Dodgers Clubhouse': 'clothes', 'Trastevere': 'food', "Carlo's Bake Shop": 'bakery', 'HOLEY MOLLY': 'bakery' };
+const STORE_HELLO = { clothes: 'Racks and racks of clothes', shoes: 'Shoes all the way up the walls', food: 'Something smells good!', bakery: 'Fresh out of the oven', icecream: 'So many flavors!', books: 'Shelves full of books',
+  tech: 'Phones and computers to try out', toys: 'Puzzles, games and stuffed animals', candy: 'Bins and bins of candy', beauty: 'Makeup and perfume', shades: 'Sunglasses to try on', movies: 'Popcorn! Movies are showing',
+  gym: 'Treadmills and weights', theatre: 'A little stage for plays', gift: 'Little treasures on every shelf' };
+let PROM_ROOMS = null;
+function promRooms(){   // (worked out once: where each shop's sign, door and room go)
+  if (PROM_ROOMS) return PROM_ROOMS; bldIndex(); PROM_ROOMS = [];
+  const L = PROM_STORES.map(([side, t, name, kind], i) => ({ i, side, t, name, kind, cat: STORE_KIND[name] || (kind === 1 ? 'food' : kind === 2 ? 'movies' : 'clothes') }));
+  for (const side of [-1, 1]){ const S = L.filter(q => q.side === side).sort((a, b) => a.t - b.t); for (let i = 1; i < S.length; i++) if (S[i].t - S[i - 1].t < 6.6) S[i].t = S[i - 1].t + 6.6; }   // (side by side, not on top of each other)
+  promRooms.signs = L;
+  const blocks = [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]];
+  for (const side of [-1, 1]){ const S = L.filter(q => q.side === side).sort((a, b) => a.t - b.t), fs = side < 0 ? PROM.s0 : PROM.s1, inw = side;   // (inw: the way into the building)
+    S.forEach((q, k) => { const blk = blocks.find(([a, b]) => q.t > a + 2 && q.t < b - 2); if (!blk) return;
+      const half = q.kind === 2 ? 4.5 : 3.2, prev = S[k - 1], next = S[k + 1];
+      const own = [1, 2, 3, .5].map(d => bldAt(fs + inw*d, q.t)).find(Boolean); if (!own) return;   // (a shop stays inside its own building: next door's wall would show up inside)
+      const t0 = Math.max(q.t - half, prev ? (prev.t + q.t)/2 : -1e9, blk[0] + .5, own.box[1] + .3), t1 = Math.min(q.t + half, next ? (next.t + q.t)/2 : 1e9, blk[1] - .5, own.box[3] - .3); if (t1 - t0 < 3.4 || q.t - t0 < 1.4 || t1 - q.t < 1.4) return;
+      let D = 0; for (let d = .5; d <= 10; d += .5){ if ([q.t, t0 + .3, t1 - .3].every(tt => bldAt(fs + inw*d, tt) === own)) D = d; else if (d > 1.6) break; }   // as deep as its building goes
+      D = Math.min(9, D - .4); if (D < 4) return;
+      const floor = landH(fs, q.t);   // (level with the sidewalk at the door)
+      PROM_ROOMS.push({ ...q, fs, inw, t0, t1, D, floor, s0: Math.min(fs + inw*.3, fs + inw*D), s1: Math.max(fs + inw*.3, fs + inw*D) }); }); }
+  return PROM_ROOMS; }
+function roomAt(s, t, inside){   // the shop you're in (or in the doorway of)
+  if (s < PROM.s0 - 11 || s > PROM.s1 + 11 || t < PROM.t0 || t > PROM.t1) return null;
+  for (const r of promRooms()){ if (t < r.t0 || t > r.t1) continue;
+    if (s >= r.s0 && s <= r.s1 && t > r.t0 + .2 && t < r.t1 - .2) return r;
+    if (!inside && Math.abs(t - r.t) < 1.05 && (r.inw < 0 ? s > r.fs - .5 && s < r.fs + 2.5 : s < r.fs + .5 && s > r.fs - 2.5)) return r; }
+  return null; }
+function buildRooms(g, P3){
+  const rooms = promRooms(), shell = { pos: [], col: [] }, props = { pos: [], col: [] }, lit = [], cc = new THREE.Color();
+  const quad = (o, a, b, c, d, hex) => { o.pos.push(...a, ...b, ...c, ...a, ...c, ...d); cc.set(hex); for (let k = 0; k < 6; k++) o.col.push(cc.r, cc.g, cc.b); };
+  const box = (o, sa, sb, ta, tb, ya, yb, hex) => {   // a solid box, in shop terms (s across, t along, y up)
+    const S0 = Math.min(sa, sb), S1 = Math.max(sa, sb), T0 = Math.min(ta, tb), T1 = Math.max(ta, tb), p = (s, t, y) => P3(s, t, y);
+    quad(o, p(S0, T0, yb), p(S1, T0, yb), p(S1, T1, yb), p(S0, T1, yb), hex);   // top
+    quad(o, p(S0, T0, ya), p(S0, T0, yb), p(S0, T1, yb), p(S0, T1, ya), hex); quad(o, p(S1, T0, ya), p(S1, T1, ya), p(S1, T1, yb), p(S1, T0, yb), hex);
+    quad(o, p(S0, T0, ya), p(S1, T0, ya), p(S1, T0, yb), p(S0, T0, yb), hex); quad(o, p(S0, T1, ya), p(S0, T1, yb), p(S1, T1, yb), p(S1, T1, ya), hex); };
+  const BRIGHT = [0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0x8e24aa, 0xfb8c00, 0x00acc1, 0xd81b60, 0xf4f4f0, 0x222222];
+  const FLOOR = { clothes: 0xc9b79c, shoes: 0x9c7f5c, food: 0x8a5a3c, bakery: 0xe8dcc8, icecream: 0xf4c6d6, books: 0x7a5a3c, tech: 0xe8e6e1, toys: 0x6fb7e0, candy: 0xff9ec8, beauty: 0x2a2a2a, shades: 0xd8d4cc, movies: 0x5a1020, gym: 0x3a3a3a, theatre: 0x6b2a2a, gift: 0xc9b79c };
+  const WALL = { tech: 0xf7f7f5, books: 0xe8dcc4, movies: 0x2a1a1e, gym: 0x9aa0a6, beauty: 0xf4f0ee, candy: 0xfff0f6, toys: 0xfff5d6, theatre: 0x3a1a1a };
+  for (const r of rooms){ const R = mulberry(r.i*31 + 7), y0 = r.floor, y1 = y0 + 3.5, inw = r.inw, T0 = r.t0 + .2, T1 = r.t1 - .2, back = r.fs + inw*r.D, front = r.fs + inw*.3, W = T1 - T0;
+    const S = d => r.fs + inw*d;   // (meters in from the shopfront)
+    const wall = WALL[r.cat] ?? [0xf4efe6, 0xeae4d8, 0xf1ece2][r.i % 3];
+    // the room: floor, ceiling, back and side walls, and the wall over the shopfront
+    quad(shell, P3(front, T0, y0), P3(back, T0, y0), P3(back, T1, y0), P3(front, T1, y0), FLOOR[r.cat] ?? 0xc9b79c);
+    quad(shell, P3(front, T0, y1), P3(front, T1, y1), P3(back, T1, y1), P3(back, T0, y1), 0xf4f2ee);
+    quad(shell, P3(back, T0, y0), P3(back, T0, y1), P3(back, T1, y1), P3(back, T1, y0), wall);
+    for (const tt of [T0, T1]) quad(shell, P3(front, tt, y0), P3(back, tt, y0), P3(back, tt, y1), P3(front, tt, y1), wall);
+    for (let d = 1.5; d < r.D - .5; d += 2.5) lit.push(...P3(S(d), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 + .6, y1 - .02), ...P3(S(d), (T0 + T1)/2 - .6, y1 - .02), ...P3(S(d + 1), (T0 + T1)/2 + .6, y1 - .02), ...P3(S(d), (T0 + T1)/2 + .6, y1 - .02));   // ceiling lights
+    const B = (da, db, ta, tb, ha, hb, hex) => box(props, S(da), S(db), ta, tb, y0 + ha, y0 + hb, hex), pick = () => BRIGHT[(R()*BRIGHT.length)|0];
+    // the counter at the back, and someone working there
+    const counter = (hex = 0xf2ede2) => { B(r.D - 2.4, r.D - 1.6, T0 + .8, T1 - 2.2, 0, 1.05, hex); B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58);
+      B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, pick()); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, [0xf1c9a5, 0xc99a74, 0x8d5a3b][r.i % 3]); };
+    const wallShelves = (rows, item) => { for (const [ta, tb] of [[T0, T0 + .5], [T1 - .5, T1]]) for (let k = 0; k < rows; k++){ const h = .5 + k*.55;
+      B(.8, r.D - .3, ta, tb, h, h + .04, 0x8a6a48); for (let d = 1; d < r.D - .6; d += .45) if (R() < .85) item(d, ta, tb, h + .04); } };
+    switch (r.cat){
+      case 'clothes': case 'gift':
+        for (let k = 0; k < 2; k++){ const tm = T0 + W*(k + 1)/3; B(1.6, r.D - 3, tm - .03, tm + .03, 1.45, 1.5, 0x9aa0a6);   // racks, with clothes hanging on them
+          for (let d = 1.8; d < r.D - 3.1; d += .22) B(d, d + .1, tm - .35, tm + .35, .55, 1.42, pick()); B(1.6, 1.66, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); B(r.D - 3.06, r.D - 3, tm - .03, tm + .03, 0, 1.45, 0x9aa0a6); }
+        wallShelves(3, (d, ta, tb, h) => B(d, d + .35, ta + .05, tb - .05, h, h + .22, pick()));
+        B(1, 1.4, T0 + W/2 - .2, T0 + W/2 + .2, 0, 1.2, 0xe8dcc8); B(1.05, 1.35, T0 + W/2 - .25, T0 + W/2 + .25, 1.2, 1.75, pick()); B(1.1, 1.3, T0 + W/2 - .12, T0 + W/2 + .12, 1.75, 2, 0xe8dcc8);   // a mannequin
+        counter(); break;
+      case 'shoes': wallShelves(5, (d, ta, tb, h) => B(d, d + .3, ta + .08, tb - .08, h, h + .14, pick()));
+        for (const tm of [T0 + W/3, T0 + 2*W/3]) B(2, r.D - 3, tm - .3, tm + .3, 0, .45, 0x2d3a35); counter(); break;
+      case 'food': case 'bakery': case 'icecream': {
+        B(r.D - 2.4, r.D - 1.6, T0 + .6, T1 - .6, 0, 1.05, r.cat === 'food' ? 0x6b4a32 : 0xf4efe2);   // the counter, a glass case of treats or a row of ice cream tubs on it, and the menu up on the back wall
+        for (let t = T0 + .9; t < T1 - .9; t += .45) B(r.D - 2.3, r.D - 1.9, t, t + .35, 1.05, r.cat === 'food' ? 1.1 : 1.3, r.cat === 'icecream' ? [0xf8bbd0, 0xfff59d, 0xa5d6a7, 0x8d6e63, 0xffffff][((t*3)|0) % 5] : r.cat === 'bakery' ? [0xd7a86e, 0xf3d9b1, 0x8d5a3b][((t*3)|0) % 3] : 0xc9c4ba);
+        B(r.D - .12, r.D - .05, T0 + .8, T1 - .8, 1.9, 2.9, 0x22303c); for (let k = 0; k < 4; k++) B(r.D - .13, r.D - .12, T0 + 1, T1 - 1, 2.05 + k*.2, 2.12 + k*.2, 0xfff2c4);
+        B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
+        for (let d = 1.4; d < r.D - 3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
+          for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); } break; }
+      case 'books': for (const [ta, tb] of [[T0, T0 + .45], [T1 - .45, T1]]) for (let k = 0; k < 6; k++){ const h = .1 + k*.42; B(.6, r.D - .3, ta, tb, h, h + .04, 0x6b4a32);
+          for (let d = .65; d < r.D - .4;){ const w = .04 + R()*.05; B(d, d + w, ta + .04, tb - .04, h + .04, h + .3 + R()*.06, pick()); d += w + .005; } }   // book after book after book
+        for (let d = 1.6; d < r.D - 2.5; d += 2.2) B(d, d + 1.2, T0 + W/2 - .5, T0 + W/2 + .5, 0, .8, 0x8a6a48); counter(0x6b4a32); break;
+      case 'tech': for (let d = 1.4; d < r.D - 1.5; d += 2.3) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1.6, tm - .45, tm + .45, 0, .85, 0xd9c7a2);   // long wooden tables with phones and laptops on them
+          for (let k = 0; k < 3; k++) B(d + .2 + k*.5, d + .5 + k*.5, tm - .15, tm + .15, .85, .87, 0x1d1d1f); }
+        B(r.D - .1, r.D - .05, T0 + 1, T1 - 1, 1, 2.8, 0x1d1d1f); break;   // a big screen on the back wall
+      case 'toys': wallShelves(4, (d, ta, tb, h) => { const k = R(); if (k < .5) B(d, d + .3, ta + .08, tb - .1, h, h + .3, pick()); else B(d + .05, d + .3, ta + .12, tb - .12, h, h + .22, pick()); });
+        for (let d = 1.6; d < r.D - 3; d += 1.6) B(d, d + 1, T0 + W/2 - .6, T0 + W/2 + .6, 0, .7, 0x8a6a48);
+        for (let d = 1.7; d < r.D - 3.1; d += .35) B(d, d + .25, T0 + W/2 - .4, T0 + W/2 + .4, .7, .7 + .1 + R()*.3, pick());   // puzzles and games stacked on the tables
+        { const tm = T0 + W/2, d = r.D - 3.2; B(d, d + .9, tm - .45, tm + .45, 0, .9, 0x8d5a3b); B(d + .1, d + .8, tm - .35, tm + .35, .9, 1.55, 0x8d5a3b); for (const tt of [-.3, .3]) B(d + .3, d + .5, tm + tt - .08, tm + tt + .08, 1.55, 1.75, 0x8d5a3b); }   // a big teddy bear
+        counter(); break;
+      case 'candy': for (let d = 1.3; d < r.D - 2.5; d += 1.4) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1, tm - .4, tm + .4, 0, .9, 0xf4f4f0); for (let k = 0; k < 4; k++) B(d + .05 + k*.24, d + .25 + k*.24, tm - .35, tm + .35, .9, 1, pick()); }   // bins of candy
+        wallShelves(4, (d, ta, tb, h) => B(d, d + .3, ta + .08, tb - .08, h, h + .25, pick()));
+        { const tm = T0 + W/2; B(1.2, 1.3, tm - .05, tm + .05, 0, 1.6, 0xf4f4f0); B(1, 1.5, tm - .25, tm + .25, 1.6, 2.1, 0xff3e8a); } counter(); break;   // a giant lollipop
+      case 'beauty': case 'shades': wallShelves(5, (d, ta, tb, h) => B(d, d + .12, ta + .15, tb - .15, h, h + .14, r.cat === 'shades' ? 0x1d1d1f : pick()));
+        for (let d = 1.6; d < r.D - 2.5; d += 2.2) B(d, d + 1.3, T0 + W/2 - .45, T0 + W/2 + .45, 0, .95, 0xf4f4f0); counter(0x1d1d1f); break;
+      case 'movies': B(r.D - 2.6, r.D - 1.6, T0 + .6, T1 - .6, 0, 1.05, 0xa0101e); { const tm = T0 + 1.2; B(r.D - 2.4, r.D - 1.8, tm, tm + .7, 1.05, 1.9, 0xfdd835); B(r.D - 2.35, r.D - 1.85, tm + .05, tm + .65, 1.9, 2, 0xffffff); }   // the snack bar and the popcorn machine
+        for (let k = 0; k < 3; k++) for (const tt of [T0 + .02, T1 - .08]) B(1.2 + k*2, 2.4 + k*2, tt, tt + .06, 1, 2.8, pick());   // movie posters
+        B(r.D - .9, r.D - .5, T0 + W - 2.2, T0 + W - 1.6, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + W - 2.25, T0 + W - 1.55, 1.1, 1.75, 0xa0101e); B(r.D - .82, r.D - .58, T0 + W - 2.05, T0 + W - 1.75, 1.8, 2.1, 0xc99a74); break;
+      case 'gym': for (let d = 1.4; d < r.D - 1.5; d += 1.8) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1.6, tm - .35, tm + .35, 0, .25, 0x1d1d1f); B(d + 1.4, d + 1.55, tm - .35, tm + .35, .25, 1.3, 0x3a444c); }   // treadmills
+        for (let k = 0; k < 5; k++) B(r.D - .6, r.D - .2, T0 + .5 + k*.5, T0 + .8 + k*.5, .2 + (k % 2)*.4, .45 + (k % 2)*.4, 0x222222); break;
+      case 'theatre': B(r.D - 2.5, r.D - .1, T0 + .3, T1 - .3, 0, .6, 0x6b4a32); B(r.D - .1, r.D - .05, T0 + .3, T1 - .3, .6, 3.3, 0xa0101e);   // the stage and its red curtain
+        for (let d = 1.2; d < r.D - 3.2; d += 1) for (let t = T0 + .5; t < T1 - .8; t += .7) B(d, d + .5, t, t + .5, 0, .45, 0xa0101e); break; } }   // rows of seats
+  const mk = (o, mat) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); };
+  mk(shell, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85, side: THREE.DoubleSide })); mk(props, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .7, side: THREE.DoubleSide }));
+  { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(lit, 3)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xfff6dc, side: THREE.DoubleSide }))); }
+}
 function buildPromenade(g, P3, at, instanceOf){
   // the real shops and restaurants (OpenStreetMap), each with its sign where it really is: glass shopfronts all along, awnings where they serve food, marquees at the two movie theaters
   const BRAND = { 'Apple Store': ['#f5f5f7', '#1d1d1f', 'Apple'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#2a5934', '#f4efe2'],
@@ -4326,7 +4438,7 @@ function buildPromenade(g, P3, at, instanceOf){
     const label = txt || name; let fs = 76; ax.font = `900 ${fs}px Nunito, sans-serif`; while (ax.measureText(label).width > 470 && fs > 26){ fs -= 2; ax.font = `900 ${fs}px Nunito, sans-serif`; }
     ax.fillText(label, x0 + 256, y0 + CELL_H/2 + 4); return { side, t, name, kind, uv: [c/4, 1 - (r + 1)/ROW, (c + 1)/4, 1 - r/ROW] }; });
   const atlas = new THREE.CanvasTexture(cv); atlas.colorSpace = THREE.SRGBColorSpace; atlas.anisotropy = 4;
-  for (const side of [-1, 1]){ const L = stores.filter(q => q.side === side).sort((a, b) => a.t - b.t); for (let i = 1; i < L.length; i++) if (L[i].t - L[i - 1].t < 6.6) L[i].t = L[i - 1].t + 6.6; }   // (signs side by side, not on top of each other)
+  promRooms(); stores.forEach((q, i) => { q.t = promRooms.signs[i].t; });   // (signs side by side, not on top of each other: see promRooms)
   const signPos = [], signUV = [], awn = [], awnCol = [], cc = new THREE.Color(), AWN = [0xb8452e, 0x1f6b8a, 0x2e7d4f, 0x22303c, 0x7a3e1d];
   const quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d);
   stores.forEach((q, i) => { if (q.side === 0) return; const fs = q.side < 0 ? PROM.s0 : PROM.s1, out = -q.side, big = q.kind === 2, w = big ? 9 : 6, ta = q.t - w/2, tb = q.t + w/2, h0 = landH(fs + out*2, q.t), y0 = h0 + (big ? 4.6 : 3.75), y1 = y0 + (big ? 1.7 : .85), sx = fs + out*(big ? .9 : .14);
@@ -4342,15 +4454,21 @@ function buildPromenade(g, P3, at, instanceOf){
   const glassTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); const gr = x.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#7a8a94'); gr.addColorStop(1, '#3a4650'); x.fillStyle = gr; x.fillRect(0, 0, 128, 64);
     x.fillStyle = 'rgba(255,226,170,.45)'; x.fillRect(10, 30, 50, 30); x.fillRect(70, 26, 44, 34); x.fillStyle = '#20262b'; x.fillRect(0, 0, 6, 64); x.fillRect(0, 0, 128, 5); x.fillRect(122, 0, 6, 64);
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();
-  const glass = [], glassUV = [];
-  for (const side of [-1, 1]){ const fs = (side < 0 ? PROM.s0 : PROM.s1) - side*.06;
-    for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let t = t0; t < t1 - .1; t += 3){ const tb = Math.min(t1, t + 3), h0 = landH(fs - side*2, t + 1.5), apple = side > 0 && t > -359 && t < -333, top = h0 + (apple ? 13.5 : 3.45);
-      quad(glass, P3(fs, t, top), P3(fs, tb, top), P3(fs, tb, h0 + .05), P3(fs, t, h0 + .05)); glassUV.push(0, 1, (tb - t)/3, 1, (tb - t)/3, 0, 0, 1, (tb - t)/3, 0, 0, 0); } }
+  const glass = [], glassUV = [], clear = [];
+  for (const side of [-1, 1]){ const fs = (side < 0 ? PROM.s0 : PROM.s1) - side*.06, R = promRooms().filter(r => r.side === side);
+    for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]){
+      const cuts = [t0, t1]; for (let t = t0 + 3; t < t1; t += 3) cuts.push(t); for (const r of R) if (r.t0 < t1 && r.t1 > t0) cuts.push(r.t0, r.t1, r.t - 1.05, r.t + 1.05);
+      const cs = [...new Set(cuts.filter(t => t >= t0 && t <= t1))].sort((a, b) => a - b);
+      for (let i = 0; i < cs.length - 1; i++){ const ta = cs[i], tb = cs[i + 1]; if (tb - ta < .01) continue; const tm = (ta + tb)/2, room = R.find(r => tm > r.t0 && tm < r.t1), h0 = landH(fs - side*2, tm), apple = side > 0 && tm > -359 && tm < -333 && !room, top = h0 + (apple ? 13.5 : 3.45);
+        if (room && Math.abs(tm - room.t) < 1.05) continue;   // the doorway: open
+        if (room){ quad(clear, P3(fs, ta, room.floor + 3.5), P3(fs, tb, room.floor + 3.5), P3(fs, tb, room.floor), P3(fs, ta, room.floor)); continue; }   // see right in
+        quad(glass, P3(fs, ta, top), P3(fs, tb, top), P3(fs, tb, h0 + .05), P3(fs, ta, h0 + .05)); glassUV.push(0, 1, (tb - ta)/3, 1, (tb - ta)/3, 0, 0, 1, (tb - ta)/3, 0, 0, 0); } } }
   const shops = new THREE.Group(), mk = (arr, mat, extra) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); if (extra) for (const [k, v, n] of extra) geo.setAttribute(k, new THREE.Float32BufferAttribute(v, n)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); shops.add(m); return m; };
   mk(signPos, new THREE.MeshBasicMaterial({ map: atlas, side: THREE.DoubleSide }), [['uv', signUV, 2]]);
   mk(awn, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide }), [['color', awnCol, 3]]);
   mk(glass, new THREE.MeshStandardMaterial({ map: glassTex, emissive: 0xffffff, emissiveMap: glassTex, emissiveIntensity: .25, roughness: .15, metalness: .3, side: THREE.DoubleSide }), [['uv', glassUV, 2]]);
-  g.add(shops);
+  mk(clear, new THREE.MeshStandardMaterial({ color: 0xbfd8e2, transparent: true, opacity: .22, roughness: .05, metalness: .5, depthWrite: false, side: THREE.DoubleSide }));
+  g.add(shops); buildRooms(g, P3);
   // the dinosaur topiaries: ivy over a frame, standing in round fountains that spout water
   const ivy = std(0x2f6b2a, .95), ivy2 = std(0x3d7d33, .95), stone = std(0xcfc6b4, .8), water = new THREE.MeshStandardMaterial({ color: 0x5fb6d6, roughness: .1, metalness: .2, transparent: true, opacity: .8 });
   const E = (rx, ry, rz, m, x, y, z) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 9), m); e.scale.set(rx, ry, rz); e.position.set(x, y, z); return e; };
@@ -4397,8 +4515,8 @@ function buildPromenade(g, P3, at, instanceOf){
     instanceOf(pole, pp); g.add(ban); mergeStatic(ban); }
   // big signs at each end: 3RD STREET PROMENADE at Wilshire, and Santa Monica Place across Broadway
   for (const [t, txt, col, face] of [[PROM.t0 - 2, '3RD STREET PROMENADE', '#22303c', 0], [XST.broadway + 12, 'SANTA MONICA PLACE', '#7a1f2b', Math.PI]]){ const gp = new THREE.Group(), iron = std(0x2d3a35, .5);
-    for (const z of [-9, 9]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, 6.5, 8), iron); p.position.set(0, 3.25, z); gp.add(p); }
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.8), new THREE.MeshBasicMaterial({ map: labelTex(txt, col, '#fff', 1024, 132, 84), side: THREE.DoubleSide })); sg.position.y = 5.6; sg.rotation.y = Math.PI/2 + face; gp.add(sg);
+    for (const x of [-9.5, 9.5]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, 6.5, 8), iron); p.position.set(x, 3.25, 0); gp.add(p); }   // (one post on each sidewalk, the sign across the street)
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.8), new THREE.MeshBasicMaterial({ map: labelTex(txt, col, '#fff', 1024, 132, 84), side: THREE.DoubleSide })); sg.position.y = 5.6; sg.rotation.y = Math.PI; gp.add(sg);   // (facing up the street, toward Wilshire)
     at(gp, PROM.s, t); }
   // people out shopping: they stroll up and down each block (see updCoast)
   { const body = new THREE.CylinderGeometry(.22, .26, 1.05, 8); body.translate(0, .95, 0); const head = new THREE.SphereGeometry(.17, 10, 8); head.translate(0, 1.66, 0); const legs = new THREE.CylinderGeometry(.2, .16, .45, 8); legs.translate(0, .22, 0);
@@ -4577,6 +4695,7 @@ function updCoast(o){
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
+  { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (r) banner(r.name, STORE_HELLO[r.cat] || ''); } }   // walking into a shop
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;

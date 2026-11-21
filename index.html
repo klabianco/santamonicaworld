@@ -2269,6 +2269,7 @@ const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(...homeST(HOME_APT
     hurtT:0, sharks:[], sharkSpawnT:2, beatT:0, ride:null, rideFrom:null, rideAway:null, rideTarget:null });
 function startOcean(){
   updShipChest();
+  if (save.char !== 'swimmer'){ save.char = 'swimmer'; persist(); }   // you always start at home as yourself, a person (change into an animal in the Menu)
   syncHouse(); placeLighthouse(); ocean = newOcean(); save.houseFound = true;
   awardWhalePrize(ocean);
   if (save.whaleQuest?.reward && !krakenBeaten()) ocean.held = 'sunstone';
@@ -2600,19 +2601,22 @@ const LAND = { top: 12, pch: [24, 29.5], face: [29.5, 35], park: [35, 45], ave: 
 // Laid out from the satellite view and Street View: a light gray stucco block about 23 m along 3rd Street and 31 m deep, three floors of
 // apartments over a half-sunken garage, blue-gray balcony bands across the front, a brown tile edge on the roof. Wide steps go up from the
 // sidewalk between two lamp pillars into a passage through the front of the building to a long, narrow courtyard open to the sky (about
-// 4 m by 12 m). Every apartment door faces the courtyard; on the 2nd and 3rd floors the doors open onto catwalks running all the way around
+// 5 m by 14 m). Every apartment door faces the courtyard; on the 2nd and 3rd floors the doors open onto catwalks running all the way around
 // it. The stairwell (under a little tile roof) is at the street end of the courtyard, beside the passage. So you come out of 303 at the far end,
 // walk along the catwalk to the stairwell, go down past the 2nd floor to the 1st, walk out through the passage and down the steps to 3rd Street.
 // Plan coordinates: u = meters back from the front wall, v = meters along 3rd Street from the middle of the front (negative is away from California).
 // The catwalks, stairs and courtyard are stacked over each other, so walking picks the floor you're on (walkRef, see homeLayers).
-const HOME_APT = { front: 94.5, mid: -44.9, len: 23, deep: 31, f1: 1.5, fh: 3, steps: 2.6, pass: 1.4, court: [10, 22.4], cv: 2, cw: 1.2,
+const HOME_APT = { front: 94.5, mid: -44.9, len: 23, deep: 31, f1: 1.5, fh: 3, steps: 2.6, pass: 1.4, court: [10, 24], cv: 2.5, cw: 1.2,
   stair: { u0: 6, mid: 6.8, u1: 9, v0: -5.4, v1: -1.4 } };
-HOME_APT.doors = [['01', 13.5, -2, 'n'], ['02', 18.5, -2, 'n'], ['03', 22.4, 0, 'b'], ['04', 18.5, 2, 's'], ['05', 13.5, 2, 's']];   // [number, u, v, which wall]
-HOME_APT.startU = 21.6; HOME_APT.startV = .2;   // outside 303, at the far end of the courtyard, facing the way to the stairwell
+HOME_APT.doors = [['01', 13.5, -2.5, 'n'], ['02', 19.5, -2.5, 'n'], ['03', 24, 0, 'b'], ['04', 19.5, 2.5, 's'], ['05', 13.5, 2.5, 's']];   // [number, u, v, which wall]
+HOME_APT.startU = 22.8; HOME_APT.startV = .2;   // outside 303, at the far end of the courtyard, facing the way to the stairwell
 const homeST = (u, v) => [HOME_APT.front + u, HOME_APT.mid + v];
 let walkRef = Infinity;   // how high the walker is standing now: picks the floor in the stacked parts of home (Infinity: the top one)
 function inHomeBuilding(o){ if (!o || !o.onLand || !(o.gh > homeBase() + .5)) return false; const [s, t] = landST(o.x, o.y), u = s - HOME_APT.front, v = t - HOME_APT.mid;   // (up the steps, in the passage, the courtyard or the stairwell, or on a catwalk)
   return u > -HOME_APT.steps && u < HOME_APT.deep && Math.abs(v) < HOME_APT.len/2; }
+function homeDivider(s, t, pt){   // is this spot on the far side of the wall between the two flights of stairs from you?
+  const S = HOME_APT.stair, hv = (S.v0 + S.v1)/2, u = s - HOME_APT.front, v = t - HOME_APT.mid;
+  return u > S.mid - .2 && u < S.u1 + .2 && v > S.v0 && v < S.v1 && (v - hv)*(pt - HOME_APT.mid - hv) < 0; }
 function homeBase(){ return homeBase.v ?? (homeBase.v = landH(HOME_APT.front - 3, HOME_APT.mid)); }
 function homeFloor(n){ return homeBase() + HOME_APT.f1 + (n - 1)*HOME_APT.fh; }   // floor n's level (the first floor is up the front steps, over the garage)
 function homeLayers(s, t){   // every walkable surface of the building over this spot, lowest to highest
@@ -3679,7 +3683,16 @@ function buildSwimmer(){
   const tank = new THREE.Group(); tank.position.set(.08, .17, 0); body.add(tank);
   const tk = caps(.085, .42, yellow); tank.add(tk); const valve = ellip(.035, 1, 1, 1, dark); valve.position.x = .32; tank.add(valve);
   const goggles = body.children.filter(c => c.material === gog);
-  root.userData = { kind:'swimmer', body, arms, legs, float:-.09, gear:{ goggles, capM } };
+  // street clothes for walking around on land (a T-shirt, shorts and hair instead of the swim cap and goggles); hidden in the water
+  const shirt = std(0x3f9fd2, .8), shortsM = std(0x2d3d58, .8), hairM = std(0x3a2a1f, .9), street = [];
+  const tee = caps(.166, .4, shirt); tee.geometry.scale(1, .76, 1.28); tee.position.x = .13; body.add(tee); street.push(tee);
+  const shorts = caps(.162, .12, shortsM); shorts.geometry.scale(1, .8, 1.2); shorts.position.x = -.2; body.add(shorts); street.push(shorts);
+  for (const id of ['la', 'ra']){ const sl = caps(.062, .08, shirt, .07); arms[id].sh.add(sl); street.push(sl); }
+  for (const id of ['ll', 'rl']){ const leg = caps(.084, .12, shortsM, -.12); legs[id].hp.add(leg); street.push(leg); }
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 16, 0, TAU, 0, Math.PI*.56), hairM);
+  hair.scale.setScalar(1.14); hair.rotation.z = -1.02; hair.position.copy(head.position); hair.castShadow = true; body.add(hair); street.push(hair);
+  for (const o of street) o.visible = false;
+  root.userData = { kind:'swimmer', body, arms, legs, float:-.09, gear:{ goggles, capM, cap, street } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
   return root;
 }
@@ -3802,13 +3815,15 @@ function addKit(root, k, have = {}){
     const lens = new THREE.Mesh(new THREE.CircleGeometry(hr*.22, 12), new THREE.MeshBasicMaterial({ color: 0xfff4c8 })); lens.rotation.y = Math.PI/2; lens.position.x = hr*.16; lamp.add(lens); }
 }
 // show what's equipped (`has` says whether a gear id is on)
-function showGear(m, has){
-  const kit = m.userData.kit; if (kit) for (const id in kit) for (const o of kit[id]) o.visible = has(id);
+const WET_GEAR = new Set(['fins', 'snorkel', 'scuba']);
+function showGear(m, has, dry = false){   // (dry: walking around on land, in street clothes)
+  const kit = m.userData.kit; if (kit) for (const id in kit) for (const o of kit[id]) o.visible = has(id) && !(dry && WET_GEAR.has(id));
   const g = m.userData.gear; if (!g) return;
-  for (const q of g.goggles) q.visible = !has('snorkel');
+  for (const q of g.goggles) q.visible = !has('snorkel') && !dry;
+  if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry;
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
 }
-function updateGearLook(m){ showGear(m, hasGear); }
+function updateGearLook(m, dry){ showGear(m, hasGear, dry); }
 let diveLight = null;
 // The dive light switches itself on when it gets dark (deep water, dark places, inside the wreck) and off again when it's bright.
 let lightOn = false;
@@ -4052,8 +4067,8 @@ function buildCoast(){
       if (s0 > LAND.third[1] && hit(HOME_APT.mid - HOME_APT.len/2 - 1, HOME_APT.mid + HOME_APT.len/2 + 1)){ t = HOME_APT.mid - HOME_APT.len/2 - 2.2; continue; }
       const f = first && t === -3; building(s0, t - w, w, d, f ? 17 : h0 + BR()*(h1 - h0), f ? 0x63c7bd : PAL[(BR()*PAL.length)|0]); t -= w + (BR() < .3 ? 5 : 1.2); } };
   row(54, 9, 12, -150, 8, 24, true);   // along Ocean Avenue (the turquoise Art Deco hotel nearest the pier)
-  row(LAND.second[1] + 1.5, 9, 10.5, -110, 6, 16);   // between 2nd and 3rd
-  row(LAND.third[1] + 1.5, 9, 12, -110, 6, 18);      // across 3rd
+  row(LAND.second[1] + 1.5, 9, 10.5, -110, 7, 12);   // between 2nd and 3rd: two- to four-story apartments, like home's neighbors
+  row(LAND.third[1] + 1.5, 9, 12, -110, 7, 12.5);    // across 3rd (home's side)
   // home, 1045 3rd Street (see HOME_APT): gray stucco around a courtyard, catwalks, the stairwell under its tile roof, the passage and front steps
   { const H = HOME_APT, B = homeBase(), F = homeFloor, [c0, c1] = H.court, S = H.stair, roofY = F(3) + H.fh + .1, hm = new THREE.Group();
     const stucco = std(0xcfd3d3, .85), trim = std(0x7f97ab, .6), conc = std(0xd4d2cc, .85), rail = std(0x5d7387, .5), tile = std(0x8b5a3c, .8), base = std(0x50685e, .85), dark = new THREE.MeshBasicMaterial({ color: 0x15181a });
@@ -4084,7 +4099,7 @@ function buildCoast(){
     for (const v of [-2.6, 2.6]){ const yu = new THREE.Group(); for (let k = 0; k < 9; k++){ const leaf = new THREE.Mesh(new THREE.ConeGeometry(.05, 1.1, 4), green); leaf.position.y = .5; leaf.rotation.set(Math.cos(k*2.4)*.7, 0, Math.sin(k*2.4)*.7); yu.add(leaf); }
       const [x, z] = at3(-.9, v); yu.position.set(x, B + 1.2, z); hm.add(yu); }
     // the courtyard: plants down on the ground floor, catwalks around it on the 2nd and 3rd floors (railings on the open side)
-    for (const [u, v] of [[12.5, -.8], [15.5, .9], [18.5, -.6], [21, .7]]){ const bush = new THREE.Mesh(new THREE.SphereGeometry(.55, 8, 6), green); const [x, z] = at3(u, v); bush.position.set(x, F(1) + .45, z); bush.scale.y = .8; hm.add(bush); }
+    for (const [u, v] of [[12.5, -.8], [15.5, .9], [18.5, -.6], [21.5, .7]]){ const bush = new THREE.Mesh(new THREE.SphereGeometry(.55, 8, 6), green); const [x, z] = at3(u, v); bush.position.set(x, F(1) + .45, z); bush.scale.y = .8; hm.add(bush); }
     box(c0, c1, -H.cv, H.cv, B, F(1), conc); box(0, c0, -H.pass, H.pass, B, F(1), conc);   // (the courtyard floor and the passage floor)
     for (const n of [2, 3]){ const y = F(n), cw = H.cw, cv = H.cv;
       box(c0, c1, -cv, -cv + cw, y - .25, y, conc); box(c0, c1, cv - cw, cv, y - .25, y, conc); box(c0, c0 + cw, -cv, cv, y - .25, y, conc); box(c1 - cw, c1, -cv, cv, y - .25, y, conc);
@@ -5713,7 +5728,13 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   else if (kind === 'vehicle'){ const [d, h] = VEH[ocean.vehicle].cam; _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py + .3, pz + fz*3.2); }
   else if (kind === 'ocean' && camAir > 1){ const d = 4.8 + camAir*.35, h = 2.4 + camAir*.2;   // leaping high: pull back so the whole jump stays on screen
     _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*2, py + camAir*.12, pz + fz*2); }
-  else { const tight = kind === 'ocean' && inHomeBuilding(ocean), d = kind === 'ship' ? 3.3 : tight ? 1.9 : lerp(kind === 'race' ? 5.6 : 4.8, 3.3, sub), h = kind === 'ship' ? 1.2 : tight ? 1.25 : lerp(kind === 'race' ? 3.1 : 2.4, .55, sub);   // on deck the camera stays low, under the sails; in the stairwell and on the catwalks it comes in close
+  else if (kind === 'ocean' && inHomeBuilding(ocean)){   // in the courtyard, on the catwalks and in the stairwell: come in close, and swing the camera round
+    const [, pt] = landST(px/U, pz/U), open = (a, dd) => [dd, dd*.5].every(r => { const cx = (px - Math.cos(a)*r)/U, cz = (pz - Math.sin(a)*r)/U, [cs, ct] = landST(cx, cz);   //   until it's out in the open: not in a wall,
+      return walkH(cx, cz) <= py + .8 && !homeDivider(cs, ct, pt); });                                                                                                  //   up on the roof or behind the wall between the stairs
+    let a = camHead, dd = .5, best = -9; for (const r of [2.2, 1.7, 1.2, .8]) for (const da of [0, .35, -.35, .7, -.7, 1.1, -1.1, 1.6, -1.6]){ const sc = r - 1.2*Math.abs(da); if (sc > best && open(camHead + da, r)){ best = sc; a = camHead + da; dd = r; } }
+    const c = Math.max(0, Math.cos(a - camHead)), ahead = 2.4*Math.max(.2, c);   // (swung round to the side: look at you, not down the catwalk)
+    _tp.set(px - Math.cos(a)*dd, py + 1.35 - (1 - c)*.25, pz - Math.sin(a)*dd); _tl.set(px + fx*ahead, py - .5 + (1 - c)*.8, pz + fz*ahead); }
+  else { const d = kind === 'ship' ? 3.3 : lerp(kind === 'race' ? 5.6 : 4.8, 3.3, sub), h = kind === 'ship' ? 1.2 : lerp(kind === 'race' ? 3.1 : 2.4, .55, sub);   // on deck the camera stays low, under the sails
     _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py - .2 + sub*.1, pz + fz*3.2); }
   if (kind !== 'title' && kind !== 'house' && _tp.x/U > coastX(_tp.z/U) - 300){ const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh; }   // (never inside the bluff)
   const k = camInit ? 1 - Math.exp(-dt*(kind === 'ocean' && camAir > .5 ? 14 : 5)) : 1; camPos.lerp(_tp, k); camLook.lerp(_tl, k); camInit = true;   // follow fast during a big leap
@@ -5820,7 +5841,7 @@ function render3D(dt){
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
     drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); if (!(ocean.hugT > time)) hideHearts(); followSun(oceanSun, px, pz); updSpray(dt, wy);
-    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide; updateGearLook(m); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
+    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.onLand ? landY(ocean) + .6 + (ocean.climb?.h || 0) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
     const cUnder = camera.position.y < waveH(camera.position.x, camera.position.z, OC.amp, 1) - .02;

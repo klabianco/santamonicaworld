@@ -375,7 +375,7 @@
     </div>
     <p class="explain"><b>Your own island in Santa Monica Bay.</b> Build your dream house, then swim out to explore the real bay: the pier, the kelp forest, an old shipwreck and a deep canyon. Find treasure, go on quests and make friends.</p>
     <ul class="how">
-      <li><b>Swim</b>Use the joystick, or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> / arrow keys, to swim. Hold <kbd>Space</kbd> or Dive to go under. Drag the screen to look around.</li>
+      <li><b>Move</b>Use the joystick, or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, to walk or swim the way the camera looks. Drag the screen to turn the camera (<kbd>←</kbd> <kbd>→</kbd> turn it too), and pinch or scroll to zoom. Hold <kbd>Space</kbd> or Dive to go under.</li>
       <li><b>Stay alive</b>Keep moving or you'll sink. Come up for air. Stay away from sharks and orange-red sea nettles (stinging jellyfish).</li>
       <li><b>Build &amp; explore</b>Press Build on your island to place blocks. Press <kbd>T</kbd> to talk to people and animals, and <kbd>M</kbd> for your map.</li>
       <li><b>Coins &amp; XP</b>Grab pearls and shells, open treasure chests, talk to people and find new places. Coins buy gear for every animal at the Dive Shop, and you can upgrade each piece, level by level, to swim faster and hold your breath longer. Every Turbo Booster doubles your speed again! You can also buy kayaks, canoes, boats, a submarine and a pirate ship. XP makes you faster and unlocks new swimmers: turtle, otter, dolphin.</li>
@@ -773,13 +773,16 @@ for (const id of ['shopPanel', 'leaguePanel', 'questPanel', 'mapPanel', 'boatPan
   $(id).addEventListener('click', e => { if (e.target === e.currentTarget) closeTopWindow(); });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; if (e.key.toLowerCase() === 'f'){ gadgetHeld = false; $('gadgetUse').classList.remove('on'); } });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-const ptr = { x:0, y:0, down:false };
+const ptr = { x:0, y:0, down:false, id: null }, touchPts = new Map(); let pinchD = 0;   // (fingers on the screen, for pinching)
 const mmHit = { x:-1e4, y:-1e4, r:0 };   // where the minimap is on screen: tapping it opens the full map
 const onMinimap = e => mode === 'ocean' && Math.hypot(e.clientX - mmHit.x, e.clientY - mmHit.y) < mmHit.r;
-cv.addEventListener('pointerdown', e => { if (building){ buildDrag = { x: e.clientX, y: e.clientY, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch(_){} return; } if (onMinimap(e) && !paused){ initAudio(); openMap(); return; } initAudio(); ptr.down = true; ptr.x = e.clientX; ptr.y = e.clientY; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
-cv.addEventListener('pointermove', e => { if (building && buildDrag){ const dx = e.clientX - buildDrag.x; if (Math.abs(dx) + Math.abs(e.clientY - buildDrag.y) > 6) buildDrag.moved = true; if (buildDrag.moved){ buildYaw += dx*.008; buildDrag.x = e.clientX; buildDrag.y = e.clientY; } return; } if (ptr.down && playing() && !paused && camMode !== 'first'){ camHead += (e.clientX - ptr.x)*.007; camHoldT = time + 1.5; }   // drag to look around
+cv.addEventListener('pointerdown', e => { if (building){ buildDrag = { x: e.clientX, y: e.clientY, moved: false }; try { cv.setPointerCapture(e.pointerId); } catch(_){} return; } if (onMinimap(e) && !paused){ initAudio(); openMap(); return; } initAudio(); touchPts.set(e.pointerId, [e.clientX, e.clientY]); pinchD = 0; if (touchPts.size > 1) return; ptr.down = true; ptr.id = e.pointerId; ptr.x = e.clientX; ptr.y = e.clientY; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
+cv.addEventListener('pointermove', e => { if (building && buildDrag){ const dx = e.clientX - buildDrag.x; if (Math.abs(dx) + Math.abs(e.clientY - buildDrag.y) > 6) buildDrag.moved = true; if (buildDrag.moved){ buildYaw += dx*.008; buildDrag.x = e.clientX; buildDrag.y = e.clientY; } return; } if (touchPts.has(e.pointerId)){ touchPts.set(e.pointerId, [e.clientX, e.clientY]); if (touchPts.size === 2){ const [a, b] = [...touchPts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinchD && d > 0) camZoom = clamp(camZoom*pinchD/d, .45, 2.4); pinchD = d; return; } }   // two fingers: pinch to zoom
+  if (e.pointerId !== ptr.id) return;
+  if (ptr.down && playing() && !paused && camMode !== 'first'){ camHead += (e.clientX - ptr.x)*.007; camPitch = clamp(camPitch + (e.clientY - ptr.y)*.004, -.45, .85); camHoldT = time + 1.5; }   // drag to look around (and up and down)
   ptr.x = e.clientX; ptr.y = e.clientY; cv.style.cursor = onMinimap(e) ? 'pointer' : ''; });
-const ptrUp = () => { ptr.down = false; };
+const ptrUp = e => { touchPts.delete(e.pointerId); pinchD = 0; if (e.pointerId === ptr.id) ptr.down = false; };
+cv.addEventListener('wheel', e => { if (!playing() || paused) return; e.preventDefault(); camZoom = clamp(camZoom*Math.exp(e.deltaY*.0012), .45, 2.4); }, { passive: false });   // the mouse wheel (or two fingers on a trackpad) zooms
 cv.addEventListener('pointerup', e => { if (building && buildDrag){ if (!buildDrag.moved) buildTap(e.clientX, e.clientY); buildDrag = null; } });
 cv.addEventListener('pointerup', ptrUp); cv.addEventListener('pointercancel', ptrUp);
 const left  = () => keys.arrowleft || keys.a, right = () => keys.arrowright || keys.d;
@@ -821,10 +824,13 @@ function coach(text, secs = 0){
 const stick = { x:0, y:0, active:false };
 const newLimbs = () => ({ la:{t:-1}, ll:{t:-1}, rl:{t:-1}, ra:{t:-1} });   // every limb resting (the pose for holding still)
 let limbQueue = [];                               // (old four-limb presses; nothing adds to it any more)
-let camFollowOK = true, camHoldT = 0;
+let camFollowOK = true, camHoldT = 0, camPitch = 0, camZoom = 1;
+// Like Roblox: on foot and swimming the camera stays where you put it (drag the screen to turn and tilt it, the mouse wheel zooms,
+// the ← → arrow keys turn it) and the stick or W A S D move you relative to it. In a car, a boat or on a dolphin it follows behind you.
+const camFollows = () => mode !== 'ocean' || !ocean || !!ocean.car || !!ocean.vehicle || !!ocean.ride || camMode === 'first';
 function moveInput(){
   let x = stick.x, y = stick.y;
-  if (!stick.active){ x = (keys.d || keys.arrowright ? 1 : 0) - (keys.a || keys.arrowleft ? 1 : 0); y = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0); }
+  if (!stick.active){ const arrows = camFollows(); x = (keys.d || (arrows && keys.arrowright) ? 1 : 0) - (keys.a || (arrows && keys.arrowleft) ? 1 : 0); y = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0); }
   const m = Math.hypot(x, y); if (m > 1){ x /= m; y /= m; }
   return { x, y, m: Math.min(1, m) };
 }
@@ -3269,7 +3275,7 @@ function updOcean(dt){
   const cur = o.cur || [0, 0];
   o.dx = (o.dx || 0) + cur[0]*dt*1.6; o.dy = (o.dy || 0) + cur[1]*dt*1.6;
   if (o.teach && !o.onLand && time > sayUntil){
-    if ((o.swimPh || 0) < 3) coach('Swim with the joystick (or W A S D / arrow keys). Push the way you want to go. Drag the screen to look around.');
+    if ((o.swimPh || 0) < 3) coach('Swim with the joystick (or W A S D). Push the way you want to go. Drag the screen to turn the camera, and pinch to zoom.');
     else { o.teach = false; save.tutorialDone = true; persist(); coach(OCEAN_HELLO, 10); }
   } else if (coachTimer > 0){ coachTimer -= dt; if (coachTimer <= 0) coach(''); }
   let d = Math.hypot(o.x,o.y);
@@ -6244,7 +6250,10 @@ function underwaterLook(scene, mats, under, uwCol, uwD, col, d){
 }
 let fpPitch = 0, fpEye = .1, camAir = 0;   // camAir: how high a dolphin leap is right now
 function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
-  camHead = camMode === 'first' ? heading : !camInit ? heading : camFollowOK && time > camHoldT ? lerpAngle(camHead, heading, Math.min(1, dt*(kind === 'car' ? 3.2 : 2.2))) : camHead;
+  const follow = camFollows() || kind === 'race' || kind === 'pool' || kind === 'title';
+  camHead = camMode === 'first' ? heading : !camInit ? heading : follow && camFollowOK && time > camHoldT ? lerpAngle(camHead, heading, Math.min(1, dt*(kind === 'car' ? 3.2 : 2.2))) : camHead;
+  if (!follow && !paused) camHead += ((keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0))*1.7*dt;   // (the arrow keys turn the camera)
+  const boom = (d, h) => { const L = Math.hypot(d, h)*camZoom, a = clamp(Math.atan2(h, d) + camPitch, .04, 1.35); return [L*Math.cos(a), L*Math.sin(a)]; };   // (tilted and zoomed the way you set it)
   const fx = Math.cos(camHead), fz = Math.sin(camHead);
   if (kind !== 'title' && camMode === 'first'){   // through your own eyes
     const p = fpPitch, eye = _tp.set(px + fx*.62, py + fpEye, pz + fz*.62);
@@ -6254,7 +6263,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   else if (camMode === 'top' && sub > 0){ _tp.set(px, py + 6, pz + 2); _tl.set(px, py, pz - .5); }
   else if (camMode === 'top'){ _tp.set(px, 15, pz + 4.5); _tl.set(px, 0, pz - 1); }
   else if (kind === 'house'){ _tp.set(px - fx*2.6, py + 3.6, pz - fz*2.6); _tl.set(px + fx*1.2, py - .5, pz + fz*1.2); }   // inside your house: look down over the lowered walls
-  else if (kind === 'car'){ const sp = clamp(Math.hypot(ocean.car.vx, ocean.car.vy)/CAR.top, 0, 1), d = 6.3 + sp*1.8, h = 2.3 + sp*.4;   // driving: a chase camera that swings round behind the car
+  else if (kind === 'car'){ const sp = clamp(Math.hypot(ocean.car.vx, ocean.car.vy)/CAR.top, 0, 1), [d, h] = boom(6.3 + sp*1.8, 2.3 + sp*.4);   // driving: a chase camera that swings round behind the car
     _tp.set(px - fx*d, py + h, pz - fz*d); _tl.set(px + fx*4, py + .5, pz + fz*4); }
   else if (kind === 'vehicle'){ const [d, h] = VEH[ocean.vehicle].cam; _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py + .3, pz + fz*3.2); }
   else if (kind === 'ocean' && camAir > 1){ const d = 4.8 + camAir*.35, h = 2.4 + camAir*.2;   // leaping high: pull back so the whole jump stays on screen
@@ -6265,7 +6274,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
     let a = camHead, dd = .5, best = -9; for (const r of [2.2, 1.7, 1.2, .8]) for (const da of [0, .35, -.35, .7, -.7, 1.1, -1.1, 1.6, -1.6]){ const sc = r - 1.2*Math.abs(da); if (sc > best && open(camHead + da, r)){ best = sc; a = camHead + da; dd = r; } }
     const c = Math.max(0, Math.cos(a - camHead)), ahead = 2.4*Math.max(.2, c);   // (swung round to the side: look at you, not down the catwalk)
     _tp.set(px - Math.cos(a)*dd, py + 1.35 - (1 - c)*.25, pz - Math.sin(a)*dd); _tl.set(px + fx*ahead, py - .5 + (1 - c)*.8, pz + fz*ahead); }
-  else { const d = kind === 'ship' ? 3.3 : lerp(kind === 'race' ? 5.6 : 4.8, 3.3, sub), h = kind === 'ship' ? 1.2 : lerp(kind === 'race' ? 3.1 : 2.4, .55, sub);   // on deck the camera stays low, under the sails
+  else { const [d, h] = kind === 'race' || kind === 'pool' ? [lerp(5.6, 3.3, sub), lerp(3.1, .55, sub)] : boom(kind === 'ship' ? 3.3 : lerp(4.8, 3.3, sub), kind === 'ship' ? 1.2 : lerp(2.4, .55, sub));   // on deck the camera stays low, under the sails
     _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py - .2 + sub*.1, pz + fz*3.2); }
   if (kind !== 'title' && kind !== 'house' && _tp.x/U > coastX(_tp.z/U) - 300){
     if ((kind === 'car' || kind === 'ocean') && ocean?.onLand && !inHomeBuilding(ocean)){   // in town: a wall between you and the camera pulls the camera in close (rather than up onto the roof)

@@ -4770,6 +4770,13 @@ function loadOwners(then){ if (OWNERS) return then(); fetch('books/owners.json')
       pages: pages.map(ps => ['', ps])  }; }
   then(); }).catch(() => { OWNERS = []; then(); }); }
 const amazonUrl = asin => 'https://www.amazon.com/dp/' + asin;
+// Young Adult (upstairs at Barnes & Noble): classics teens still read, free for anyone (Project Gutenberg): the first chapters here, and the whole book free online
+let YA = null;
+function loadYA(then){ if (YA) return then(); fetch('books/ya.json').then(r => r.json()).then(L => { YA = L;
+  for (const b of L){ const pages = []; let cur = []; for (const p of b.sample){ if (p.startsWith('## ') && cur.length){ pages.push(cur); cur = []; } cur.push(p); if (cur.join(' ').length > 750){ pages.push(cur); cur = []; } } if (cur.length) pages.push(cur);
+    BOOKS['ya:' + b.id] = { shelf: 'ya', title: b.title, by: b.by, e: b.e, c: b.c, kind: `by ${b.by} · ${b.year}`, gut: b.gid, blurb: b.blurb, prose: true, pages: pages.map(ps => ['', ps]) }; }
+  then(); }).catch(() => { YA = []; then(); }); }
+const gutUrl = id => 'https://www.gutenberg.org/ebooks/' + id;
 let bookOpen = null;   // { id, page, from: 'store' | 'hand' }
 function openBook(id, from = 'hand'){ if (!BOOKS[id]) return; initAudio(); bookOpen = { id, page: from === 'hand' && treat?.book === id ? treat.page || 0 : 0, from };
   paused = true; ptr.down = false; $('storePanel').hidden = true; $('bookPanel').hidden = false; drawBook(false); sfx(900, .06, 'triangle', .03); }
@@ -4781,7 +4788,7 @@ function drawBook(turned){ const B = BOOKS[bookOpen.id], n = B.pages.length, i =
     $('bookR').innerHTML = `<h2>${htmlText(B.title)}</h2><p class="by">${htmlText(B.kind)}</p>${(B.blurb || []).slice(0, 2).map(p => `<p class="blurb">${htmlText(p)}</p>`).join('')}<p class="by">${B.prose ? 'Tap Next page to read the free sample' : 'Tap Next page to start reading'}</p>`; }
   else { const [pic, txt, ans, chap] = B.pages[i - 1]; $('bookL').innerHTML = B.prose ? '' : picHTML(pic);
     if (B.prose){ $('bookR').innerHTML = txt.map(p => p.startsWith('## ') ? `<h3>${htmlText(p.slice(3))}</h3>` : `<p>${htmlText(p)}</p>`).join('')
-      + (i === n ? `<div class="sampleend"><p>That's the end of the free sample!</p><a class="btn primary" href="${amazonUrl(B.asin)}" target="_blank" rel="noopener">Get the whole book on Amazon</a></div>` : ''); }
+      + (i === n ? (B.gut ? `<div class="sampleend"><p>That's the end of the first chapters!</p><a class="btn primary" href="${gutUrl(B.gut)}" target="_blank" rel="noopener">Read the whole book free</a></div>` : `<div class="sampleend"><p>That's the end of the free sample!</p><a class="btn primary" href="${amazonUrl(B.asin)}" target="_blank" rel="noopener">Get the whole book on Amazon</a></div>`) : ''); }
     else $('bookR').innerHTML = `${chap ? `<h3>${htmlText(chap)}</h3>` : ''}<p>${htmlText(txt)}</p>${ans ? `<p class="ans">${htmlText(ans)}</p>` : ''}`; }
   $('bookNum').textContent = i === 0 ? '' : `Page ${i} of ${n}`; $('bookPrev').disabled = i === 0; $('bookNext').textContent = i >= n ? 'The end: close the book' : 'Next page ▶';
   if (turned){ bk.classList.remove('turn'); void bk.offsetWidth; bk.classList.add('turn'); } $('bookR').scrollTop = 0;
@@ -5422,11 +5429,15 @@ function renderStore(){
     cv.appendChild(buy);
     fl.forEach(([n, c], i) => card(`<div class="sw" style="background:${c}"></div><h3>${htmlText(n)}</h3>`, cone.length >= 3 ? 'Your cone is full' : 'Add a scoop', () => { if (cone.length < 3){ cone.push(i); sfx(600 + cone.length*120, .08, 'triangle', .05); renderStore(); } }, cone.length >= 3, 'secondary'));
     return; }
-  if (menu === 'books'){ const bn = !!r.down, shelves = bn ? (storeDown ? [...KID_SHELVES, ['ownkids', "Owners' Own Books for Kids"]] : [['own', "Owners' Own Books"]]) : KID_SHELVES;   // (Barnes & Noble: the kids' books are all downstairs)
+  if (menu === 'books'){ const bn = !!r.down, byYA = bn && !storeDown && (() => { const [s0, t0] = landST(ocean.x, ocean.y), d = (s0 - r.fs)*r.inw; return t0 > r.t1 - 4 && d > 9; })();   // (standing by the YOUNG ADULT bookcase: those first)
+    const up = byYA ? [['ya', 'Young Adult & Teen'], ['own', "Owners' Own Books"]] : [['own', "Owners' Own Books"], ['ya', 'Young Adult & Teen']], shelves = bn ? (storeDown ? [...KID_SHELVES, ['ownkids', "Owners' Own Books for Kids"]] : up) : KID_SHELVES;   // (Barnes & Noble: the kids' books are all downstairs)
     if (shelves.some(([k]) => k.startsWith('own')) && !OWNERS){ $('storeNote').textContent = 'Getting the books...'; return loadOwners(() => { if (!$('storePanel').hidden) renderStore(); }); }
-    $('storeNote').textContent = bn && !storeDown ? "The owners' own books! Read a free sample right here. (The kids' books are downstairs.)" : `Read any book here for free, like in a real bookstore. Buy one (15 coins) to take it with you. You have ${save.coins || 0} coins.`;
+    if (shelves.some(([k]) => k === 'ya') && !YA){ $('storeNote').textContent = 'Getting the books...'; return loadYA(() => { if (!$('storePanel').hidden) renderStore(); }); }
+    $('storeNote').textContent = bn && !storeDown ? "The owners' own books, and Young Adult classics: read them right here. (The kids' books are downstairs.)" : `Read any book here for free, like in a real bookstore. Buy one (15 coins) to take it with you. You have ${save.coins || 0} coins.`;
     for (const [sk, sname] of shelves){ const ids = Object.keys(BOOKS).filter(id => BOOKS[id].shelf === sk); if (!ids.length) continue; const h = document.createElement('h3'); h.className = 'sect'; h.textContent = sname; box.appendChild(h);
       for (const id of ids){ const B = BOOKS[id], own = sk.startsWith('own'), mine = treat?.book === id, face = B.cover && !B.cover.startsWith('svg:') ? `<img class="bcov" src="${B.cover}" alt="">` : `<div class="em">${B.e}</div>`;
+        if (sk === 'ya'){ const d = card(`${face}<h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p><p>${htmlText(B.blurb[0])}</p>`, '📖 Read the first chapters', () => openBook(id, 'store'));
+          const a = document.createElement('a'); a.className = 'btn secondary'; a.href = gutUrl(B.gut); a.target = '_blank'; a.rel = 'noopener'; a.textContent = '📚 Whole book free'; d.appendChild(a); continue; }
         if (own){ const has = B.pages.length > 0, d = card(`${face}<h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, has ? '📖 Read a free sample' : '🛒 Get it on Amazon', () => has ? openBook(id, 'store') : window.open(amazonUrl(B.asin), '_blank', 'noopener'));
           if (has){ const a = document.createElement('a'); a.className = 'btn secondary'; a.href = amazonUrl(B.asin); a.target = '_blank'; a.rel = 'noopener'; a.textContent = '🛒 Get it on Amazon'; d.appendChild(a); } continue; }
         const d = card(`${face}<h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, '📖 Read it', () => openBook(id, 'store'));

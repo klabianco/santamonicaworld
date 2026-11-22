@@ -3554,7 +3554,9 @@ function surfStep(o, dt){
   $('surfBtn').firstChild.textContent = o.surfCaught ? 'Riding!' : 'Paddling';
   $('surfBtn').lastChild.textContent = o.surfCaught ? `${Math.floor(o.surfDistance)} m · B to exit` : 'B · get off';
 }
+let lastGoodPos = null;
 function updOcean(dt){
+  if (ocean){ const o = ocean; if (Number.isFinite(o.x) && Number.isFinite(o.y) && Number.isFinite(o.gh ?? 0)) lastGoodPos = [o.x, o.y, o.gh, o.onLand]; else if (lastGoodPos){ [o.x, o.y, o.gh, o.onLand] = lastGoodPos; o.vx = o.vy = 0; o.workout = null; walkRef = (o.gh ?? 0) + .3; console.warn('position went bad: put back'); } }   // (safety net: never get lost in nowhere)
   const o = ocean; o.prevDepth = o.depth || 0;
   gadgetStep(o, dt);
   if (o.surfing && (!canSurf(o) || diveHeld())){ o.surfing = o.surfCaught = false; }
@@ -5911,7 +5913,8 @@ function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAud
     stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat and people will come dance'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
   banner(...hi); sfx(660, .1, 'triangle', .05); }
 function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null; if (w.k === 'rc'){ if (rcObj) rcObj.visible = false; sfx(600, .08, 'triangle', .04); return banner('Picked up your mini car', 'Tap Drive to drive it again'); }
-  const [x, y] = landXY(w.r.fs + w.r.inw*w.sp.ed, w.sp.et); o.x = x; o.y = y; walkRef = w.r.floor + .3; o.gh = groundAt(x, y);
+  if (w.k === 'golf'){ const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.d - .8), w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); return; }   // (step back off the tee: golf spots have no exit point)
+  { const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.ed ?? w.sp.d), w.sp.et ?? w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); }
   const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. Strength ${strengthLv()} 💪` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
   if (w.k === 'weights' && w.n){ flushCloud(); o.flexT = time + 2.2; }
   if (w.k === 'pickle'){ if (pkVis) pkVis.ball.visible = pkVis.shadow.visible = pkVis.pad.visible = false; banner('Good game! 🏓', `You ${w.score[0]}, Coach Pip ${w.score[1]}`); return; }

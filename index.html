@@ -3845,7 +3845,7 @@ function buildSwimmer(){
   { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
   for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); }
   for (const k in wear) for (const o of wear[k]) o.visible = false;
-  root.userData = { kind:'swimmer', body, arms, legs, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
+  root.userData = { kind:'swimmer', body, arms, legs, torso, tee, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
   return root;
 }
@@ -4523,9 +4523,37 @@ function closeBook(){ if (!bookOpen) return; const { id, page, from } = bookOpen
   if (from === 'store' && storeAt){ renderStore(); $('storePanel').hidden = false; pick = 0; showPick(); return; }
   paused = false; graceAfterPause(); showPick(); }
 // ---- doing the real thing in each place: work out at JOHN REED (treadmills, bikes, weights, stretching, the DJ booth), get up on the stage at the theater, try the phones at the tech stores ----
+// ---- getting stronger at the gym: every lift counts (save.lifts), your arms, shoulders and chest grow, and you can flex ----
+const muscleNow = () => Math.min(1, (save.lifts || 0)/200), strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
+function setMuscle(m, mu){ const u = m.userData; if (u.kind !== 'swimmer' || u.mu === mu) return; u.mu = mu; const a = 1 + 1.3*mu, f = 1 + .6*mu;
+  for (const id of ['la', 'ra']){ const { sh, el } = u.arms[id]; sh.userData.z0 ??= sh.position.z; sh.position.z = sh.userData.z0*(1 + .22*mu);   // (broader shoulders,
+    for (const c of sh.children) if (c.isMesh) c.scale.set(1, a, a); if (el.children[0]?.isMesh) el.children[0].scale.set(1, f, f); }                   //  big arms)
+  for (const c of [u.torso, u.tee]) if (c) c.scale.set(1, 1 + .25*mu, 1 + .32*mu); }                                                                   //  and a bigger chest)
+function flex(){ const o = ocean; if (!o) return; o.flexT = time + 2.2; heartsAt = time; [392, 523, 659].forEach((f, i) => sfx(f, .14, 'square', .03, i*.08));
+  const n = save.lifts || 0; banner(`💪 Strength ${strengthLv()}`, n ? `${n} lifts so far. ${n < 200 ? 'Keep lifting to get even bigger!' : 'Maximum muscles!'}` : 'Lift weights to grow your muscles!'); }
+function poseFlex(m, px, gy, pz, human){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false); if (!human) return;
+  const u = m.userData, sq = Math.sin(time*9)*.08; u.arms.la.sh.rotation.set(0, Math.PI/2, 0); u.arms.la.el.rotation.set(0, -1.9 - sq, 0); u.arms.ra.sh.rotation.set(0, -Math.PI/2, 0); u.arms.ra.el.rotation.set(0, 1.9 + sq, 0); }
+// ---- the DJ's dance party: drop the beat and people come in off the Promenade to dance in front of the booth ----
+function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o.workout : null;
+  if (dj){ const r = dj.r, want = dj.crowd = Math.max(dj.crowd || 0, [0, 0, 5, 9][dj.lvl]); let n = C.people.filter(p => p.party && p.party.stage !== 'out').length;
+    if (n < want){ const T0 = r.t0 + .2, T1 = r.t1 - .2, tm = (T0 + T1)/2, D = r.D, S = d => r.fs + r.inw*d;
+      for (const p of C.people.filter(p => !p.party).sort((a, b) => Math.abs(a.t - r.door) - Math.abs(b.t - r.door)).slice(0, want - n)){ const slot = n++, row = slot % 2, col = slot >> 1;
+        if (Math.abs(p.t - r.door) > 30){ p.t = r.door + (Math.random() < .5 ? -1 : 1)*(10 + Math.random()*14); p.s = PROM.s + (Math.random()*2 - 1)*6; }   // (the ones from far away were just around the corner)
+        const target = [S(D - 3.2 + row*.95), Math.min(T1 - .6, T0 + 2.3 + col*.8 + row*.4)];
+        p.party = { r, k: 0, stage: 'in', yaw: 0, path: [[S(-1.3), r.door], [S(.6), r.door], [S(1.3), tm], [S(D - 3.7), tm], target] }; }
+      if (dj.crowd && !dj.toldCrowd){ dj.toldCrowd = true; banner('Here comes the crowd! 🕺', 'People are coming in to dance'); } } }
+  for (const p of C.people){ const P = p.party; if (!P) continue; const r = P.r;
+    if (!dj && P.stage !== 'out'){ P.stage = 'out'; P.path = P.path.slice(0, -1).reverse(); P.k = 0; }
+    if (P.stage === 'dance'){ const [bs, bt] = [r.fs + r.inw*(r.D - 1.2), r.t1 - 1.9]; P.yaw = Math.PI/2 - Math.atan2(bt - p.t, bs - p.s); }
+    else { const [ts, tt] = P.path[P.k], ds = ts - p.s, dd = tt - p.t, L = Math.hypot(ds, dd), v = 2.6*dt;
+      if (L > .01) P.yaw = Math.PI/2 - Math.atan2(dd, ds);
+      if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
+      else { p.s += ds/L*v; p.t += dd/L*v; } }
+    const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
 const SPOT = { tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''] };
 let placeNow = null, bells = null;
+const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   if (o.workout) return { label: o.workout.k === 'stage' ? '⏹ Get off the stage' : o.workout.k === 'dj' ? '⏹ Stop the music' : '⏹ Stop', go: stopWorkout };
@@ -4545,15 +4573,17 @@ function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAud
   o.x = x; o.y = y; o.vx = o.vy = 0; o.walking = false; o.ang = Math.atan2(y2 - y, x2 - x); walkRef = r.floor + 1.5; o.gh = groundAt(x, y);
   o.workout = { k: sp.k, r, sp, x, y, lvl: 1, n: 0, dist: 0, t0: time, tapT: -9, beatT: 0, beat: 0, st: 0 };
   const hi = { tread: ['On the treadmill!', 'Tap Faster to speed up. Walk away when you\'re done'], bike: ['Spin time!', 'Tap Pedal faster to go faster'], weights: ['Pump some iron!', 'Tap Lift! for every lift'],
-    stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat to change the music'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
+    stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat and people will come dance'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
   banner(...hi); sfx(660, .1, 'triangle', .05); }
 function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null;
   const [x, y] = landXY(w.r.fs + w.r.inw*w.sp.ed, w.sp.et); o.x = x; o.y = y; walkRef = w.r.floor + .3; o.gh = groundAt(x, y);
-  const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. So strong!` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
+  const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. Strength ${strengthLv()} 💪` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
+  if (w.k === 'weights' && w.n){ flushCloud(); o.flexT = time + 2.2; }
   if (w.k === 'dj') banner('What a set!', 'The whole gym was dancing'); else if (w.k === 'stage') banner('What a show!', 'Take a bow next time too'); else banner('Great workout! 💪', how); }
 function workTap(){ const o = ocean, w = o?.workout; if (!w || paused) return; initAudio(); w.tapT = time;
   if (w.k === 'tread' || w.k === 'bike'){ w.lvl = w.lvl % 3 + 1; coach(`${['', w.k === 'bike' ? 'Easy pedaling' : 'Walking', w.k === 'bike' ? 'Faster!' : 'Jogging!', w.k === 'bike' ? 'Racing!' : 'Sprinting!'][w.lvl]} Speed ${w.lvl} of 3`, 2); sfx(500 + w.lvl*150, .08, 'square', .03); }
-  else if (w.k === 'weights'){ w.n++; sfx(140, .12, 'square', .04, .3); if (w.n % 10 === 0){ banner(`${w.n} lifts!`, 'So strong! 💪'); heartsAt = time; } }
+  else if (w.k === 'weights'){ if (time - w.tapT0 < .45) return; w.tapT0 = time; w.n++; save.lifts = (save.lifts || 0) + 1; persist(); sfx(140, .12, 'square', .04, .3);   // (one lift at a time)
+    if (save.lifts % 20 === 0){ flex(); banner(`Stronger! 💪 Strength ${strengthLv()}`, save.lifts < 200 ? 'Your muscles are growing!' : 'Maximum muscles!'); } }
   else if (w.k === 'stretch'){ w.n++; sfx(400, .4, 'sine', .03, 0, 300); coach(['Reach for the sky!', 'Breathe in... and out', 'Stretch, stretch, stretch!'][w.n % 3], 2); }
   else if (w.k === 'dj'){ w.lvl = w.lvl % 3 + 1; [0, .13, .26].forEach(dl => sfx(466, .11, 'sawtooth', .03, dl)); coach(['', 'Chill beat', 'Turn it up!', 'Full party mode!'][w.lvl], 2); }
   else if (w.k === 'stage'){ w.bowT = time; heartsAt = time; for (let k = 0; k < 26; k++) sfx(1800 + Math.random()*2500, .04, 'square', .012, Math.random()*1.4); banner('Bravo! 👏', 'The audience loves you'); } }
@@ -4565,7 +4595,8 @@ function workStep(o, dt){ const w = o.workout; o.vx = o.vy = 0; o.x = w.x; o.y =
   if (w.k === 'dj' || w.k === 'stage'){ if ((w.beatT -= dt) <= 0){ w.beatT += .48; const b = w.beat++ % 8, L = w.k === 'stage' ? 2 : w.lvl;
     sfx(110, .16, 'sine', .09, 0, -60); sfx(7000, .03, 'square', .006, .24);
     if (L >= 2) sfx([110, 110, 131, 98][(b >> 1) % 4], .2, 'sawtooth', .025, .24);
-    if (L >= 3 || w.k === 'stage') sfx([523, 659, 784, 659, 587, 698, 880, 698][b], .14, 'triangle', .03); } } }
+    if (L >= 3 || w.k === 'stage') sfx([523, 659, 784, 659, 587, 698, 880, 698][b], .14, 'triangle', .03);
+    if (w.k === 'dj' && w.crowd && b === 7 && Math.random() < .5) sfx(700 + Math.random()*300, .35, 'sine', .015, .1, 500); } } }   // (the crowd: woo!)
 function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData, k = w.k;
   m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); if (bells) bells.visible = false;
   if (k === 'tread'){ const f = [0, 8, 12, 16][w.lvl]; m.position.set(px, gy + (human ? 1.13 : .12) + Math.abs(Math.sin(time*f))*.03*w.lvl, pz); poseWalk(m, time*f, true); return; }
@@ -4573,12 +4604,12 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
     for (const [l, sg] of [['ll', 1], ['rl', -1]]){ u.legs[l].hp.rotation.z = 1.05 + sg*Math.sin(ph)*.45; u.legs[l].kn.rotation.z = -1.1 - sg*Math.cos(ph)*.45; }
     for (const a of ['la', 'ra']){ u.arms[a].sh.rotation.set(0, 0, Math.PI + 1.05); u.arms[a].el.rotation.set(0, 0, .25); } m.rotation.z -= .25; return; }
   m.position.set(px, gy + (human ? 1.13 : .12), pz); poseWalk(m, 0, false);
-  if (k === 'weights'){ const f = clamp((time - w.tapT)/.8, 0, 1), c = Math.sin(f*Math.PI)*2.3; if (!human) return;
+  if (k === 'weights'){ if (ocean.flexT > time) return poseFlex(m, px, gy, pz, human); const f = clamp((time - w.tapT)/.8, 0, 1), c = Math.sin(f*Math.PI)*2.3; if (!human) return;
     for (const a of ['la', 'ra']){ u.arms[a].sh.rotation.set(0, 0, Math.PI + .15); u.arms[a].el.rotation.set(0, 0, .1 + c); }
     if (!bells){ bells = new THREE.Group(); for (let i = 0; i < 2; i++){ const g = new THREE.Group(), mat = std(0x222222, .5); for (const z of [-.07, .07]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .04, 12), mat); p.rotation.x = Math.PI/2; p.position.z = z; g.add(p); }
       const bar = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .14, 8), std(0x9aa0a6, .4)); bar.rotation.x = Math.PI/2; g.add(bar); bells.add(g); } }
     if (bells.parent !== oceanScene) oceanScene.add(bells); bells.visible = true; m.updateMatrixWorld(true);
-    ['la', 'ra'].forEach((a, i) => { const g = bells.children[i]; g.position.set(.33, 0, 0).applyMatrix4(u.arms[a].el.matrixWorld); g.rotation.set(0, -ocean.ang, 0); }); return; }
+    ['la', 'ra'].forEach((a, i) => { const g = bells.children[i]; g.position.set(.33, 0, 0).applyMatrix4(u.arms[a].el.matrixWorld); g.rotation.set(0, -ocean.ang, 0); g.scale.setScalar(1 + .9*muscleNow()); }); return; }   // (heavier weights as you get stronger)
   if (k === 'stretch'){ if (!human) return; const sw = Math.sin(time*1.4)*.35, up = time - w.tapT < 1.2 ? .12 : 0; m.position.y += up;
     u.arms.la.sh.rotation.set(0, 0, .12 + sw*.4); u.arms.ra.sh.rotation.set(0, 0, .12 - sw*.4); u.arms.la.el.rotation.set(0, 0, 0); u.arms.ra.el.rotation.set(0, 0, 0); return; }
   if (k === 'dj'){ const b = (time*125/60) % 1; m.position.y += Math.abs(Math.sin(b*Math.PI))*.06; if (!human) return;
@@ -4626,7 +4657,7 @@ function renderStore(){
   for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
     const w = { ...save.wear }; delete w[k]; save.wear = w; persist(); flushCloud(); sfx(520, .08, 'triangle', .05); renderStore(); }, false, 'secondary');
 }
-function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it = treat; if (!it || paused || !o) return; initAudio();
+function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it = treat; if (!o || paused) return; if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
@@ -4642,7 +4673,7 @@ function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it
 const treatTex = {};
 function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
-  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : treat ? `${treat.e} ${ACT_DO[treat.act]}` : '';
+  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : treat ? `${treat.e} ${ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
   placeNow = paused ? null : placeAction(o); const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
@@ -5147,7 +5178,10 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    people.forEach((p, i) => { const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
+    partyStep(dt, o);
+    people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
+        _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
+      const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
       if (!near){ p.t += p.dir*p.v*dt; if (p.t > p.t1 || p.t < p.t0){ p.dir *= -1; p.t = clamp(p.t, p.t0, p.t1); p.s = PROM.s + (Math.random() < .5 ? -1 : 1)*(4.5 + Math.random()*4.5); } }
       for (const d of PROM_DINOS) if (Math.abs(p.t - d[1]) < 3.6 && Math.abs(p.s - d[0]) < 3.6) p.s += (p.s < d[0] ? -1 : 1)*dt*2;   // (round the fountains,
       if (bldAt(p.s, p.t)) p.s += (p.s < PROM.s ? -1 : 1)*dt*3;   //  and the food pavilions)
@@ -6807,6 +6841,7 @@ function render3D(dt){
       else if (ocean.sitting != null){ m.position.set(px, gy + (human ? .78 : .5), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // sitting on the chair
         if (human) for (const l of ['ll', 'rl']){ m.userData.legs[l].hp.rotation.z = 1.5; m.userData.legs[l].kn.rotation.z = -1.5; } }
       else if (ocean.workout) poseWork(m, px, gy, pz, human);   // working out, DJing, on stage
+      else if (ocean.flexT > time && !ocean.walking) poseFlex(m, px, gy, pz, human);   // showing off your muscles
       else if (ocean.hugT > time && (heldItem === 'teddy' || treat?.act === 'hug')){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
         if (human){ const u = m.userData; u.arms.la.sh.rotation.set(HUG.sx, HUG.sy, HUG.sz); u.arms.ra.sh.rotation.set(-HUG.sx, -HUG.sy, HUG.sz); u.arms.la.el.rotation.set(HUG.ex, HUG.ey, HUG.ez); u.arms.ra.el.rotation.set(-HUG.ex, -HUG.ey, HUG.ez); }
         drawHearts(px, gy + 2, pz, dt); }
@@ -6831,7 +6866,7 @@ function render3D(dt){
       m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
-    drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
+    drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
     fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? landY(ocean) + .6 + (ocean.climb?.h || 0) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();

@@ -4500,13 +4500,24 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .55], [1, 1.05]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*2 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  // ---- street signs at the corners: Ocean Avenue and 3rd Street at every cross street ----
-  { const XN = { colorado: 'COLORADO AVE', broadway: 'BROADWAY', smblvd: 'SANTA MONICA BLVD', arizona: 'ARIZONA AVE', wilshire: 'WILSHIRE BLVD', california: 'CALIFORNIA AVE', washington: 'WASHINGTON AVE', idaho: 'IDAHO AVE', montana: 'MONTANA AVE' };
-    for (const [k, xt] of Object.entries(XST)) for (const [s, name] of [[AVES.ocean + 11, 'OCEAN AVE'], [AVES.third + 8, k === 'broadway' || k === 'smblvd' || k === 'arizona' || k === 'wilshire' ? '3RD ST PROMENADE' : '3RD ST']]){
-      if (k === 'colorado' && s < 420) continue; const sg = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x6f7a73, .5)); pole.position.y = 1.5; sg.add(pole);
-      for (const [txt, ry, dz] of [[name, Math.PI/2, 0], [XN[k], 0, .2]]){ const mat = new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, txt.length > 14 ? 46 : 60) });   // (each blade runs along the street it names)
-        for (const flip of [0, Math.PI]){ const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.7, .32), mat); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry + flip; plate.translateZ(.01); sg.add(plate); } }
-      at(sg, s, xt - 10); } }
+  // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
+  { const NS = ['Ocean Avenue', '2nd Street', '3rd Street', '4th Street', '5th Street', '6th Street', '7th Street'];
+    const XN = { colorado: 'COLORADO AVE', broadway: 'BROADWAY', smblvd: 'SANTA MONICA BLVD', arizona: 'ARIZONA AVE', wilshire: 'WILSHIRE BLVD', california: 'CALIFORNIA AVE', washington: 'WASHINGTON AVE', idaho: 'IDAHO AVE', montana: 'MONTANA AVE' };
+    const XR = { colorado: 'Colorado Avenue', broadway: 'Broadway', smblvd: 'Santa Monica Boulevard', arizona: 'Arizona Avenue', wilshire: 'Wilshire Boulevard', california: 'California Avenue', washington: 'Washington Avenue', idaho: 'Idaho Avenue', montana: 'Montana Avenue' };
+    const sAt = (name, t) => { for (const r of CITY.roads) if (r.name === name) for (let i = 0; i + 1 < r.p.length; i++){ const [s0, t0] = r.p[i], [s1, t1] = r.p[i + 1]; if ((t - t0)*(t - t1) <= 0 && t0 !== t1) return [lerp(s0, s1, (t - t0)/(t1 - t0)), r.c]; } return null; };   // where a street crosses this line
+    const xRange = name => { let lo = 1e9, hi = -1e9, c = 3; for (const r of CITY.roads) if (r.name === name){ c = r.c; for (const [s2] of r.p){ lo = Math.min(lo, s2); hi = Math.max(hi, s2); } } return [lo, hi, c]; };
+    const TX = {}, mat = txt => TX[txt] || (TX[txt] = new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, txt.length > 16 ? 40 : txt.length > 13 ? 48 : 60) }));
+    const poleM = std(0x6f7a73, .5), poleG = new THREE.CylinderGeometry(.06, .06, 3.9, 6), plateG = new THREE.PlaneGeometry(2.5, .48), SG = new THREE.Group();   // (bigger than real ones, so you can read them on a phone)
+    for (const [k, xt] of Object.entries(XST)){ const [xlo, xhi, xc] = xRange(XR[k]);
+      for (const ns of NS){ const hit = sAt(ns, xt); if (!hit) continue; const [sx, sc] = hit; if (sx < xlo - 2 || sx > xhi + 2) continue;   // (only where both streets really meet)
+        const prom = ns === '3rd Street' || (ns === '3rd Street' && false); const promBlock = k === 'broadway' || k === 'smblvd' || k === 'arizona' || k === 'wilshire';
+        const name = ns === '3rd Street' && promBlock ? '3RD ST PROMENADE' : ns.replace(/ Avenue$/, ' AVE').replace(/ Street$/, ' ST').toUpperCase();
+        const ds = ROAD_W[sc]/2 + 1.3, dt = ROAD_W[xc]/2 + 1.3;   // (on the sidewalk, just off the corner)
+        const spot = [[1, -1], [-1, -1], [1, 1], [-1, 1]].map(([a, b2]) => [sx + a*ds, xt + b2*dt]).find(([s2, t2]) => !bldAt(s2, t2)); if (!spot) continue;
+        const sg = new THREE.Group(), pole = new THREE.Mesh(poleG, poleM); pole.position.y = 1.95; sg.add(pole);
+        for (const [txt, ry, dz] of [[name, Math.PI/2, .4], [XN[k], 0, .95]]) for (const flip of [0, Math.PI]){ const plate = new THREE.Mesh(plateG, mat(txt)); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry + flip; plate.translateZ(.012); sg.add(plate); }   // (each blade runs along the street it names)
+        const [x, y] = landXY(spot[0], spot[1]); sg.position.set(x*U, landH(spot[0], spot[1]), y*U); SG.add(sg); } }
+    mergeStatic(SG); g.add(SG); }
   buildPromenade(g, P3, at, instanceOf);
   waterizeTree(g); oceanWorld.add(g);
   { const fill = new THREE.DirectionalLight(0xfff1dc, 0); fill.position.set(-1, .55, .3); oceanScene.add(fill, fill.target); coastFill = fill; }   // soft afternoon light off the sea, so the bluffs (which face the water) aren't in the dark

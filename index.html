@@ -2874,7 +2874,7 @@ function homeLayers(s, t){   // every walkable surface of the building over this
 const landST = (x, y) => [(x - coastX(y))*U, y*U];
 const landXY = (s, t) => [coastX(t*METERS) + s*METERS, t*METERS];   // (back to units)
 function landH(s, t){   // the ground (what the 3D land shows)
-  if (s < 0) return .3 - shelfD(-s);   // (the wet sand slopes on down into the sea, with no step at the water's edge)
+  if (s < 0){ const h0 = Math.min(.3, landH(0, t)); return Math.max(h0 - shelfD(-s), h0 + s*.3); }   // (the wet sand slopes gently on down into the sea, so you can wade in: no step at the water's edge)
   const m = bluffMid(t); let h = !isNaN(m) && Math.abs(s - m) < 25 ? smElev(m + clamp((s - m)*2.2, -25, 25), t) : smElev(s, t);   // (the bluff face made steep again)
   h = Math.min(h, .3 + s*.12);   // the sand slopes up out of the water
   const inc = inclineAt(s, t); if (inc) h = inc.d < INCLINE.w ? inc.h : lerp(inc.h, h, (inc.d - INCLINE.w)/1.5);   // the Incline, cut into the bluff (with walls each side)
@@ -2893,6 +2893,7 @@ function bldIndex(){
   CITY.bldgs.forEach((b, n) => { let s0 = 1e9, s1 = -1e9, t0 = 1e9, t1 = -1e9, lo = 1e9;
     for (const [s, t] of b.p){ s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t); lo = Math.min(lo, landH(s, t)); }
     const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];
+    if (s1 < 70 && s0 > 0 && (s1 - s0)*(t1 - t0) < 45) return;   // (lifeguard towers on the sand: built as towers, not solid boxes)
     for (let i = Math.floor(s0/BLD_CELL); i <= Math.floor(s1/BLD_CELL); i++) for (let j = Math.floor(t0/BLD_CELL); j <= Math.floor(t1/BLD_CELL); j++){ const k = bldKey(i, j); (bldCells.get(k) || bldCells.set(k, []).get(k)).push(n); } }); }
 function inPoly(p, s, t){ let c = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++){ const [a, b] = p[i], [cc, d] = p[j]; if ((b > t) !== (d > t) && s < (cc - a)*(t - b)/(d - b) + a) c = !c; } return c; }
 function bldAt(s, t){ bldIndex(); const L = bldCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return null;
@@ -4373,6 +4374,7 @@ function buildCoast(){
     return out; };
   for (const b of CITY.bldgs){ const [s0, t0, s1, t1] = b.box, sc = (s0 + s1)/2, tc = (t0 + t1)/2;
     if (onPierDeck(sc, tc) ? sc < 10 : sc < 60 && tc > -30 && tc < 90) continue;   // (the far end of the real pier is out over the water, where Pool Island's pier is)
+    if (s1 < 70 && s0 > 0 && (s1 - s0)*(t1 - t0) < 45) continue;   // (the little squares on the sand are the lifeguard towers: they're built as towers, not boxes)
     if (s1 > HOME_APT.front - 1 && s0 < HOME_APT.front + HOME_APT.deep && t1 > HOME_APT.mid - HOME_APT.len/2 - 1 && t0 < HOME_APT.mid + HOME_APT.len/2 + 1) continue;   // (home is built by hand)
     const pal = PAL[b.k] || PAL[3], onProm = t1 > PROM.t0 - 12 && t0 < PROM.t1 + 12 && ((s0 < PROM.s0 + 1.5 && s1 > PROM.s0 - 2.5) || (s0 > PROM.s1 - 2.5 && s0 < PROM.s1 + 1.5)), pav = s0 > PROM.s0 + 4 && s1 < PROM.s1 - 4 && tc > PROM.t0 && tc < PROM.t1;
     const ERA = b.yr && b.yr < 1930 ? [0xece2cc, 0xd9b98f, 0xb8674c, 0xf1e9da, 0xc9a27e] : b.yr && b.yr < 1950 ? [0xf2efe8, 0xe6dac6, 0xd8c7a8, 0xefe4cf] : b.yr && b.yr < 1980 ? [0xf4f2ee, 0xdcd8d0, 0xe9e4da] : b.yr ? [0xffffff, 0xd5d9dc, 0x9aa5ad, 0x3a444c, 0xf0ece4] : [0xefe8dc];
@@ -4477,6 +4479,28 @@ function buildCoast(){
   { const tree = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, 3, 6), std(0x6b5440, .9)); tr.position.y = 1.5; tree.add(tr);   // street trees (from OpenStreetMap)
     const top = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 0), std(0x4f7f3a, .85)); top.position.y = 3.9; top.scale.y = .8; tree.add(top);
     const PR = mulberry(3); instanceOf(tree, CITY.trees.filter(([s, t]) => !bldAt(s, t)).map(([s, t]) => [s, t, .85 + PR()*.4, PR()*TAU])); }
+  // ---- waves washing up the beach: a band of foam that runs up the sand and slides back (two of them, one after the other), all along the shore ----
+  { const mk = (ph0) => { const pa = [], pb = [], ed = [], ph = [], idx = []; let n = 0;
+      for (let t = -2650; t <= 900; t += 3){ if (onPierDeck(5, t) || landH(4, t) > 3) continue;   // (not where the pier is, or a cliff comes down to the water)
+        const P = (s, y) => { const [x, z] = landXY(s, t); return [x*U, y, z*U]; }, lift = s => Math.max(landH(s, t) + .04, .07), f = ph0 + t*.045 + Math.sin(t*.013)*1.7;
+        for (const [sa, sb, e] of [[-1.6, 2.4, 1], [-5, -1.4, 0]]){ pa.push(...P(sa, lift(sa))); pb.push(...P(sb, lift(sb))); ed.push(e); ph.push(f); }
+        if (n && Math.abs(t - pa._t) < 3.5){ const i = n - 2; idx.push(i, i + 1, i + 2, i + 1, i + 3, i + 2); } pa._t = t; n += 2; }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pa, 3)); geo.setAttribute('posB', new THREE.Float32BufferAttribute(pb, 3));
+      geo.setAttribute('edge', new THREE.Float32BufferAttribute(ed, 1)); geo.setAttribute('ph', new THREE.Float32BufferAttribute(ph, 1)); geo.setIndex(idx);
+      const m = new THREE.Mesh(geo, new THREE.ShaderMaterial({ uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { time: SWASH.time }]), transparent: true, depthWrite: false, fog: true, side: THREE.DoubleSide,
+        vertexShader: `attribute vec3 posB; attribute float edge; attribute float ph; uniform float time; varying float vE; varying float vW; varying float vN;
+          #include <fog_pars_vertex>
+          void main(){ float w = .5 + .5*sin(time*.8 + ph); vW = w; vE = edge; vN = ph; vec3 p = mix(position, posB, pow(w, 1.5)); vec4 mvPosition = modelViewMatrix*vec4(p, 1.); gl_Position = projectionMatrix*mvPosition;
+            #include <fog_vertex>
+          }`,
+        fragmentShader: `varying float vE; varying float vW; varying float vN;
+          #include <fog_pars_fragment>
+          void main(){ float line = smoothstep(.78, .95, vE)*(1. - smoothstep(.985, 1., vE)); float lace = .75 + .25*sin(gl_FragCoord.x*.21 + vN*3.)*sin(gl_FragCoord.y*.17 - vN*2.); float wash = smoothstep(0., 1., vE)*.6*lace; float a = min(.95, (line*1.2 + wash)*(.45 + .55*vW));
+            gl_FragColor = vec4(vec3(.97, .99, 1.), a);
+            #include <fog_fragment>
+          }` }));
+      m.material.uniforms.time = SWASH.time; m.renderOrder = 5; m.frustumCulled = false; g.add(m); };   // (merge copies uniforms: share the clock)
+    mk(0); mk(Math.PI); }   // (the second wave comes in as the first goes out)
   // ---- LA County lifeguard towers: light blue huts on stilts, with a ramp down to the sand ----
   { const towers = new THREE.Group(); g.add(towers); const blueM = std(0x8fc6e6, .6), whiteM = std(0xf4f4f0, .6), glassM = std(0x2a3c4a, .2, .2), postM = std(0xd9d4c8, .8);
     for (let t = -2300; t < 190; t += 230){ if (Math.abs(t) < 40) continue; const tw = new THREE.Group(), s = 70, base = landH(s, t);
@@ -6073,7 +6097,8 @@ function carHits(c, x, y, ang = c.ang){   // how many spots around the car's edg
     const px = x + (fx*a - fy*b)*METERS, py = y + (fy*a + fx*b)*METERS;
     const [ss, st] = landST(px, py); if (ss < .5 || !onMainland(px, py) || inPromenade(ss, st) || carGround(px, py, c.h) > c.h + .85) n++; }
   return n; }
-function carBlocked(c, x, y){ const n = carHits(c, x, y); return n > 0 && n > carHits(c, c.x, c.y); }   // (already scraping a wall? you can slide along it, or back away)
+function carBlocked(c, x, y){ const fx = Math.cos(c.ang)*2.1*METERS, fy = Math.sin(c.ang)*2.1*METERS; if (fenceCross(c.x, c.y, x + fx, y + fy) || fenceCross(c.x, c.y, x - fx, y - fy)) return true;   // (the fence along the top of the bluff stops cars too: down only by the Incline)
+  const n = carHits(c, x, y); return n > 0 && n > carHits(c, c.x, c.y); }   // (already scraping a wall? you can slide along it, or back away)
 function crash(impact){ if (impact < 2.5) return; camShake = Math.min(.5, impact*.025); sfx(70 + Math.random()*30, .35, 'sawtooth', Math.min(.14, .03 + impact*.006), 0, -40); sfx(260, .12, 'square', .04); if (impact > 9) sfx(900, .18, 'triangle', .03, .05, -500); }
 function horn(){ if (!ocean?.car) return; initAudio(); sfx(392, .38, 'square', .045); sfx(494, .38, 'square', .045); for (const t of trafficCars()) if (Math.hypot(t.x - ocean.x, t.y - ocean.y) < 25*METERS) t.c.stopT = 0; }   // (honk and the cars in your way get going)
 function carStep(o, dt){
@@ -8531,7 +8556,9 @@ addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-
 
 /* ---------- Main loop ---------- */
 let last = performance.now(), chipT = 0;
+const SWASH = { time: { value: 0 } };   // (the clock for the waves on the beach)
 function frame(now){
+  SWASH.time.value = time;
   if (!loadGone){ framesDrawn++; if (framesDrawn % 10 === 4) loadingStep(); }
   const dt = clamp((now - last)/1000, 0, .05); last = Math.max(last, now); time += dt;   // never let time run backwards
   if (!paused){

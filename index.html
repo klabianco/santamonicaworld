@@ -629,6 +629,7 @@
 </div>
 
 <div id="sunoBar" hidden><div class="sunohead"><b id="sunoTitle"></b><a id="sunoLink" target="_blank" rel="noopener">on Suno ↗</a><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
+<div id="tripPanel" class="overlay" hidden><div class="panel small"><h2>📋 Trip report</h2><p class="explain">Copy this and paste it to Claude.</p><textarea id="tripText" readonly style="width:100%;height:46vh;font:13px ui-monospace,monospace;border-radius:10px;padding:8px"></textarea><div class="row2"><button id="tripClose" class="btn primary" type="button">Done</button></div></div></div>
 <div id="boothPanel" class="overlay" hidden>
   <div class="panel small"><p class="kicker">☎️ Phone booth</p><h2>Where do you want to go?</h2>
     <p class="explain">Pick up the phone and dial another phone booth. Zap! You come out of that one.</p>
@@ -755,6 +756,7 @@
       <button id="promBtn" class="btn primary" type="button" hidden>Back to the Promenade</button>
       <button id="aptWayBtn" class="btn primary" type="button" hidden>Show me the way home</button>
       <button id="aptBtn" class="btn secondary" type="button" hidden>Go home</button>
+      <button id="tripBtn" class="btn secondary" type="button">📋 Copy trip report</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
       <button id="switchBtn" class="btn secondary" type="button" hidden>Switch swimmer</button>
@@ -5401,12 +5403,22 @@ function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] 
 let attnT = 0, attnSaveT = 0; const _camDir = new THREE.Vector3();
 function attnBox(){ const A = save.attn && typeof save.attn === 'object' ? save.attn : (save.attn = {}); A.c ||= {}; A.l ||= {}; A.p ||= {}; A.e ||= []; A.since ||= Date.now(); return A; }
 function attnNote(txt){ try { if (mode !== 'ocean' || !txt) return; const A = attnBox(), m = Math.round((Date.now() - A.since)/6e4); A.e.push([m, String(txt).replace(/[^\p{L}\p{N} '!:.,&-]/gu, '').trim().slice(0, 40)]); if (A.e.length > 60) A.e.splice(0, A.e.length - 60); } catch(e){} }
+// the trip report (Menu → Copy trip report): where you've spent your time, in words, to paste to Claude so the world gets built out there
+function tripReport(){ const A = save.attn || {}, since = A.since ? new Date(A.since).toLocaleDateString() : '?', mins = v => `${Math.round(v/60)} min`;
+  const byPlace = Object.entries(A.p || {}).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `  ${k}: ${mins(v)}`);
+  const area = {}; for (const [k, v] of Object.entries(A.c || {})){ const [a, b] = k.split(',').map(Number), [x, y] = landXY(a*25, b*25); let n = '?'; try { n = landName(x, y); } catch(e){} area[n] = (area[n] || 0) + v; }
+  const looked = {}; for (const [k, v] of Object.entries(A.l || {})){ const [a, b] = k.split(',').map(Number), [x, y] = landXY(a*25, b*25); let n = '?'; try { n = landName(x, y); } catch(e){} looked[n] = (looked[n] || 0) + v; }
+  const top = o => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => `  ${k}: ${mins(v)}`);
+  const ev = (A.e || []).slice(-30).map(([m, t]) => `  +${m} min: ${t}`);
+  return [`Santa Monica World trip report (${save.label || 'player'}, since ${since})`, 'Places (by time spent):', ...byPlace, 'Areas walked:', ...top(area), 'Looking at:', ...top(looked), 'Recent things that happened:', ...ev].join('\n'); }
+$('tripBtn').onclick = async () => { const txt = tripReport(); let ok = false; try { await navigator.clipboard.writeText(txt); ok = true; } catch(e){} closePanel(); if (ok) banner('📋 Trip report copied!', 'Paste it to Claude to build out the places you go'); else { paused = true; $('tripText').value = txt; $('tripPanel').hidden = false; $('tripText').select(); } };
+$('tripClose').onclick = () => { $('tripPanel').hidden = true; paused = false; graceAfterPause(); };
 function attnTrim(o, n){ const k = Object.keys(o); if (k.length <= n) return; k.sort((a, b) => o[b] - o[a]); for (const x of k.slice(n)) delete o[x]; }
 function attnStep(dt, o){ if (paused || document.hidden || o.x < coastX(o.y) - 4000) return; attnT += dt; if (attnT < 2) return; const k = Math.min(attnT, 4); attnT = 0;
   const A = attnBox(), sq = (x, y) => { const [s, t] = landST(x, y); return Math.round(s/25) + ',' + Math.round(t/25); }, add = (m, key, v) => m[key] = Math.round(((m[key] || 0) + v)*10)/10;
   add(A.c, sq(o.x, o.y), k);
   camera.getWorldDirection(_camDir); const h = Math.hypot(_camDir.x, _camDir.z) || 1; add(A.l, sq(o.x + _camDir.x/h*25*METERS, o.y + _camDir.z/h*25*METERS), k);   // (what's 25 m ahead of the camera)
-  const pl = ($('hudVal')?.textContent || '').slice(0, 32); if (pl && !/^\d/.test(pl)) add(A.p, pl, k);
+  const pl = ($('hudVal')?.textContent || '').slice(0, 32); if (pl && !/^[\d.,]+\s*[×s%]?$/.test(pl)) add(A.p, pl, k);   // (skip scores and timers, not "3rd Street...")
   if ((attnSaveT += k) >= 30){ attnSaveT = 0; attnTrim(A.c, 220); attnTrim(A.l, 160); attnTrim(A.p, 90); while (JSON.stringify(A).length > 6000){ attnTrim(A.c, Object.keys(A.c).length*.8|0); attnTrim(A.l, Object.keys(A.l).length*.8|0); A.e.splice(0, 5); } persist(); } }
 function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), [S0, S1, T0, T1] = ICE.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, near = Math.abs(s - sc) < 220 && Math.abs(t - tc) < 260; if (!near && !iceVis) return; const V = iceBuild(); V.g.visible = near; if (!near) return;
   for (const k of V.sk){ const R = k.R, a = (R.s1 - R.s0)/2 - k.edge - k.lane, b = (R.t1 - R.t0)/2 - k.edge - k.lane, cs = (R.s0 + R.s1)/2, ct = (R.t0 + R.t1)/2; k.ph += k.dir*k.v*dt;

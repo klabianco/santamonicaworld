@@ -4770,21 +4770,29 @@ function buildCoast(){
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
   buildPalisades(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
-  { const NS = ['Ocean Avenue', '2nd Street', '3rd Street', '4th Street', '5th Street', '6th Street', '7th Street'];
-    const XN = { colorado: 'COLORADO AVE', broadway: 'BROADWAY', smblvd: 'SANTA MONICA BLVD', arizona: 'ARIZONA AVE', wilshire: 'WILSHIRE BLVD', california: 'CALIFORNIA AVE', washington: 'WASHINGTON AVE', idaho: 'IDAHO AVE', montana: 'MONTANA AVE' };
+  {
+    // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
+    // ("Montana"), and the kind of street ("Ave") small at the end over the block number (100 at Ocean, 200 at 2nd...)
+    const XN = { colorado: ['Colorado', 'Ave'], broadway: ['Broadway', ''], smblvd: ['Santa Monica', 'Blvd'], arizona: ['Arizona', 'Ave'], wilshire: ['Wilshire', 'Blvd'], california: ['California', 'Ave'], washington: ['Washington', 'Ave'], idaho: ['Idaho', 'Ave'], montana: ['Montana', 'Ave'] };
     const XR = { colorado: 'Colorado Avenue', broadway: 'Broadway', smblvd: 'Santa Monica Boulevard', arizona: 'Arizona Avenue', wilshire: 'Wilshire Boulevard', california: 'California Avenue', washington: 'Washington Avenue', idaho: 'Idaho Avenue', montana: 'Montana Avenue' };
+    const XBLK = { colorado: 1600, broadway: 1500, smblvd: 1400, arizona: 1300, wilshire: 1200, california: 1100, washington: 1000, idaho: 900, montana: 800 };   // (the block of Ocean, 2nd, 3rd... that starts at each corner)
+    const NSN = { 'Ocean Avenue': ['Ocean', 'Ave', 100], '2nd Street': ['2nd', 'St', 200], '3rd Street': ['3rd', 'St', 300], '4th Street': ['4th', 'St', 400], '5th Street': ['5th', 'St', 500], '6th Street': ['6th', 'St', 600], '7th Street': ['7th', 'St', 700] };
     const sAt = (name, t) => { for (const r of CITY.roads) if (r.name === name) for (let i = 0; i + 1 < r.p.length; i++){ const [s0, t0] = r.p[i], [s1, t1] = r.p[i + 1]; if ((t - t0)*(t - t1) <= 0 && t0 !== t1) return [lerp(s0, s1, (t - t0)/(t1 - t0)), r.c]; } return null; };   // where a street crosses this line
     const xRange = name => { let lo = 1e9, hi = -1e9, c = 3; for (const r of CITY.roads) if (r.name === name){ c = r.c; for (const [s2] of r.p){ lo = Math.min(lo, s2); hi = Math.max(hi, s2); } } return [lo, hi, c]; };
-    const TX = {}, mat = txt => TX[txt] || (TX[txt] = new THREE.MeshBasicMaterial({ map: labelTex(txt, '#1f6b3a', '#fff', 512, 100, txt.length > 16 ? 40 : txt.length > 13 ? 48 : 60) }));
-    const poleM = std(0x6f7a73, .5), poleG = new THREE.CylinderGeometry(.06, .06, 3.9, 6), plateG = new THREE.PlaneGeometry(2.5, .48), SG = new THREE.Group();   // (bigger than real ones, so you can read them on a phone)
+    const TX = {}, blade = (nm, kind, num) => { const key = nm + '|' + kind + '|' + num; return TX[key] || (TX[key] = new THREE.MeshBasicMaterial({ map: canvasTex(1024, 184, (x, w, h) => {
+      x.fillStyle = '#1d4f9e'; x.fillRect(0, 0, w, h); x.fillStyle = '#f3a32b'; x.fillRect(0, h - 16, w, 16); x.strokeStyle = '#fff'; x.lineWidth = 5; x.strokeRect(9, 9, w - 18, h - 34);
+      x.fillStyle = '#fff'; x.textBaseline = 'middle'; const right = kind || num ? 150 : 0; let f = 124; x.font = `600 ${f}px 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif`; while (x.measureText(nm).width > w - 60 - right && f > 60){ f -= 4; x.font = `600 ${f}px 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif`; }
+      x.textAlign = 'center'; x.fillText(nm, (w - right)/2 + 6, (h - 16)/2 + 4); x.textAlign = 'right'; x.font = "600 50px 'Arial Narrow', Arial, sans-serif"; if (kind) x.fillText(kind, w - 34, 56); x.font = "600 42px 'Arial Narrow', Arial, sans-serif"; if (num) x.fillText(String(num), w - 34, 118); }, false) })); };
+    const poleM = std(0x6f7a73, .5), poleG = mergeGeometries([new THREE.CylinderGeometry(.06, .06, 3.0, 6).translate(0, -.45, 0), new THREE.CylinderGeometry(.02, .02, 1.25, 6).translate(0, 1.6, 0)]), plateG = new THREE.PlaneGeometry(2.5, .45), edgeG = new THREE.BoxGeometry(2.52, .47, .02), edgeM = std(0x1d4f9e, .5), SG = new THREE.Group();   // (bigger than real ones, so you can read them on a phone)
     for (const [k, xt] of Object.entries(XST)){ const [xlo, xhi, xc] = xRange(XR[k]);
-      for (const ns of NS){ const hit = sAt(ns, xt); if (!hit) continue; const [sx, sc] = hit; if (sx < xlo - 2 || sx > xhi + 2) continue;   // (only where both streets really meet)
-        const prom = ns === '3rd Street' || (ns === '3rd Street' && false); const promBlock = k === 'broadway' || k === 'smblvd' || k === 'arizona' || k === 'wilshire';
-        const name = ns === '3rd Street' && promBlock ? '3RD ST PROMENADE' : ns.replace(/ Avenue$/, ' AVE').replace(/ Street$/, ' ST').toUpperCase();
+      for (const ns of Object.keys(NSN)){ const hit = sAt(ns, xt); if (!hit) continue; const [sx, sc] = hit; if (sx < xlo - 2 || sx > xhi + 2) continue;   // (only where both streets really meet)
+        const promBlock = k === 'broadway' || k === 'smblvd' || k === 'arizona' || k === 'wilshire', [nn, nk, xnum] = NSN[ns];
         const ds = ROAD_W[sc]/2 + 1.3, dt = ROAD_W[xc]/2 + 1.3;   // (on the sidewalk, just off the corner)
         const spot = [[1, -1], [-1, -1], [1, 1], [-1, 1]].map(([a, b2]) => [sx + a*ds, xt + b2*dt]).find(([s2, t2]) => !bldAt(s2, t2)); if (!spot) continue;
         const sg = new THREE.Group(), pole = new THREE.Mesh(poleG, poleM); pole.position.y = 1.95; sg.add(pole);
-        for (const [txt, ry, dz] of [[name, Math.PI/2, .4], [XN[k], 0, .95]]) for (const flip of [0, Math.PI]){ const plate = new THREE.Mesh(plateG, mat(txt)); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry + flip; plate.translateZ(.012); sg.add(plate); }   // (each blade runs along the street it names)
+        const along = [ns === '3rd Street' && promBlock ? ['3rd St', 'Promenade', ''] : [nn, nk, XBLK[k]], Math.PI/2, .4], across = [[XN[k][0], XN[k][1], xnum], 0, .95];
+        for (const [[t1, t2, t3], ry, dz] of [along, across]){ const e = new THREE.Mesh(edgeG, edgeM); e.position.set(0, 2.85 + dz, 0); e.rotation.y = ry; sg.add(e);
+          for (const flip of [0, Math.PI]){ const plate = new THREE.Mesh(plateG, blade(t1, t2, t3)); plate.position.set(0, 2.85 + dz, 0); plate.rotation.y = ry + flip; plate.translateZ(.012); sg.add(plate); } }   // (each blade runs along the street it names)
         const [x, y] = landXY(spot[0], spot[1]); sg.position.set(x*U, landH(spot[0], spot[1]), y*U); SG.add(sg); } }
     mergeStatic(SG); g.add(SG); }
   buildPromenade(g, P3, at, instanceOf);
@@ -5249,12 +5257,13 @@ function poseFlex(m, px, gy, pz, human){ m.position.set(px, gy + (human ? 1.2 : 
   const u = m.userData, sq = Math.sin(time*9)*.08; u.arms.la.sh.rotation.set(0, Math.PI/2, 0); u.arms.la.el.rotation.set(0, -1.9 - sq, 0); u.arms.ra.sh.rotation.set(0, -Math.PI/2, 0); u.arms.ra.el.rotation.set(0, 1.9 + sq, 0); }
 // ---- Pacific Park on the pier: the Pacific Wheel and the West Coaster you can ride, and the Route 66 "End of the Trail" sign.
 //      (The real wheel and coaster stand on the part of the pier out over the water; here they're on the end of the deck, where the pier meets the sea.) ----
-const PP = { wheel: { s: -38, t: 68, R: 12, hub: 13.6, n: 20 },   // (OpenStreetMap: the Pacific Wheel about 40 m out over the water, the West Coaster around it)
-  coaster: [[-16, 49, 2], [-4, 49.5, 3], [6, 54, 7], [9, 63, 11.5], [2, 74, 13], [-10, 79, 4], [-24, 80.5, 6.5], [-36, 79, 3.5], [-46, 72, 6], [-47, 60, 4.5], [-40, 52, 3], [-28, 48.5, 2]] };
+const PP = { wheel: { s: -38.1, t: 66.1, R: 12, hub: 13.6, n: 20, a: [-29.9, 56.7], b: [-47.9, 74.7] },   // (OpenStreetMap: the Pacific Wheel stands on a diagonal across the park, from a to b)
+  coaster: [[-35.0,77.9,2.0],[-26.3,78.0,2.0],[-17.7,78.0,2.0],[-9.1,78.0,2.88],[-0.5,78.0,5.04],[8.1,78.0,7.97],[16.8,78.0,11.16],[25.4,78.0,14.03],[34.0,78.0,16.08],[42.6,78.0,16.8],[49.8,77.3,16.32],[51.6,76.8,16.08],[53.2,75.7,15.79],[55.7,72.9,15.15],[56.9,69.6,14.47],[56.3,65.9,13.68],[55.6,64.3,13.31],[54.5,62.8,12.92],[53.1,61.6,12.54],[51.6,60.6,12.17],[49.3,59.8,11.7],[47.3,59.6,11.34],[44.4,59.9,10.87],[42.7,60.9,10.6],[40.4,63.1,10.25],[39.1,65.6,10.06],[38.6,68.2,10.0],[39.1,71.4,9.93],[40.5,74.1,9.74],[42.6,76.1,9.48],[45.2,77.0,9.16],[47.9,77.1,8.8],[51.3,76.5,8.29],[52.9,75.4,8.0],[55.1,73.0,7.5],[56.3,70.2,7.05],[56.8,67.4,6.67],[56.5,65.7,6.46],[55.8,63.8,6.24],[54.6,62.4,6.08],[52.1,60.5,5.8],[49.0,59.3,5.8],[40.6,59.2,6.02],[32.1,59.1,6.62],[23.7,59.0,7.46],[15.2,58.9,8.45],[6.8,58.8,9.46],[-1.7,58.7,10.38],[-10.1,58.6,11.08],[-15.6,57.8,11.38],[-21.3,56.1,11.5],[-29.0,52.8,11.47],[-36.6,49.5,11.38],[-44.3,46.3,11.26],[-48.8,45.1,11.17],[-54.5,45.8,11.07],[-58.0,47.4,10.99],[-59.7,49.7,10.93],[-61.3,52.1,10.88],[-62.3,55.2,10.82],[-62.5,57.2,10.78],[-62.3,59.5,10.74],[-61.2,62.2,10.69],[-59.4,64.5,10.65],[-56.8,66.9,10.6],[-53.8,67.9,10.57],[-51.0,68.2,10.54],[-48.2,67.9,10.52],[-45.1,66.5,10.5],[-43.3,64.9,10.5],[-42.6,64.2,10.5],[-41.0,61.7,10.29],[-40.3,59.0,9.82],[-40.2,54.8,8.8],[-41.2,52.3,8.04],[-42.5,50.0,7.29],[-44.7,47.8,6.48],[-47.3,46.5,5.9],[-50.3,46.0,5.55],[-54.2,46.1,5.5],[-57.8,47.8,5.5],[-60.0,49.0,5.5],[-61.8,51.6,5.5],[-62.8,55.1,5.5],[-62.6,66.8,5.5],[-61.6,70.9,5.5],[-60.2,73.2,5.5],[-58.8,74.3,5.5],[-56.0,76.2,5.5],[-52.3,77.1,5.17],[-43.6,77.5,3.28]] };   // the West Coaster's real track (OpenStreetMap, in the direction the train goes): out of the station toward land up the lift hill, two turns of a helix down, back along the north side, round twice over Inkie's Scrambler (high, then low), and into the station. Heights are estimates (17 m at the top, like the real one)
 let pacPark = null;
-const PIER_SPOTS = [{ k: 'wheel', s: -38, t: 62.5, rad: 3, es: -38, et: 61 }, { k: 'coaster', s: -16, t: 46.5, rad: 3, es: -16, et: 45.5 }];
+const PIER_SPOTS = [{ k: 'wheel', s: -35.6, t: 68.6, rad: 2.5, es: -31.5, et: 66 }, { k: 'coaster', s: -25, t: 75.6, rad: 2.5, es: -15, et: 72 }];
 function buildPacificPark(g, P3){
   const W = PP.wheel, steel = std(0xf2f2f2, .35, .4), wheel = new THREE.Group(), spin = new THREE.Group(); wheel.position.set(...P3(W.s, W.t, pierDeckH(W.s) + W.hub)); wheel.add(spin); g.add(wheel);
+  { const a = new THREE.Vector3(...P3(...W.a, 0)), b = new THREE.Vector3(...P3(...W.b, 0)); wheel.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }   // (turned to stand on its real diagonal)
   for (const z of [-.9, .9]){ for (const [r, w] of [[W.R, .17], [W.R*.55, .1]]){ const ring = new THREE.Mesh(new THREE.TorusGeometry(r, w, 8, 72), steel); ring.position.z = z; spin.add(ring); } }
   for (let k = 0; k < W.n; k++){ const a = k/W.n*TAU; for (const z of [-.9, .9]){ const sp = new THREE.Mesh(new THREE.BoxGeometry(W.R, .08, .08), steel); sp.position.set(Math.cos(a)*W.R/2, Math.sin(a)*W.R/2, z); sp.rotation.z = a; spin.add(sp); } }
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(.7, .7, 2.6, 16), steel); hub.rotation.x = Math.PI/2; wheel.add(hub);
@@ -5271,15 +5280,17 @@ function buildPacificPark(g, P3){
     const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, .15, 1.7), std(0xf4f4f0, .5)); roof.position.y = -.2; gp.add(roof);
     wheel.add(gp); gond.push(gp); }
   // the West Coaster: a red track looping round the park on white supports, and its little train
-  const pts = PP.coaster.map(([s, t, h]) => new THREE.Vector3(...P3(s, t, pierDeckH(s) + h))), curve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', .35);
+  const pts = PP.coaster.map(([s, t, h]) => new THREE.Vector3(...P3(s, t, pierDeckH(s) + h))), curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
   g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 420, .16, 8, true), std(0xd32f2f, .45, .3)));
   { const N = 420, P = curve.getSpacedPoints(N); for (let i = 0; i < N; i += 3){ const p = P[i], q = P[i + 1] || P[0], dir = q.clone().sub(p).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(.45);
       const tie = new THREE.Mesh(new THREE.BoxGeometry(.12, .08, 1.1), std(0x5d4037, .8)); tie.position.copy(p); tie.lookAt(p.clone().add(side)); g.add(tie);
       if (i % 12 === 0){ const col = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 1, 6), steel); const gy = (() => { const [ls, lt] = landST(p.x/U, p.z/U); return pierDeckH(ls); })(); col.scale.y = Math.max(.1, p.y - gy); col.position.set(p.x, (p.y + gy)/2, p.z); g.add(col); } } }
-  const train = new THREE.Group(); for (let k = 0; k < 3; k++){ const car = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(1.6, .6, 1.1), std([0xfdd835, 0x1e88e5, 0x43a047][k], .45)); body.position.y = .45; car.add(body); const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, 1), std(0x222222, .7)); seat.position.set(-.5, .8, 0); car.add(seat); train.add(car); }
+  const train = new THREE.Group(); for (let k = 0; k < 5; k++){ const car = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(1.6, .6, 1.1), std([0xfdd835, 0x1e88e5, 0x43a047, 0xe53935, 0xff7043][k], .45)); body.position.y = .45; car.add(body); const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, 1), std(0x222222, .7)); seat.position.set(-.5, .8, 0); car.add(seat); train.add(car); }
   g.add(train);
-  const station = new THREE.Mesh(new THREE.BoxGeometry(7, .4, 2.4), std(0x8d6e63, .8)); station.position.set(...P3(-18, 47.2, pierDeckH(-18) + 1.3)); g.add(station);
-  const roofS = new THREE.Mesh(new THREE.BoxGeometry(8, .2, 3.4), std(0xd32f2f, .6)); roofS.position.set(...P3(-18, 48.6, pierDeckH(-18) + 4.4)); g.add(roofS);
+  { const S0 = -34.6, S1 = -17.7, T0 = 72.8, T1 = 81.1, dk = pierDeckH(-26), bxs = (s0, s1, t0, t1, y0, y1, hex) => { const m = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), std(hex, .7)); m.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, dk + (y0 + y1)/2)); g.add(m); };   // the station (OpenStreetMap footprint): a platform beside the track, a red roof, the back wall
+    bxs(S0, S1, T0, 77.2, 0, 1.25, 0x8d6e63); bxs(S0, S1, 78.6, T1, 0, 1.25, 0x8d6e63); bxs(S0 - .3, S1 + .3, T0 - .3, T1 + .3, 4.4, 4.7, 0xd32f2f); bxs(S0, S1, T1 - .25, T1, 1.25, 4.4, 0xf4ead2);
+    for (const ss of [S0 + .2, S1 - .2]) for (const tt of [T0 + .2, 77.1]) bxs(ss - .12, ss + .12, tt - .12, tt + .12, 1.25, 4.4, 0xf4f4f0);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, 1), new THREE.MeshBasicMaterial({ map: labelTex('WEST COASTER', '#d32f2f', '#ffeb3b', 1024, 170, 120), side: THREE.DoubleSide })); sg.position.set(...P3(-26, T0 - .35, dk + 5.3)); sg.rotation.y = Math.PI; g.add(sg); }
   // a little spinning ride, Inkie's Scrambler
   let scrCup = null; const scr = new THREE.Group(); scr.position.set(...P3(-54, 52, pierDeckH(-54))); g.add(scr); const scrSpin = new THREE.Group(); scrSpin.position.y = 1.2; scr.add(scrSpin);
   scr.add(new THREE.Mesh(new THREE.CylinderGeometry(.4, .5, 2.4, 10), std(0x8e24aa, .5)));
@@ -5308,8 +5319,10 @@ function parkStep(dt){ const P = pacPark; if (!P) return; const w = ocean?.worko
     P.scrSpin.children.forEach(a => { a.children[1].rotation.y = -P.scrPh; }); }
   if (w?.k !== 'coaster'){ coasterMove(P, dt); }
   placeTrain(P); }
-function coasterMove(P, dt){ const p = P.curve.getPointAt(P.tu % 1), lift = (P.tu % 1) < P.top.u;   // up the lift hill on the chain, then gravity does the rest
-  P.tv = lift ? 6 : clamp(Math.sqrt(Math.max(9, 2*9.8*(P.top.y - p.y))), 3, 19); P.tu += P.tv*dt/P.L; }
+function coasterSpeed(P, u){ const p = P.curve.getPointAt(u % 1); if ((u % 1) < .012) return 2.2; if ((u % 1) < P.top.u) return P.liftV || 2; if ((u % 1) > .95) return 2.6;   // (out of the station, up the lift hill on the chain, gravity, then the brakes)
+  return clamp(Math.sqrt(Math.max(9, 2*9.8*(P.top.y - p.y))), 3, 16.5); }
+function coasterMove(P, dt){ if (!P.liftV){ let t = 0; for (let i = 0; i < 2000; i++){ const u = i/2000; if (u >= .012 && u < P.top.u) continue; t += P.L/2000/coasterSpeed(P, u); } P.liftV = 1; const liftLen = (P.top.u - .012)*P.L; P.liftV = clamp(liftLen/Math.max(10, 67 - t), 1.2, 6); }   // (a ride takes about 1:07, like the real one)
+  P.tv = coasterSpeed(P, P.tu); P.tu += P.tv*dt/P.L; }
 function placeTrain(P){ const u0 = P.tu % 1; P.train.children.forEach((car, k) => { const u = ((u0 - k*2/P.L) % 1 + 1) % 1, p = P.curve.getPointAt(u), q = P.curve.getPointAt((u + .002) % 1); car.position.copy(p); car.lookAt(q); car.rotateY(-Math.PI/2); }); }
 function nearPierSpot(o){ if (!o?.onLand || o.car || !pacPark) return null; const [s, t] = landST(o.x, o.y); if (s > 120 || s < -80 || t < 30 || t > 90) return null;
   const G = inRideLine(390 - s, -t); if (G && (G[0] === 'wheel' || G[0] === 'coaster')) return PIER_SPOTS.find(sp => sp.k === G[0]);
@@ -5320,7 +5333,7 @@ function startRide(sp){ const o = ocean, P = pacPark; if (!o || paused || !P) re
   else { P.tu = Math.floor(P.tu) + 0; o.workout = { k: 'coaster', pier: true, sp, u: 0, t0: time, tapT: -9, lvl: 1, n: 0 }; P.tu = 0; banner('🎢 The West Coaster!', 'Hold on tight! Tap Hands up on the drops'); }
   sfx(660, .1, 'triangle', .05); rideStep(o, o.workout, 0); }
 function rideStep(o, w, dt){ const P = pacPark; o.vx = o.vy = 0; o.walking = false; o.air = airMax(); o.idle = 0; let p, face;
-  if (w.k === 'wheel'){ const W = PP.wheel, a = P.ang + w.g/W.n*TAU; p = new THREE.Vector3(Math.cos(a)*W.R, Math.sin(a)*W.R - 1.95, 0).add(P.wheel.position); const [sx, sy] = landXY(PP.wheel.s - 1, PP.wheel.t), [cx, cy] = landXY(PP.wheel.s, PP.wheel.t); face = Math.atan2(sy - cy, sx - cx);
+  if (w.k === 'wheel'){ const W = PP.wheel, a = P.ang + w.g/W.n*TAU; P.wheel.updateMatrixWorld(); p = P.wheel.localToWorld(new THREE.Vector3(Math.cos(a)*W.R, Math.sin(a)*W.R - 1.95, 0)); const nv = new THREE.Vector3(0, 0, 1).applyQuaternion(P.wheel.quaternion); face = Math.atan2(nv.z, nv.x);
     if (P.ang - w.a0 > TAU) return endRide(o, w, 'What a view! You went all the way around'); }
   else { coasterMove(P, dt); w.u = P.tu; p = P.curve.getPointAt(P.tu % 1).clone(); const q = P.curve.getPointAt((P.tu + .003) % 1); face = Math.atan2(q.z - p.z, q.x - p.x); p.y += .55;
     if (!w.lastY) w.lastY = p.y; if (p.y < w.lastY - .08 && P.tv > 9 && time - (w.wee || 0) > 2.5){ w.wee = time; sfx(900, .6, 'sawtooth', .015, 0, -400); } w.lastY = p.y;
@@ -6037,7 +6050,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
    arcade, fishing off the rail, the food and shops. Spots are in real pier coordinates (A along, off north+), like buildPierTown. */
 const PARK_ANIM = {};   // (the moving parts of the rides, filled in by buildParkRides)
 const RIDES = {
-  dragon: { name: 'Sea Dragon', exit: [406, -60.5], dur: 18, f: T => { const amp = Math.min(1.15, T*.2)*Math.min(1, Math.max(0, (18 - T)/4)), a = amp*Math.sin(T*2.1); return { A: 406 - 5.2*Math.sin(a), off: -67.5, y: 7.6 - 5.2*Math.cos(a) + .1, sit: true, arms: Math.abs(a) > .7, swing: a }; } },
+  dragon: { name: 'Sea Dragon', exit: [406.6, -62], dur: 24, f: T => { const amp = Math.min(1.15, T*.16)*Math.min(1, Math.max(0, (24 - T)/5)), a = amp*Math.sin(T*1.25); return { sit: true, arms: Math.abs(a) > .7, swing: a }; } },   // (a real swing ship goes about every 5 seconds)
   plunge: { name: 'Pacific Plunge', exit: [443, -63.5], dur: 9, f: T => { const y = T < 4 ? T/4*12 : T < 5.6 ? 12 : T < 6.3 ? 12 - (T - 5.6)/.7*11.2 : .8 + Math.abs(Math.sin((T - 6.3)*5))*.4*Math.max(0, 1 - (T - 6.3)/1.5); return { A: 443 + 1.7, off: -70.5, y, sit: true, arms: T > 5.5 && T < 7, ang: 0 }; } },
   scrambler: { name: "Inkie's Scrambler", exit: [436, -46.5], dur: 16, f: T => { const sp = Math.min(1, T/3)*Math.min(1, Math.max(0, (16 - T)/3)), a = T*1.3*sp, b = T*3.4*sp; return { sit: true, arms: sp > .9, sp }; } },
   bumper: { name: 'Sig Alert bumper cars', exit: [356, -68.5], dur: 15, f: T => ({ A: 356 + 5*Math.sin(T*.9), off: -75 + 3*Math.sin(T*1.3 + 1), y: .1, sit: true, car: true, ang: Math.atan2(3*1.3*Math.cos(T*1.3 + 1), -5*.9*Math.cos(T*.9)) }) },
@@ -6053,6 +6066,8 @@ function startRide2(o, key){ const R = RIDES[key]; initAudio(); o.workout = { k:
   banner(`🎢 ${R.name}!`, key === 'trapeze' ? 'Up the ladder... swing... and let go!' : 'Hold on tight! (Tap Wheee! to scream)'); }
 function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0; o.walking = false; o.air = airMax(); o.idle = 0;
   const p = w.T < R.dur ? R.f(w.T) : null; if (!p) return stopWorkout();
+  if (w.key === 'dragon' && PARK_ANIM.dragon){ PARK_ANIM.dragon.rotation.z = p.swing; PARK_ANIM.dragon.updateWorldMatrix(true, false); const c = PARK_ANIM.dragonSeat.clone().applyMatrix4(PARK_ANIM.dragon.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p;   // (in the boat's end seat, swinging with it)
+    const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(PARK_ANIM.dragon.parent.quaternion); o.ang = Math.atan2(fw.z, fw.x); return; }
   if (w.key === 'carousel' && PARK_ANIM.carousel){ const c = carouselSeat(), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px);   // (on a horse, going round and up and down, with the band organ playing)
     if ((w.orgT = (w.orgT ?? 0) - dt) <= 0){ const N = [392, 523, 659, 523, 587, 494, 392, 440, 523, 440, 494, 392]; w.orgT = .36; const n = N[(w.orgN = (w.orgN || 0) + 1) % N.length]; sfx(n, .3, 'triangle', .035); if (w.orgN % 3 === 1) sfx(n/2, .2, 'sine', .04); } return; }
   if (w.key === 'scrambler' && pacPark?.scrCup){ const c = pacPark.scrCup.getWorldPosition(new THREE.Vector3()), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y - .2; o.gh = w.py; w.p = p; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px); return; }   // (you sit in a real cup, flung round with it)
@@ -6129,7 +6144,7 @@ function carouselStep(dt){ const K = PARK_ANIM.carousel; if (!K) return; K.ang +
 function carouselSeat(){ const K = PARK_ANIM.carousel, H = K.list[0]; K.spin.updateWorldMatrix(true, false); const p = new THREE.Vector3(Math.cos(H.a)*H.r, horseY(H, K.ang) + .28, -Math.sin(H.a)*H.r).applyMatrix4(K.spin.matrixWorld); return p; }
 /* Every ride has a line: an ENTRANCE arch with the ride's name, rails to the loading spot, and an EXIT sign. Walk into the line (anywhere
    between the arch and the loading spot) and the ride button comes up. [key, A, off of the loading spot, which way the line runs (dA, dOff)] */
-const RIDE_GATES = [['wheel', 428, -62.5, 0, 1, 'Pacific Wheel', '#c62828'], ['coaster', 403, -46.5, -1, 0, 'West Coaster', '#c62828'], ['dragon', 406, -61, 0, 1, 'Sea Dragon', '#2e7d32'],
+const RIDE_GATES = [['wheel', 425.6, -68.6, -.707, .707, 'Pacific Wheel', '#c62828'], ['coaster', 415, -75.6, 0, 1, 'West Coaster', '#c62828'], ['dragon', 406.6, -63, 0, 1, 'Sea Dragon', '#2e7d32'],
   ['plunge', 443, -64, -1, 0, 'Pacific Plunge', '#1565c0'], ['scrambler', 436, -47, -1, 0, "Inkie's Scrambler", '#6a1b9a'], ['bumper', 356, -69, 0, 1, 'Sig Alert Bumper Cars', '#0277bd'], ['trapeze', 361, -18.5, 0, 1, 'Trapeze School', '#ef6c00']];
 const GATE_LEN = 6;
 function inRideLine(A, off){ for (const G of RIDE_GATES){ const [k, a, o, da, dO] = G, u = (A - a)*da + (off - o)*dO; if (u < -1.2 || u > GATE_LEN + 1.5) continue; if (Math.abs((A - a)*dO - (off - o)*da) < 1.3) return G; } return null; }
@@ -6151,12 +6166,18 @@ function buildRideGates(g, P3){ const grp = new THREE.Group(), S = A => 390 - A,
   g.add(grp); mergeStatic(grp); }
 function buildParkRides(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .7) => M[hex + ':' + r] || (M[hex + ':' + r] = std(hex, r)), S = A => 390 - A;
   const put = (o, A, off, y = 0) => { const s = S(A); o.position.set(...P3(s, -off, pierDeckH(s) + y)); grp.add(o); return o; };
-  { const sd = new THREE.Group(); const fr = new THREE.Mesh(new THREE.BoxGeometry(.3, 8, .3), mat(0x9e9e9e)); for (const z of [-2.5, 2.5]) for (const x of [-3, 3]){ const l = fr.clone(); l.position.set(x*.5, 3.8, z); l.rotation.x = x > 0 ? .3 : -.3; sd.add(l); }
-    const pivot = new THREE.Group(); pivot.position.y = 7.6; sd.add(pivot); PARK_ANIM.dragon = pivot;
-    const ship = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 9, 12, 1, false, Math.PI/2, Math.PI), mat(0x2e7d32)); ship.rotation.set(0, 0, Math.PI/2); ship.position.y = -5.2; ship.rotation.y = Math.PI/2; pivot.add(ship);
-    for (const e of [-4.6, 4.6]){ const hd = new THREE.Mesh(new THREE.ConeGeometry(.6, 1.8, 6), mat(0xc62828)); hd.position.set(e, -4.2, 0); hd.rotation.z = e > 0 ? -1.2 : 1.2; pivot.add(hd); }
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(.2, 5.2, .2), mat(0x9e9e9e)); arm.position.y = -2.6; pivot.add(arm);
-    const s = 390 - 406; sd.position.set(...P3(s, 67.5, pierDeckH(s))); g.add(sd); }   // (on its own: it swings when you ride)
+  { const sd = new THREE.Group(), fr = new THREE.BoxGeometry(.3, 8.4, .3), gray = mat(0x9e9e9e);   // the Sea Dragon (OpenStreetMap: 11 m long, swinging along the pier): A-frames each side, the boat hanging from the top
+    for (const z of [-2.2, 2.2]) for (const x of [-1, 1]){ const l = new THREE.Mesh(fr, gray); l.position.set(x*1.3, 3.9, z); l.rotation.z = x*.32; sd.add(l); }
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, 4.8, 8), gray); top.rotation.x = Math.PI/2; top.position.y = 7.7; sd.add(top);
+    const pivot = new THREE.Group(); pivot.position.y = 7.6; sd.add(pivot); PARK_ANIM.dragon = pivot; const green = mat(0x2e7d32), gold = mat(0xd4af37, .4), red = mat(0xc62828);
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 9.5, 16, 1, true, Math.PI/2, Math.PI), green); hull.material = green.clone(); hull.material.side = THREE.DoubleSide; hull.rotation.z = Math.PI/2; hull.position.y = -5.0; pivot.add(hull);   // (an open boat: a half-tube along the swing)
+    for (const x of [-3.6, -2.2, -.8, .8, 2.2, 3.6]){ const bench = new THREE.Mesh(new THREE.BoxGeometry(.5, .14, 2.5), mat(0x5d4037)); bench.position.set(x, -5.6, 0); pivot.add(bench); }
+    for (const z of [-1.5, 1.5]){ const rail = new THREE.Mesh(new THREE.BoxGeometry(9.5, .12, .12), gold); rail.position.set(0, -5.0, z); pivot.add(rail); }
+    for (const e of [-1, 1]){ const neck = new THREE.Mesh(new THREE.CylinderGeometry(.35, .55, 2.6, 8), green); neck.position.set(e*5.3, -4.0, 0); neck.rotation.z = -e*.7; pivot.add(neck);
+      const head = new THREE.Mesh(new THREE.ConeGeometry(.55, 1.6, 6), red); head.position.set(e*6.1, -2.8, 0); head.rotation.z = -e*1.4; pivot.add(head); }
+    for (const z of [-.9, .9]){ const arm = new THREE.Mesh(new THREE.BoxGeometry(.2, 4.4, .2), gray); arm.position.set(0, -2.6, z); pivot.add(arm); }
+    const s = 390 - 406.6, a = new THREE.Vector3(...P3(s, 68.4, 0)), b = new THREE.Vector3(...P3(s - 1, 68.4, 0)); sd.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);   // (its length along the pier)
+    sd.position.set(...P3(s, 68.4, pierDeckH(s))); g.add(sd); PARK_ANIM.dragonSeat = new THREE.Vector3(3.6, -5.5, .6); }
   { const tw = new THREE.Group(), col = new THREE.Mesh(new THREE.CylinderGeometry(.7, .9, 14, 12), mat(0x1565c0)); col.position.y = 7; tw.add(col); const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, .35, 8, 18), mat(0xfdd835)); ring.rotation.x = Math.PI/2; ring.position.y = .6; tw.add(ring); PARK_ANIM.plunge = ring; const top = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.4, 12), mat(0xc62828)); top.position.y = 14.7; tw.add(top); const s2 = 390 - 443; tw.position.set(...P3(s2, 70.5, pierDeckH(s2))); g.add(tw); }   // (its seat ring rides up and drops)
   { const bc = new THREE.Group(), roof = new THREE.Mesh(new THREE.BoxGeometry(14, .4, 10), mat(0x0277bd)); roof.position.y = 4.4; bc.add(roof); for (const [x, z] of [[-6.8, -4.8], [6.8, -4.8], [-6.8, 4.8], [6.8, 4.8]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 4.4, 6), mat(0xeeeeee)); p.position.set(x, 2.2, z); bc.add(p); }
     for (let k = 0; k < 6; k++){ const car = new THREE.Mesh(new THREE.CylinderGeometry(.8, .9, .6, 12), mat([0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0xff7043, 0x8e24aa][k])); car.position.set(-4 + (k % 3)*4, .3, k < 3 ? -2 : 2); bc.add(car); }

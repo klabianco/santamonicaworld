@@ -2396,7 +2396,7 @@ function startOcean(){
   updShipChest();
   if (save.char !== 'swimmer'){ save.char = 'swimmer'; persist(); }   // you always start at home as yourself, a person (change into an animal in the Menu)
   syncHouse(); placeLighthouse(); ocean = newOcean(); save.houseFound = true;
-  { const [s, t] = PROM_START, [x, y] = landXY(s, t), [dx, dy] = landXY(PROM_DINOS[2][0], PROM_DINOS[2][1]); Object.assign(ocean, { x, y, gh: landH(s, t), ang: Math.atan2(dy - y, dx - x) }); }   // (Kevin's pick: start on the Promenade, not at home)
+  { const [s, t] = PROM_START, [x, y] = landXY(s, t), [dx, dy] = landXY(PROM_DINOS[1][0], PROM_DINOS[1][1]); Object.assign(ocean, { x, y, gh: landH(s, t), ang: Math.atan2(dy - y, dx - x) }); }   // (Kevin's pick: start on the Promenade, not at home)
   awardWhalePrize(ocean);
   if (save.whaleQuest?.reward && !krakenBeaten()) ocean.held = 'sunstone';
   boardFix(ocean); for (const q of save.board) if (q.kind === 'calf' && q.state === 'lead'){ q.x = ocean.x; q.y = ocean.y + 4*METERS; }   // (the baby whale you were leading is right behind you)
@@ -2750,6 +2750,15 @@ const BLUFF = (() => { const E = CITY.E, mid = new Float32Array(E.nt).fill(NaN);
     for (let s = 300; s < 425; s += 1) if (smElev(s, t) < m && smElev(s + 1, t) >= m){ mid[j] = s + .5; break; } }
   return mid; })();
 function bluffMid(t){ const E = CITY.E, f = (t - E.t0)/E.dt, j = Math.floor(f); if (j < 0 || j >= E.nt - 1) return NaN; const a = BLUFF[j], b = BLUFF[j + 1]; return isNaN(a) || isNaN(b) ? NaN : lerp(a, b, f - j); }
+// Palisades Park's fence along the top of the bluff: you can't climb straight down to the beach (take the California Incline, or the pier bridge at Colorado)
+const FENCE = (() => { const E = CITY.E, f = new Float32Array(E.nt).fill(NaN);
+  for (let j = 0; j < E.nt; j++){ const m = BLUFF[j]; if (isNaN(m)) continue; const t = E.t0 + j*E.dt, hi = smElev(425, t);
+    for (let s = Math.ceil(m); s < 430; s += .5) if (smElev(s, t) >= hi - 1.2){ f[j] = s + .8; break; } }
+  return f; })();
+function fenceS(t){ const E = CITY.E, fj = (t - E.t0)/E.dt, j = Math.floor(fj); if (j < 0 || j >= E.nt - 1) return NaN; const a = FENCE[j], b = FENCE[j + 1]; return isNaN(a) || isNaN(b) ? NaN : lerp(a, b, fj - j); }
+function fenceCross(x0, y0, x1, y1){ const [s0, t0] = landST(x0, y0), [s1, t1] = landST(x1, y1), t = (t0 + t1)/2, f = fenceS(t); if (isNaN(f)) return false;
+  return (s0 - f)*(s1 - f) <= 0 && s0 !== s1 && !inclineAt(f, t); }   // (the Incline goes through it)
+function fenceBack(o, x0, y0){ if (!(o.jumpY > 3) && fenceCross(x0, y0, o.x, o.y)){ o.x = x0; o.y = y0; o.vx = o.vy = 0; } }
 // The California Incline (from OpenStreetMap): from Ocean Avenue at California, through the park and down the bluff face to PCH
 const INCLINE = { w: 6.5, p: [[404.3, -1045.5], [391.9, -1046.8], [383.7, -1048.7], [376.8, -1052.1], [371.1, -1058], [368, -1065.2], [367, -1069.9], [351.2, -1316.6], [347.5, -1342.5],
   [343.5, -1366], [339.6, -1381.1], [330.8, -1424], [328.6, -1435], [326.3, -1445.7], [322.4, -1454.4], [317.9, -1461.3], [313, -1464], [304, -1464.2]] };
@@ -3359,10 +3368,10 @@ function updOcean(dt){
   surfButton.classList.toggle('on', !!o.surfing);
   if (!o.surfing){ surfButton.firstChild.textContent = 'Surf'; surfButton.lastChild.textContent = 'B · board'; }
   if (o.grapple) grappleStep(o, dt);
-  else if (!o.onLand && o.jumpY > 0 && !o.ride && !o.vehicle){ jumpStep(o, dt); }   // flying (a jump, the jetpack, the paraglider)
+  else if (!o.onLand && o.jumpY > 0 && !o.ride && !o.vehicle){ const x0 = o.x, y0 = o.y; jumpStep(o, dt); fenceBack(o, x0, y0); }   // flying (a jump, the jetpack, the paraglider)
   else if (o.onShip){ shipWalk(o, dt); $('airChip').hidden = true; }
   else if (o.onBoat){ boatWalk(o, dt); $('airChip').hidden = true; }
-  else if (o.onLand){ if (o.car) carStep(o, dt); else if (o.sleeping) sleepStep(o); else if (o.sitting != null) sitStep(o); else if (o.workout) workStep(o, dt); else if (o.bison) bisonStep(o, dt); else walkStep(o, dt); $('airChip').hidden = true;
+  else if (o.onLand){ if (o.car) carStep(o, dt); else if (o.sleeping) sleepStep(o); else if (o.sitting != null) sitStep(o); else if (o.workout) workStep(o, dt); else if (o.bison) bisonStep(o, dt); else { const x0 = o.x, y0 = o.y; walkStep(o, dt); fenceBack(o, x0, y0); } $('airChip').hidden = true;
     if (groundAt(o.x, o.y) < -.45){ o.onLand = false; o.idle = 0; o.vx *= .5; o.vy *= .5; o.blockH = o.blockShow = 0;         // walked back into the sea
       if (Math.hypot(o.x - EAGLE.x, o.y - EAGLE.y) < (EAGLE.r + 1.5)*METERS){ o.jumpY = EAGLE.top; o.jumpV = 1.5; } }         // (off the edge of Eagle Rock: fall, then splash)
     if (Math.hypot(o.x - HOUSE.x, o.y - HOUSE.y) < 118 + 40 && o.wentFar){ madeItHome(o); return; }
@@ -4423,6 +4432,15 @@ function buildCoast(){
     const street = sign.clone(); street.position.x = .15; street.rotation.y = Math.PI/2; arch.add(street);   // (and from Ocean Avenue)
     const crown = new THREE.Mesh(new THREE.TorusGeometry(span/2 + .2, .14, 8, 28, Math.PI), cream); crown.position.y = H + .6; crown.scale.y = .35; crown.rotation.y = Math.PI/2; arch.add(crown);
     arch.scale.setScalar(1.45); at(arch, AVES.ocean - 10.5, 0); }
+  // ---- the fence along the top of the bluff in Palisades Park (with a gap where the California Incline goes down) ----
+  { const posts = [], rails = [], E = CITY.E; let prev = null;
+    for (let t = E.t0; t < E.t0 + (E.nt - 1)*E.dt; t += 2.5){ const s = fenceS(t); if (isNaN(s) || inclineAt(s, t)){ prev = null; continue; }
+      posts.push([s, t]); if (prev) rails.push([prev, [s, t]]); prev = [s, t]; }
+    const mat = std(0x2f4f3a, .6), pm = new THREE.InstancedMesh(new THREE.BoxGeometry(.08, 1.1, .08), mat, posts.length), rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, .06, .05), mat, rails.length*2), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), sc = new THREE.Vector3();
+    posts.forEach(([s, t], i) => { const [x, y] = landXY(s, t); m4.compose(v.set(x*U, landH(s, t) + .55, y*U), q.identity(), sc.set(1, 1, 1)); pm.setMatrixAt(i, m4); });
+    rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
+      for (const [k, hh] of [[0, .55], [1, 1.05]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*2 + k, m4); } });
+    for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
   // ---- street signs at the corners: Ocean Avenue and 3rd Street at every cross street ----
   { const XN = { colorado: 'COLORADO AVE', broadway: 'BROADWAY', smblvd: 'SANTA MONICA BLVD', arizona: 'ARIZONA AVE', wilshire: 'WILSHIRE BLVD', california: 'CALIFORNIA AVE', washington: 'WASHINGTON AVE', idaho: 'IDAHO AVE', montana: 'MONTANA AVE' };
     for (const [k, xt] of Object.entries(XST)) for (const [s, name] of [[AVES.ocean + 11, 'OCEAN AVE'], [AVES.third + 8, k === 'broadway' || k === 'smblvd' || k === 'arizona' || k === 'wilshire' ? '3RD ST PROMENADE' : '3RD ST']]){
@@ -4442,7 +4460,7 @@ function buildCoast(){
 }
 // ---- the 3rd Street Promenade: shopfronts with awnings and signs, the dinosaur topiary fountains, benches, lamps, bollards and people ----
 const PROM_STORES = [[-1,-801.0,"JOHN REED Fitness",0],[-1,-777.3,"1212 Santa Monica",1],[-1,-763.1,"Chipotle",1],[-1,-687.4,"Cabo Cantina",1],[-1,-672.7,"Sephora",0],[-1,-604.8,"Stefano's Pizzeria",1],[-1,-593.0,"AMC Santa Monica 7",2],[-1,-572.0,"The Coffee Bean & Tea Leaf",1],[-1,-557.0,"Barnes & Noble",0],[-1,-542.3,"Johnny Rockets",1],[-1,-524.3,"Skechers",0],[-1,-508.8,"Sunglass Hut",0],[-1,-493.8,"Superdry",0],[-1,-480.6,"Zara",0],[-1,-459.9,"Carlo's Bake Shop",1],[-1,-451.7,"Starbucks",1],[-1,-428.1,"Trastevere",0],[-1,-394.5,"Anthropologie",0],[-1,-365.4,"T-Mobile",0],[-1,-352.8,"Bruxie",1],[-1,-342.4,"Cotton On",0],[-1,-332.6,"Alo",0],[-1,-317.3,"Tillys",0],[-1,-286.1,"Urban Outfitters",0],[-1,-260.3,"H&M",0],[-1,-247.0,"PacSun",0],[-1,-242.1,"Aldo",0],[-1,-230.7,"McConnell's",1],[-1,-224.8,"Google Store",0],[-1,-221.9,"Cult",1],[0,-636.8,"iSno",1],[0,-395.7,"Ugo",1],[1,-655.0,"Casa Martin",1],[1,-638.3,"Foot Locker",0],[1,-602.2,"Victoria's Secret",0],[1,-593.9,"American Childrens Theatre",0],[1,-554.4,"HOLEY MOLLY",1],[1,-549.3,"Azulé Taqueria",1],[1,-539.1,"Silver Lake Ramen",1],[1,-527.9,"Dodgers Clubhouse",0],[1,-520.5,"Abercrombie & Fitch",0],[1,-510.3,"Adidas",0],[1,-498.3,"Hummus Bar Express",1],[1,-476.4,"Patagonia",0],[1,-462.0,"Madewell",0],[1,-453.0,"Barney's Beanery",1],[1,-397.5,"Raising Cane's",1],[1,-392.6,"Wetzel's Pretzels",1],[1,-387.8,"See Sea",0],[1,-383.0,"Sunsations",0],[1,-375.9,"Levi's",0],[1,-368.0,"Puzzle Zoo",0],[1,-365.0,"Lids",0],[1,-360.9,"Brandy Melville",0],[1,-346.0,"Apple Store",0],[1,-322.9,"IT'SUGAR",1],[1,-290.3,"Hollister",0],[1,-269.7,"AMC Broadway 4",2],[1,-258.9,"Rip Curl",0],[1,-249.8,"MAC Cosmetics",0],[1,-221.9,"Lululemon",0]];   // the shops on the Promenade (OpenStreetMap): [side (-1 ocean side, 1 inland, 0 the pavilions down the middle), t, name, 1 food / 2 movies]
-const PROM_START = [653, -813];   // where every trip starts: the Wilshire end of the Promenade, facing the triceratops
+const PROM_START = [653, -428];   // where every trip starts: the Promenade at Santa Monica Boulevard, facing up the block toward the stegosaurus (Kevin's pick)
 const PROM_DINOS = [[653, -240, 'tri'], [653, -520, 'stego'], [653, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
 // Walk into the shops: each one on the Promenade has a room behind its storefront (as deep as the building lets it, up to 9 m), with a door in
 // the glass front and the inside of that kind of shop. Inside, walkH is the shop floor; the walls between shops are the building itself.

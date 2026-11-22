@@ -1137,7 +1137,7 @@ function renderShop(){
   const box = $('shopItems'); box.innerHTML = '';
   for (const [title, ids] of SHOP_GROUPS){
     const h = document.createElement('h3'); h.className = 'shopgroup'; h.textContent = title; box.appendChild(h);
-  for (const it of ids.map(id => SHOP.find(i => i.id === id))){
+  for (const it of ids.map(id => SHOP.find(i => i.id === id)).filter(it => it && it.id !== 'ship')){   // (no pirate ship any more)
     const n = ownedLv(it.id), max = maxLv(it), full = n >= max, price = priceAt(it, n), d = document.createElement('div'); d.className = 'item' + (n ? (equipped(it.id) ? ' owned' : ' off') : '');
     d.innerHTML = `<h3>${it.name}</h3>` + (it.inf ? `<div class="lvl"><span>${n ? `Level ${n}` : 'Not yet'} · levels never end!</span></div>` : '') + (max > 1 && !it.many && !it.inf ? `<div class="lvl" aria-label="Level ${n} of ${max}">${Array.from({ length: max }, (_, i) => `<i class="${i < n ? 'on' : ''}${i >= it.lv.length ? ' legend' : ''}"></i>`).join('')}<span>${n ? `Level ${n}` : 'Not yet'}${max > it.lv.length ? ' · Legend!' : ''}</span></div>` : '') +
       `<p>${it.say(it.many ? n : Math.max(1, n))}</p>` + (n && !full && !it.many ? `<p class="next">Level ${n + 1}: ${it.say(n + 1)}</p>` : '') +
@@ -1616,6 +1616,7 @@ function getChunk(cx,cy){
 let ocean = null;
 const AFLOAT = { x:-1850, y:800 };
 let afloatShip = null, shipChest = null, pirateFlag = null; const ballPool = [];
+const SHIP_AFLOAT = false;   // (Nov 2026: no floating pirate ship any more. The real Star of Scotland is the wreck on the sea floor; with no ship afloat, the pirates, cannons and ladders are all off)
 function updShipChest(){ if (!shipChest) return; const open = (save.chests || []).includes('shipdeck'); shipChest.userData.lid.rotation.x = open ? -1.9 : 0; shipChest.userData.glow.visible = !open; }
 /* Climbing aboard the anchored ship: rope ladders hang down both sides; the deck is walkable and a chest waits on the high back deck.
    SHIP_DECK is a height map of the deck in the ship's own frame (tenths of a meter above the keel, -1 = no deck, -10 = ropes in the way),
@@ -2912,6 +2913,11 @@ function footLift(o){   // (streets, sidewalks and the Promenade's pavers are dr
   if (s >= ICE.site[1] && s < ICE.site[1] + ICE_RAMP && t > ICE.ent[0] - .3 && t < ICE.ent[1] + .3){ const top = iceDeckY() + .04, f = (s - ICE.site[1])/ICE_RAMP; return Math.max(0, lerp(top, landH(ICE.site[1] + ICE_RAMP, t), f) - landH(s, t)); }   // (up the ramp)
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)) return 0;   // (inside a shop)
   return (s > PROM.s0 - 1 && s < PROM.s1 + 1 && t > PROM.t0 && t < PROM.t1) || roadAt(s, t) ? .06 : 0; }
+function onRoadway(s, t){   // (for cars: on the road itself, curb to curb)
+  if (inclineAt(s, t) || onPierDeck(s, t)) return true; roadIndex(); const L = roadCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return false;
+  for (const [n, q] of L){ const r = CITY.roads[n]; if (r.c === 6 || r.c === 7 || r.c >= 9) continue; const [ax, ay] = r.p[q], [bx, by] = r.p[q + 1], dx = bx - ax, dy = by - ay, l2 = dx*dx + dy*dy || 1, f = clamp(((s - ax)*dx + (t - ay)*dy)/l2, 0, 1);
+    if (Math.hypot(s - ax - dx*f, t - ay - dy*f) < ROAD_W[r.c]/2 + .4) return true; }
+  return false; }
 function roadAt(s, t){   // the named street (or path) you're on, if any
   roadIndex(); const L = roadCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return null; let best = null, bd = 1e9;
   for (const [n, q] of L){ const r = CITY.roads[n], [ax, ay] = r.p[q], [bx, by] = r.p[q + 1], dx = bx - ax, dy = by - ay, l2 = dx*dx + dy*dy || 1, f = clamp(((s - ax)*dx + (t - ay)*dy)/l2, 0, 1), d = Math.hypot(s - ax - dx*f, t - ay - dy*f) - ROAD_W[r.c]/2;
@@ -4297,6 +4303,7 @@ function buildCoast(){
   for (const r of CITY.roads){ if (r.p.every(([s, t]) => onPierDeck(s, t) || (s < 380 && Math.abs(t) < 12))) continue;   // (the pier has its own deck)
     if (r.c === 6 && r.name === '3rd Street Promenade') continue;   // (paved facade to facade below)
     const inc = r.name === 'California Incline'; if (inc && r.c !== 1) continue;
+    if (!inc && r.c >= 1 && r.c <= 4){ strip(r.p, ROAD_W[r.c] + 5.4, 'conc', .035); strip(r.p, ROAD_W[r.c] + .36, 'curb', .045); }   // sidewalks along the streets, and the curb (a light edge the road sits inside)
     strip(r.p, inc ? 12.4 : ROAD_W[r.c], ROADKEY[r.c], r.c >= 9 ? .04 : r.c === 7 ? .05 : .06); }
   for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]){   // the Promenade: wide concrete sidewalks with curbs, and the old roadway down the middle paved with gray hexagons
     strip([[(PROM.s0 + 648.5)/2, t0], [(PROM.s0 + 648.5)/2, t1]], 648.5 - PROM.s0, 'conc', .07); strip([[(657.5 + PROM.s1)/2, t0], [(657.5 + PROM.s1)/2, t1]], PROM.s1 - 657.5, 'conc', .07);
@@ -4670,7 +4677,7 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Ugo Trattoria': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12), M('🍨', 'Gelato', 6)],
   'Wonders of the World': [M('🦴', 'Dinosaur fossil', 25, 'play', { say: 'A real fossil, millions of years old!' }), M('☄️', 'Space rock', 20, 'play', { say: 'It fell from outer space!' }), M('💎', 'Geode', 15, 'play', { say: 'Crack it open: crystals inside!' })],
   'Santa Monica Souvenirs': [M('🧢', 'Santa Monica cap', 20, 'wear', { slot: 'hat', col: '#1f6b8a' }), M('👕', 'Santa Monica T-shirt', 25, 'wear', { slot: 'shirt', col: '#f4f4f0' }), M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
-  'Surrender Tattoo': [M('🐉', 'Temporary dragon tattoo', 5, 'play', { say: 'So cool! It washes off in the bath' }), M('🦈', 'Temporary shark tattoo', 5, 'play', { say: 'Chomp! It washes off in the bath' }), M('🌺', 'Temporary flower tattoo', 5, 'play', { say: 'So pretty! It washes off in the bath' })],
+  'Surrender Tattoo': [M('🐉', 'Temporary dragon tattoo', 5, 'tattoo'), M('🦈', 'Temporary shark tattoo', 5, 'tattoo'), M('🌺', 'Temporary flower tattoo', 5, 'tattoo'), M('⭐', 'Temporary star tattoo', 5, 'tattoo'), M('🦋', 'Temporary butterfly tattoo', 5, 'tattoo')],
   'Outlandish': [M('💡', 'Ring light', 20, 'selfie'), M('🎙️', 'Microphone', 15, 'play', { say: "You're live! Say hi to your viewers" })],
   'The Cube VR': [M('🥽', 'VR session', 10, 'movie')],
   'Cabo Cantina': [M('🌮', 'Tacos', 10), M('🧀', 'Nachos', 9)], 'Casa Martin': [M('🌮', 'Tacos', 10), M('🌯', 'Burrito', 12)], 'Azulé Taqueria': [M('🌮', 'Tacos', 9), M('🥑', 'Chips & guac', 6)],
@@ -4990,6 +4997,10 @@ function endTurn(){ if (!game) return; const who = game.turn;
   game.turn = 1 - who; game.busy = false; drawGame(); if (game.turn === 1){ game.busy = true; drawGame(); setTimeout(() => { if (!game) return; game.busy = false; rollGame(); }, 900); } }
 // ---- getting stronger at the gym: every lift counts (save.lifts), your arms, shoulders and chest grow, and you can flex ----
 const muscleNow = () => Math.min(1, (save.lifts || 0)/200), strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
+function setTattoo(m, e){   // a temporary tattoo, on the outside of your right forearm
+  const u = m.userData; if (u.kind !== 'swimmer' || u.tatE === (e || '')) return; u.tatE = e || ''; if (u.tat){ u.tat.parent.remove(u.tat); u.tat = null; } if (!e) return;
+  const tex = canvasTex(96, 96, (x, w, h) => { x.clearRect(0, 0, w, h); emo(x, e, w/2, h/2 + 4, 78); }, false), pl = new THREE.Mesh(new THREE.PlaneGeometry(.085, .085), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 }));
+  pl.position.set(.15, .005, .043); u.arms.ra.el.add(pl); u.tat = pl; }
 function setMuscle(m, mu){ const u = m.userData; if (u.kind !== 'swimmer' || u.mu === mu) return; u.mu = mu; const a = 1 + 1.3*mu, f = 1 + .6*mu;
   for (const id of ['la', 'ra']){ const { sh, el } = u.arms[id]; sh.userData.z0 ??= sh.position.z; sh.position.z = sh.userData.z0*(1 + .22*mu);   // (broader shoulders,
     for (const c of sh.children) if (c.isMesh) c.scale.set(1, a, a); if (el.children[0]?.isMesh) el.children[0].scale.set(1, f, f); }                   //  big arms)
@@ -5537,6 +5548,7 @@ function renderStore(){
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
       if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
+      if (it.act === 'tattoo'){ save.tattoo = it.e; persist(); flushCloud(); closeStore(); heartsAt = time; banner(`${it.e} New tattoo!`, 'Look at your arm! (It\'s only temporary)'); return; }
       treat = { ...it, bites: it.bites || (it.act === 'drink' ? 4 : 3) }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
   const slots = [...new Set(list.filter(it => it.act === 'wear').map(it => it.slot))].filter(k => worn[k]);   // take off what you're wearing (for free)
   for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
@@ -6110,7 +6122,7 @@ function carHits(c, x, y, ang = c.ang){   // how many spots around the car's edg
   const fx = Math.cos(ang), fy = Math.sin(ang); let n = 0;
   for (const [a, b] of [[2.1, 0], [2, .78], [2, -.78], [-2.05, .78], [-2.05, -.78], [0, .85], [0, -.85]]){
     const px = x + (fx*a - fy*b)*METERS, py = y + (fy*a + fx*b)*METERS;
-    const [ss, st] = landST(px, py); if (ss < .5 || !onMainland(px, py) || inPromenade(ss, st) || carGround(px, py, c.h) > c.h + .85) n++; }
+    const [ss, st] = landST(px, py); if (ss < .5 || !onMainland(px, py) || inPromenade(ss, st) || !onRoadway(ss, st) || carGround(px, py, c.h) > c.h + .85) n++; }   // (off the road: the curb stops you)
   return n; }
 function carBlocked(c, x, y){ const fx = Math.cos(c.ang)*2.1*METERS, fy = Math.sin(c.ang)*2.1*METERS; if (fenceCross(c.x, c.y, x + fx, y + fy) || fenceCross(c.x, c.y, x - fx, y - fy)) return true;   // (the fence along the top of the bluff stops cars too: down only by the Incline)
   const n = carHits(c, x, y); return n > 0 && n > carHits(c, c.x, c.y); }   // (already scraping a wall? you can slide along it, or back away)
@@ -7687,7 +7699,7 @@ function applyAssetsToOcean(){
     for (const t of [TEX.rockMap, TEX.rockNor, TEX.rockRough]) t.repeat.set(2, 2);
     INST.rock.material = new THREE.MeshStandardMaterial({ map: TEX.rockMap, normalMap: TEX.rockNor, roughnessMap: TEX.rockRough, roughness: 1 });
     const rm = new THREE.MeshStandardMaterial({ map: TEX.rockMap, normalMap: TEX.rockNor, roughnessMap: TEX.rockRough, roughness: 1 }); waterize(rm); for (const r of rocksIsl) r.material = rm; }
-  if (MODELS.ship && !assetsApplied.ship){ assetsApplied.ship = true;   // the sister ship that didn't sink, anchored at the edge of the cove
+  if (SHIP_AFLOAT && MODELS.ship && !assetsApplied.ship){ assetsApplied.ship = true;   // the sister ship that didn't sink, anchored at the edge of the cove
     const ship = MODELS.ship.clone(); fitObject(ship, 22);
     ship.traverse(m => { if (m.isMesh) for (const mt of [].concat(m.material)) if (mt.transparent){ mt.transparent = false; mt.alphaTest = .5; mt.depthWrite = true; mt.needsUpdate = true; } });   // cut-out rigging instead of see-through, so the water doesn't draw over it
     const b = new THREE.Box3().setFromObject(ship), c = b.getCenter(new THREE.Vector3());
@@ -7898,7 +7910,7 @@ function render3D(dt){
       m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
-    amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
+    amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); setTattoo(m, save.tattoo); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
     fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? (ocean.workout?.pier ? ocean.workout.py + .6 : landY(ocean) + .6 + (ocean.climb?.h || 0)) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();

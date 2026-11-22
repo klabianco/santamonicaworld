@@ -30,6 +30,22 @@
     display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none}
   .hud-col{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
   .hud-col.right{align-items:flex-end}
+  .hudrow{display:flex;gap:6px;justify-content:flex-end;align-items:center}   /* (coins beside the speed; phone, Menu and View side by side) */
+  .chip.place .sub{font-size:12px;font-weight:800;color:var(--muted);margin-top:2px}
+  .chip.place .sub:empty{display:none}
+  @media (max-width:600px){
+    .hud{padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 0}
+    .hud{gap:8px} .hud .hud-col{gap:5px;flex:1 1 auto;min-width:0} .hud .hud-col.right{flex:0 0 auto}   /* (the buttons on the right keep their size; the left side shrinks) */
+    .hud .chip{padding:6px 10px;font-size:13px;border-radius:12px}
+    .hud .big.name{font-size:17px;line-height:1.1}
+    .hud .chip.place{max-width:100%}
+    .hud .hudrow .chip{padding:6px 9px}
+    .hud .chip.quest,.hud .chip.league{font-size:12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hud .chip.place .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hud .chip.rank .xpbar{width:78px}
+    .hud .chip.mph b{font-size:18px}
+    body .speedbar{top:60%}
+  }
   .chip.mph{display:flex;align-items:baseline;gap:5px;font-family:var(--display)}
   .chip.mph b{font-size:22px;font-weight:400;min-width:1.6em;text-align:right}
   .chip.mph span{font-size:13px;opacity:.7}
@@ -382,9 +398,8 @@
 
 <div id="hud" class="hud" hidden>
   <div class="hud-col">
-    <div class="chip"><div class="lbl" id="hudLbl">Points</div><div class="big" id="hudVal">50</div>
-      <div class="progress" id="hudProg"><i id="hudProgFill"></i></div></div>
-    <div class="chip" id="hudSub"></div>
+    <div class="chip place"><div class="lbl" id="hudLbl">Points</div><div class="big" id="hudVal">50</div>
+      <div class="progress" id="hudProg"><i id="hudProgFill"></i></div><div class="sub" id="hudSub"></div></div>
     <button class="chip quest" id="questChip" type="button" hidden></button>
     <button class="chip league" id="leagueChip" type="button" hidden></button>
     <div class="chip quest" id="holdChip" hidden></div>
@@ -392,13 +407,13 @@
   <div class="hud-col right">
     <div class="chip lvl" id="airChip" hidden><span>Air</span><div class="xpbar"><i id="airFill"></i></div></div>
     <div class="chip rank" id="rankChip"><div class="rk"><b id="rankName">Guppy</b><span id="xpVal">0 XP</span></div><div class="xpbar"><i id="xpFill"></i></div><span id="xpFloat" aria-hidden="true"></span></div>
-    <div class="chip mph" id="mphChip" hidden><b id="mphVal">0</b><span>mph</span></div>
-    <div class="chip coins" id="coinChip"><span class="coin" aria-hidden="true"></span><b id="coinVal">0</b></div>
-    <button class="chip phonechip" id="phoneBtn" type="button" aria-label="Phone">📱<b id="phoneBadge" hidden></b></button>
+    <div class="hudrow"><div class="chip mph" id="mphChip" hidden><b id="mphVal">0</b><span>mph</span></div>
+    <div class="chip coins" id="coinChip"><span class="coin" aria-hidden="true"></span><b id="coinVal">0</b></div></div>
+    <div class="hudrow"><button class="chip phonechip" id="phoneBtn" type="button" aria-label="Phone">📱<b id="phoneBadge" hidden></b></button>
     <button class="chip" id="swimmerBtn" type="button">Menu</button>
-    <button class="chip" id="viewBtn" type="button">View</button>
-    <button class="chip build" id="buildBtn" type="button" hidden>Build</button>
-    <button class="chip boats" id="boatBtn" type="button" hidden>Boats</button>
+    <button class="chip" id="viewBtn" type="button">View</button></div>
+    <div class="hudrow"><button class="chip build" id="buildBtn" type="button" hidden>Build</button>
+    <button class="chip boats" id="boatBtn" type="button" hidden>Boats</button></div>
   </div>
 </div>
 
@@ -3468,7 +3483,8 @@ function updOcean(dt){
   o.rideTarget = o.ride || o.onLand || o.vehicle ? null : findDolphin(o);
   { const px = o.mphX ?? o.x, py = o.mphY ?? o.y, v = Math.hypot(o.x - px, o.y - py)/Math.max(dt, 1e-3)/METERS*2.23694;   // how fast you're really going, in miles per hour
     o.mphX = o.x; o.mphY = o.y; o.mph = v > 20000 ? o.mph || 0 : lerp(o.mph || 0, v, Math.min(1, dt*4));   // (ignore teleports)
-    if ((o.mphT = (o.mphT || 0) - dt) <= 0){ o.mphT = .2; showSpeedBar(); $('mphChip').hidden = false; const gm = gameMph(o.mph); $('mphVal').textContent = gm < 10 ? gm.toFixed(1) : Math.round(gm).toLocaleString(); } }
+    if ((o.mphT = (o.mphT || 0) - dt) <= 0){ o.mphT = .2; showSpeedBar(); const foot = o.onLand && !o.car; $('mphChip').hidden = foot; if (mode === 'ocean' && $('speedBar').hidden !== foot) $('speedBar').hidden = foot;   // (on foot the speed and the top-speed slider just get in the way)
+      const gm = gameMph(o.mph); $('mphVal').textContent = gm < 10 ? gm.toFixed(1) : Math.round(gm).toLocaleString(); } }
   { const k = superK(), fx = $('speedFx'), op = k ? (.25 + .5*k).toFixed(2) : '0'; if (fx.style.opacity !== op){ fx.style.opacity = op; fx.style.transform = `rotate(${(time*40)%9}deg)`; } }
   { const cb = $('climbBtn'), showC = ropeNear(o) >= 0; if (cb.hidden === showC) cb.hidden = !showC; }
   { const zb = $('sleepBtn'), showZ = nearBed(o); if (zb.hidden === showZ) zb.hidden = !showZ; }
@@ -3540,7 +3556,7 @@ function updOcean(dt){
   const ashore = o.onLand && onMainland(o.x, o.y);
   $('hudLbl').textContent = ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
   $('hudProg').hidden = true;
-  $('hudSub').textContent = `${ZONES[o.zone].where} · Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N}`;
+  $('hudSub').textContent = `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
 }
 
 /* minimap: zones you've found are colored in */

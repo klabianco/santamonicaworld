@@ -4834,7 +4834,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
-const SPOT = { records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
+const SPOT = { elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
@@ -4844,12 +4844,16 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
   const r = roomAt(s, t, true); if (!r) return null; const d = (s - r.fs)*r.inw;
   let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
+  if (best?.k === 'elevator') return { label: dn ? '🛗 Elevator up' : '🛗 Elevator down', go: () => rideElevator(r, !dn) };
   if (best) return { label: SPOT[best.k][0], go: () => best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
   if (r.cat === 'gym') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
   if (d <= r.D - 3.9) return null;
   return { label: storeMenu(r) === 'scoops' ? '🍦 Order ice cream' : r.cat === 'movies' ? '🎟️ Buy a ticket' : r.kind === 1 ? '🍴 Order food' : '🛍️ Buy something', go: openStoreHere }; }
+function rideElevator(r, toDown){ const o = ocean; if (!o || paused) return; initAudio(); sfx(1046, .25, 'sine', .05); sfx(784, .35, 'sine', .05, .22);   // ding!
+  walkRef = (toDown ? r.down.yB : r.floor) + .5; const [x, y] = landXY(r.fs + r.inw*(r.D - 3), r.t1 - .2 - 1); o.x = x; o.y = y; o.vx = o.vy = 0; o.gh = groundAt(x, y);
+  banner(toDown ? '🛗 Ding! Downstairs' : '🛗 Ding! Main floor', toDown ? "Kids' books, toys, games, cookbooks and records" : 'Fiction, mysteries, sci-fi and New & Noteworthy'); }
 function doPlace(){ if (placeNow && !paused){ initAudio(); placeNow.go(); } }
 function tryPhone(){ banner('Say cheese! 📸', 'You tried out a phone. The picture is in your phone'); takePhoto(); }
 function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAudio();
@@ -5004,7 +5008,7 @@ function promRooms(){   // (worked out once: where each shop's sign, door and ro
     door = clamp(door, t0 + 1.2, t1 - 1.2); const r = { ...q, side, door, fs, inw, t0, t1, D, floor: landH(fs, door), s0: Math.min(fs + inw*.3, fs + inw*D), s1: Math.max(fs + inw*.3, fs + inw*D) }; PROM_ROOMS.push(r);
     if (big?.down){ r.door = (t0 + t1)/2; r.floor = landH(fs, r.door); }   // (the door in the middle, looking straight at the stairs)
     if (big){ let hi = r.floor; for (let d = .3; d <= D; d += 1) for (let k = 0; k <= 8; k++) hi = Math.max(hi, landH(fs + inw*d, t0 + (t1 - t0)*k/8)); if (hi > r.floor){ r.door0 = r.floor; r.floor = hi + .02; } }   // (a wide shop on a sloping street: level with its highest corner, so the street doesn't poke through)
-    if (big?.down && D > 12){ const yB = r.floor - 4.5; r.down = { yB, d0: D/2 - 3.3, d1: D/2 + 3.3, tm: (t0 + t1)/2, hw: .85 }; }   // the staircase down, in the middle of the store
+    if (big?.down && D > 12){ const yB = r.floor - 4.5; r.down = { yB, d0: D/2 - 3.3, d1: D/2 + 3.3, tm: (t0 + t1)/2, hw: 1.2, o0: D/2 - 3.3, o1: D/2 + 4.5, ow: 3 }; }   // the staircase down, in the middle of the store
     return r; };
   const ownAt = (side, t) => { const fs = side < 0 ? PROM.s0 : PROM.s1; for (const dt of [0, -1.5, 1.5, -3, 3]) for (const d of [1, 2, 3, .5]){ const b = bldAt(fs + side*d, t + dt); if (b) return b; } return null; };
   for (const side of [-1, 1]){ const S = L.filter(q => q.side === side).sort((a, b) => a.t - b.t);
@@ -5027,6 +5031,7 @@ function roomH(r, s, t){   // the floor you're standing on in a shop (a shop wit
   if (L.length === 1) return L[0]; const below = L.filter(v => v <= walkRef + .6); return below.length ? Math.max(...below) : Math.min(...L); }
 function roomLayers(r, s, t){ const d = (s - r.fs)*r.inw, St = r.down;
   if (d >= St.d0 && d <= St.d1 && Math.abs(t - St.tm) <= St.hw) return [r.floor - (r.floor - St.yB)*(d - St.d0)/(St.d1 - St.d0)];   // on the stairs
+  if (d >= St.o0 && d <= St.o1 && Math.abs(t - St.tm) <= St.ow) return [St.yB + roomTop(r, s, t, r.gridB)];   // (under the open well: only the floor downstairs)
   return [St.yB + roomTop(r, s, t, r.gridB), mainH(r, s, t)]; }
 function mainH(r, s, t){ const d = (s - r.fs)*r.inw; return (r.door0 != null && d < 1 ? lerp(r.door0, r.floor, clamp(d, 0, 1)) : r.floor) + roomTop(r, s, t); }   // (up the little ramp in from the door)
 const downIn = o => { if (!o?.onLand || o.car) return null; const [s, t] = landST(o.x, o.y), r = s > PROM.s0 - 25 && s < PROM.s1 + 25 ? roomAt(s, t, true) : null; return r?.down && (o.gh ?? 1e9) < r.floor - 2 ? r : null; };   // downstairs in a shop
@@ -5043,6 +5048,7 @@ function shopTex(key){   // wood floor, brick, a shelf of books, a reading rug (
     else if (key === 'spines'){ c('#3a2a1c', 0, 0, w, h); const P = ['#1d3557', '#e63946', '#f1faee', '#2a9d8f', '#e9c46a', '#264653', '#f4a261', '#6d597a', '#b5838d', '#111111', '#e76f51', '#457b9d', '#ffb703', '#8ecae6', '#3d5a80'];
       for (let xx = 2; xx < w - 4;){ const bw = 10 + R()*16|0, bh = 108 + R()*44|0; if (R() < .18){ c(P[R()*P.length|0], xx, h - 6 - bw, Math.min(bh, w - xx - 4), bw); xx += 4; continue; }
         const col = P[R()*P.length|0]; c(col, xx, h - 6 - bh, bw, bh); c('rgba(255,255,255,.55)', xx + 2, h - 6 - bh + 12, bw - 4, 3); c('rgba(0,0,0,.25)', xx + 2, h - 30, bw - 4, 6); xx += bw + 1; } c('#5a4128', 0, h - 6, w, 6); }
+    else if (key === 'carpet'){ c('#8f9296', 0, 0, w, h); for (let k = 0; k < 2200; k++){ const v = 120 + (R()*40|0); c(`rgb(${v},${v + 2},${v + 6})`, R()*w, R()*h, 2, 2); } }
     else if (key === 'rug'){ c('#c8a274', 0, 0, w, h); ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(w/2, h/2, 124 - i*20, 0, Math.PI*2); x.fill(); }); } }); }
 function shopSignTex(spec){ const [text, asp] = spec.split('|'), H = 128, W = Math.min(2048, H*(+asp || 8));   // a shop's section signs
   const green = /NEW|DOWNSTAIRS/.test(text);
@@ -5105,15 +5111,18 @@ function buildRooms(g, P3){
         const flat = (key, da, db, ta, tb, y, u, v) => tq(key, P3(S(da), ta, y), P3(S(db), ta, y), P3(S(db), tb, y), P3(S(da), tb, y), u, v);
         const side = (key, tt, da, db, ya, yb, u, v, flip) => tq(key, P3(S(da), tt, ya), P3(S(db), tt, ya), P3(S(db), tt, yb), P3(S(da), tt, yb), u, v, flip);
         const across = (key, dd, ta, tb, ya, yb, u, v, flip) => tq(key, P3(S(dd), ta, ya), P3(S(dd), tb, ya), P3(S(dd), tb, yb), P3(S(dd), ta, yb), u, v, flip);
-        const holeRects = [[.3, St.d0, T0, T1], [St.d1, D, T0, T1], [St.d0, St.d1, T0, tm - H], [St.d0, St.d1, tm + H, T1]];
-        for (const [da, db, ta, tb] of holeRects){ flat('oak', da, db, ta, tb, y0, (db - da)/2, (tb - ta)/2); quad(shell, P3(S(da), ta, y0 - .25), P3(S(db), ta, y0 - .25), P3(S(db), tb, y0 - .25), P3(S(da), tb, y0 - .25), 0xf4f2ee); }   // the floor (with the stairwell cut out) and the ceiling downstairs
+        const O0 = St.o0, O1 = St.o1, OW = St.ow, BLK = 0x1d1d1f;   // (from photos: the stairs go down through a big open well, with black railings and a wood edge all round)
+        const holeRects = [[.3, O0, T0, T1], [O1, D, T0, T1], [O0, O1, T0, tm - OW], [O0, O1, tm + OW, T1]];
+        for (const [da, db, ta, tb] of holeRects){ flat('oak', da, db, ta, tb, y0, (db - da)/2, (tb - ta)/2); quad(shell, P3(S(da), ta, y0 - .35), P3(S(db), ta, y0 - .35), P3(S(db), tb, y0 - .35), P3(S(da), tb, y0 - .35), 0xf4f2ee); }   // the floor (with the well cut out) and the ceiling downstairs
         // the walls: the brick one on the left, and the walls downstairs (the front one too: it's underground)
         side('brick', T0 + .01, .3, D, y0, y1, D/1.2, 3.5/.6);
-        for (const tt of [T0, T1]) quad(shell, P3(front, tt, yB), P3(back, tt, yB), P3(back, tt, y0 - .25), P3(front, tt, y0 - .25), 0xe3f1f8);
-        quad(shell, P3(front, T0, yB), P3(front, T1, yB), P3(front, T1, y0 - .25), P3(front, T0, y0 - .25), 0xe3f1f8); quad(shell, P3(back, T0, yB), P3(back, T1, yB), P3(back, T1, y0 - .25), P3(back, T0, y0 - .25), 0xfff3d6);
-        flat('oak', .3, D, T0, T1, yB, (D - .3)/2, W/2);
-        for (let d = 2; d < D - .5; d += 3.2){ box(props, S(d), S(d + .05), T0 + .6, T1 - .6, y1 - .1, y1 - .05, 0x1d1d1f); for (let t = T0 + 1; t < T1 - .8; t += 1.4) box(props, S(d - .05), S(d + .1), t, t + .12, y1 - .28, y1 - .1, 0x1d1d1f);   // black track lights
-          lit.push(...P3(S(d), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm + 1.5, y0 - .27), ...P3(S(d), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm + 1.5, y0 - .27), ...P3(S(d), tm + 1.5, y0 - .27)); }   //   (and lights downstairs)
+        for (const tt of [T0, T1]) quad(shell, P3(front, tt, yB), P3(back, tt, yB), P3(back, tt, y0 - .35), P3(front, tt, y0 - .35), 0xf4f2ee);
+        quad(shell, P3(front, T0, yB), P3(front, T1, yB), P3(front, T1, y0 - .35), P3(front, T0, y0 - .35), 0xf4f2ee); quad(shell, P3(back, T0, yB), P3(back, T1, yB), P3(back, T1, y0 - .35), P3(back, T0, y0 - .35), 0xf4f2ee);
+        flat('carpet', .3, D, T0, T1, yB, (D - .3)/2, W/2);   // (gray carpet downstairs)
+        for (let d = 2; d < D - .5; d += 3.2){ box(props, S(d), S(d + .05), T0 + .6, T1 - .6, y1 - .1, y1 - .05, BLK); for (let t = T0 + 1; t < T1 - .8; t += 1.4) box(props, S(d - .05), S(d + .1), t, t + .12, y1 - .28, y1 - .1, BLK);   // black track lights
+          lit.push(...P3(S(d), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 3.5, y0 - .37), ...P3(S(d), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 3.5, y0 - .37), ...P3(S(d), tm - 3.5, y0 - .37));   //   (and lights downstairs)
+          lit.push(...P3(S(d), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 4.5, y0 - .37), ...P3(S(d), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 4.5, y0 - .37), ...P3(S(d), tm + 4.5, y0 - .37)); }
+        for (const [dd, tt] of [[2.4, tm - 4], [2.4, tm + 4], [D - 4, tm - 5], [D - 4, tm + 5]]){ box(props, S(dd - .01), S(dd + .01), tt - .01, tt + .01, y1 - .9, y1, BLK); box(props, S(dd - .22), S(dd + .22), tt - .22, tt + .22, y1 - 1.05, y1 - .88, 0xf4f4f0); }   // white dome lamps
         // bookcases along the walls, light oak with a header on top and a sign on it; books face out in rows
         const wallCase = (tt, inn, da, db, h, sign, y = y0, BB = B) => { const ti = tt + inn*.42, a = Math.min(tt, ti), b = Math.max(tt, ti); BB(da, db, a, b, 0, h, OAK);
           side('spines', ti + inn*.005, da + .05, db - .05, y + .12, y + h - .08, (db - da - .1)/1.1, Math.round((h - .2)/.42), inn > 0);
@@ -5121,30 +5130,46 @@ function buildRooms(g, P3){
           if (sign){ box(props, S(da), S(db), Math.min(tt, ti + inn*.1), Math.max(tt, ti + inn*.1), y + h, y + h + .32, OAK); side('sign:' + sign + '|' + Math.round((db - da - .2)/.26), ti + inn*.105, da + .1, db - .1, y + h + .03, y + h + .29, 1, 1, inn > 0); } };
         const casesAt = (tt, inn, list) => list.forEach(([da, db, sign]) => wallCase(tt, inn, da, db, 2.3, sign));
         casesAt(T0, 1, [[1.2, 5, 'SANTA MONICA'], [5.2, 10.5, 'FICTION A–Z'], [10.7, D - 2.8, 'ROMANCE']]);
-        casesAt(T1, -1, [[3.2, 7, 'MYSTERIES & THRILLERS'], [7.2, 11, 'SCI-FI & FANTASY'], [11.2, 14, 'YOUNG ADULT'], [14.2, D - 2.8, 'POETRY']]);
-        // freestanding bookcases on both sides of the stairs (with a gap to walk through)
-        for (const c of W > 13 ? [tm - 4.9, tm - 2.4, tm + 2.4, tm + 4.9] : [tm - 2.4, tm + 2.4]) for (const [da, db] of [[3, D/2 - .6], [D/2 + .6, D - 3.4]]){ B(da, db, c - .3, c + .3, 0, 1.75, OAK); B(da - .05, db + .05, c - .34, c + .34, 1.75, 1.85, OAK2);
+        casesAt(T1, -1, [[3.2, 7, 'MYSTERIES & THRILLERS'], [7.2, 11, 'SCI-FI & FANTASY'], [11.2, D - 3.6, 'YOUNG ADULT']]);
+        // freestanding oak bookcases with headers, between the walls and the well (with a gap to walk through)
+        for (const c of W > 13 ? [tm - 4.7, tm + 4.7] : [tm - 2.4, tm + 2.4]) for (const [da, db] of [[3, D/2 - .6], [D/2 + .6, D - 3.4]]){ B(da, db, c - .3, c + .3, 0, 1.75, OAK); B(da - .05, db + .05, c - .36, c + .36, 1.75, 1.92, OAK);
           for (const inn of [-1, 1]) side('spines', c + inn*.305, da + .05, db - .05, y0 + .1, y0 + 1.7, (db - da)/1.1, 4, inn > 0); }
-        // New & Noteworthy: display tables up front piled with books, under their sign
-        for (const c of [tm - 1.2, tm + 1.2]){ B(1.6, 2.5, c - .45, c + .45, 0, .78, OAK2); for (let k = 0; k < 4; k++) B(1.7 + (k % 2)*.4, 2 + (k % 2)*.4, c - .4 + (k >> 1)*.42, c - .08 + (k >> 1)*.42, .78, .82 + R()*.12, pick()); }
-        for (const c of [tm - 1.2, tm + 1.2]) across('sign:NEW & NOTEWORTHY|6', 1.58, c - .45, c + .45, y0 + .6, y0 + .76, 1, 1, inw < 0);   // (a sign on the front of each table)
-        // the stairs: steps all the way down, black railings round the opening, and a sign
-        const N = 24; for (let k = 0; k < N; k++){ const da = St.d0 + (St.d1 - St.d0)*k/N, h = (y0 - yB)*(1 - (k + .5)/N); box(props, S(da), S(da + (St.d1 - St.d0)/N + .01), tm - H, tm + H, yB, yB + h, k % 2 ? 0xb08a5c : 0xa67d50); }
-        for (const tt of [tm - H - .06, tm + H]) B(St.d0, St.d1 + .06, tt, tt + .06, 0, 1, 0x1d1d1f); B(St.d1, St.d1 + .06, tm - H - .06, tm + H + .06, 0, 1, 0x1d1d1f);
-        across('sign:DOWNSTAIRS: KIDS · TOYS & GAMES · VINYL|9', St.d0 - .1, tm - 1.6, tm + 1.6, y0 + 3, y0 + 3.35, 1, 1, inw < 0);
-        for (const [tt, fl] of [[tm - H - .065, false], [tm + H + .065, true]]) side('sign:STAIRS DOWN TO KIDS · TOYS · VINYL|11', tt, St.d0 + .4, St.d1 - .4, y0 + .5, y0 + .85, 1, 1, fl);
+        // New & Noteworthy: round black display tables up front, piled with books
+        for (const c of [tm - 1.2, tm + 1.2]){ B(1.65, 2.45, c - .4, c + .4, .72, .78, BLK); B(1.95, 2.15, c - .1, c + .1, 0, .72, BLK); B(1.75, 2.35, c - .3, c + .3, 0, .04, BLK);
+          for (let k = 0; k < 4; k++) B(1.72 + (k % 2)*.36, 1.98 + (k % 2)*.36, c - .36 + (k >> 1)*.38, c - .06 + (k >> 1)*.38, .78, .84 + R()*.1, pick()); }
+        for (const c of [tm - 1.2, tm + 1.2]) across('sign:NEW & NOTEWORTHY|6', 1.6, c - .42, c + .42, y0 + .5, y0 + .66, 1, 1, inw < 0);
+        // the well: a wood edge, and a black railing all the way round (open at the top of the stairs)
+        const rail = (da, db, ta, tb) => { const L = Math.max(db - da, tb - ta), n = Math.max(1, Math.round(L/.14));
+          for (let k = 0; k <= n; k++){ const f = k/n, d = da + (db - da)*f, t = ta + (tb - ta)*f; B(d - .015, d + .015, t - .015, t + .015, 0, 1, BLK); }
+          box(props, S(da - .03), S(db + .03), ta - .03, tb + .03, y0 + .98, y0 + 1.04, BLK); };
+        rail(O0, O0, tm - OW, tm - St.hw); rail(O0, O0, tm + St.hw, tm + OW); rail(O0, O1, tm - OW, tm - OW); rail(O0, O1, tm + OW, tm + OW); rail(O1, O1, tm - OW, tm + OW);
+        for (const [da, db, ta, tb] of [[O0 - .02, O0 + .02, tm - OW, tm + OW], [O1 - .02, O1 + .02, tm - OW, tm + OW], [O0, O1, tm - OW - .02, tm - OW + .02], [O0, O1, tm + OW - .02, tm + OW + .02]]) box(props, S(da), S(db), ta, tb, y0 - .35, y0, OAK);
+        for (const [tt, fl] of [[tm - OW - .04, false], [tm + OW + .04, true]]) side('sign:STAIRS DOWN TO KIDS · TOYS · COOKBOOKS · VINYL|14', tt, O0 + .4, O1 - .4, y0 + .3, y0 + .62, 1, 1, fl);
+        across('sign:DOWNSTAIRS: KIDS · TOYS & GAMES · VINYL|9', O0 - .1, tm - 1.6, tm + 1.6, y0 + 3, y0 + 3.35, 1, 1, inw < 0);
+        // the stairs: wide oak steps on black stringers, with black railings
+        const N = 24, run = (St.d1 - St.d0)/N;   // (H = St.hw)
+        for (let k = 0; k < N; k++){ const da = St.d0 + run*k, h = (y0 - yB)*(1 - (k + .5)/N); box(props, S(da), S(da + run + .01), tm - H, tm + H, yB + h - .06, yB + h, 0xc8a274);
+          for (const tt of [tm - H, tm + H - .08]) box(props, S(da), S(da + run + .01), tt, tt + .08, yB + h - .5, yB + h - .04, BLK);
+          if (k % 2 === 0) for (const tt of [tm - H + .02, tm + H - .05]) box(props, S(da + run/2 - .015), S(da + run/2 + .015), tt, tt + .03, yB + h, yB + h + .95, BLK);
+          for (const tt of [tm - H + .01, tm + H - .06]) box(props, S(da), S(da + run + .01), tt, tt + .05, yB + h + .92, yB + h + .97, BLK); }
         counter(OAK);
-        // DOWNSTAIRS: kids' books in low cases, toys and games, records, and a reading rug
+        // the elevator, by the checkout (on both floors)
+        for (const [yy, BB] of [[y0, B], [yB, B2]]){ BB(D - 2.3, D - .05, T1 - 2, T1 - .05, 0, 3.3, 0xb7bec4);
+          for (const [ta, tb] of [[T1 - 1.65, T1 - 1.02], [T1 - .98, T1 - .35]]) box(props, S(D - 2.33), S(D - 2.3), ta, tb, yy + .02, yy + 2.2, 0xdfe4e8);
+          box(props, S(D - 2.34), S(D - 2.3), T1 - 1.75, T1 - .25, yy + 2.2, yy + 2.35, 0x8a9196); box(props, S(D - 2.34), S(D - 2.3), T1 - 1.92, T1 - 1.8, yy + 1, yy + 1.25, 0x333333); }
+        // DOWNSTAIRS: toys and games, cookbooks and kids' books in low cases, records, and a reading rug
         const low = (tt, inn, da, db, sign) => wallCase(tt, inn, da, db, 1.3, sign, yB, B2);
-        low(T0, 1, 1, 5.5, 'TOYS & GAMES'); low(T0, 1, 5.8, D - .6, "KIDS' BOOKS"); low(T1, -1, D/2 + 1, D - .6, "KIDS' BOOKS");
+        low(T0, 1, 1, 5.5, 'TOYS & GAMES'); low(T0, 1, 5.8, 10.2, 'COOKBOOKS'); low(T0, 1, 10.4, D - .6, "KIDS' BOOKS"); low(T1, -1, D/2 + 1, D - 2.7, "KIDS' BOOKS");
         for (let d = 1.1; d < 5.3; d += .38) for (let k = 0; k < 3; k++) B2(d, d + .3, T0 + .45, T0 + .62, .12 + k*.42 + .02, .12 + k*.42 + .3, pick());   // board games and toys on the shelves
         for (const d0 of [1.3, 3.1]){ B2(d0, d0 + 1.4, T1 - 1.5, T1 - .7, 0, .8, 0x2d2d2d); for (let d = d0 + .08; d < d0 + 1.35; d += .07) B2(d, d + .015, T1 - 1.42, T1 - .78, .8, 1.08, [0x111111, 0xd81b60, 0x1e88e5, 0xfdd835, 0x222222][((d*29)|0) % 5]); }   // record bins
-        B2(2.75, 3.05, T1 - 1.45, T1 - .75, 0, .95, 0x1d1d1f); box(props, S(2.78), S(3.02), T1 - 1.4, T1 - 1.05, yB + .95, yB + .98, 0x333333); box(props, S(2.85), S(2.95), T1 - 1.3, T1 - 1.15, yB + .98, yB + .99, 0xd81b60);   // the listening station (a record player)
-        r.spots = [{ k: 'records', d: 2.9, t: T1 - 1.9, rad: 1.8, down: true }, { k: 'boardgame', d: D - 2.9, t: tm + 1.3, rad: 1.4, down: true }];
+        B2(2.75, 3.05, T1 - 1.45, T1 - .75, 0, .95, BLK); box(props, S(2.78), S(3.02), T1 - 1.4, T1 - 1.05, yB + .95, yB + .98, 0x333333); box(props, S(2.85), S(2.95), T1 - 1.3, T1 - 1.15, yB + .98, yB + .99, 0xd81b60);   // the listening station (a record player)
+        B2(O1 + .3, O1 + 1.1, tm + 1.9, tm + 2.7, .7, .76, BLK); B2(O1 + .6, O1 + .8, tm + 2.2, tm + 2.4, 0, .7, BLK); for (let k = 0; k < 3; k++) B2(O1 + .38 + k*.22, O1 + .58 + k*.22, tm + 1.98, tm + 2.62, .76, .82 + k*.05, pick());   // a table of puzzles at the foot of the stairs
+        r.spots = [{ k: 'records', d: 2.9, t: T1 - 1.9, rad: 1.8, down: true }, { k: 'boardgame', d: D - 2.4, t: tm + 1.3, rad: 1.4, down: true },
+          { k: 'elevator', d: D - 3, t: T1 - 1, rad: 1.2 }, { k: 'elevator', d: D - 3, t: T1 - 1, rad: 1.2, down: true }];
         across('sign:VINYL & DVDS|6', .32, T1 - 2.4, T1 - .3, yB + 2.3, yB + 2.65, 1, 1, inw > 0);
-        flat('rug', D - 4.6, D - 1.2, tm - 1.7, tm + 1.7, yB + .012, 1, 1);   // the reading rug, a little table, and big soft toys
-        B2(D - 3.3, D - 2.5, tm + .9, tm + 1.7, 0, .5, 0xfdd835); for (const [dd, tt] of [[D - 3.6, tm + 1.3], [D - 2.2, tm + 1.3]]) B2(dd - .15, dd + .15, tt - .15, tt + .15, 0, .3, 0x1e88e5);
-        for (const [dd, tt, hex] of [[D - 1, tm - 1.4, 0xf8bbd0], [D - 1, tm - .7, 0xb3e5fc], [D - 1, tm, 0xfff59d], [D - 1, tm + .7, 0xc5e1a5]]){ B2(dd - .28, dd + .28, tt - .28, tt + .28, 0, .5, hex); B2(dd - .18, dd + .18, tt - .18, tt + .18, .5, .62, hex); }
+        flat('rug', D - 3.6, D - .9, tm - 1.7, tm + 1.7, yB + .012, 1, 1);   // the reading rug, a little table, and big soft toys
+        B2(D - 2.8, D - 2, tm + .9, tm + 1.7, 0, .5, 0xfdd835); for (const [dd, tt] of [[D - 3.1, tm + 1.3], [D - 1.7, tm + 1.3]]) B2(dd - .15, dd + .15, tt - .15, tt + .15, 0, .3, 0x1e88e5);
+        for (const [dd, tt, hex] of [[D - .9, tm - 1.4, 0xf8bbd0], [D - .9, tm - .7, 0xb3e5fc], [D - .9, tm, 0xfff59d]]){ B2(dd - .28, dd + .28, tt - .28, tt + .28, 0, .5, hex); B2(dd - .18, dd + .18, tt - .18, tt + .18, .5, .62, hex); }
         across("sign:KIDS|4", D - .02, tm - 1.5, tm + 1.5, yB + 2.4, yB + 3.1, 1, 1, inw < 0);
         break; }
         else { for (const [ta, tb] of [[T0, T0 + .45], [T1 - .45, T1]]) for (let k = 0; k < 6; k++){ const h = .1 + k*.42; B(.6, r.D - .3, ta, tb, h, h + .04, 0x6b4a32);

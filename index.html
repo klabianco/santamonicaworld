@@ -818,7 +818,7 @@ const LOCAL_KEY = 'swimworlds.v2';
 function randomHouse(){ const a = Math.random()*TAU, d = 24000 + Math.random()*8000; return seaHouse({ x: Math.round(Math.cos(a)*d), y: Math.round(Math.sin(a)*d) }); }
 // A house the mainland now covers floats straight out to sea. The same rule runs for friends' houses, so everyone sees them in the same spot.
 function seaHouse(h){ if (!h || coastS(h.x, h.y) > 2400) return h; return { x: Math.round(Math.min(-Math.abs(h.x), coastX(h.y) - 2400)), y: h.y }; }
-const fresh = () => ({ house: randomHouse(), houseFound:false, mapPieces:[], bestTime:0, coins:0, gear:[], chests:[], swimSec:0, best:0, tunnels:0, races:0, char:'swimmer', worlds:[0], landmarks:[], pearls:0, tutorialDone:false, dist:0 });
+const fresh = () => ({ house: randomHouse(), houseFound:false, mapPieces:[], bestTime:0, coins:250, giftNov26: true, gear:[], chests:[], swimSec:0, best:0, tunnels:0, races:0, char:'swimmer', worlds:[0], landmarks:[], pearls:0, tutorialDone:false, dist:0 });
 let save = fresh();
 let account = null;          // { db, uid } once logged in
 let startArmed = false;      // Start Game asks once before replacing a saved swimmer
@@ -2506,6 +2506,8 @@ function startOcean(){
   parts = []; setMode('ocean'); $('airChip').hidden = true;
   banner('3rd Street Promenade', 'At Wilshire Boulevard, by the triceratops fountain');
   ocean.tripT = 0; camHead = ocean.ang; camInit = false;
+  { const today = new Date().toDateString(); let got = 0, why = ''; if (!save.giftNov26){ save.giftNov26 = true; got += 250; why = 'A gift to spend on the Promenade'; } if (save.allowDay !== today){ save.allowDay = today; got += 50; why = why || 'Your daily allowance'; }   // (coins to spend: a one-time gift, and 50 every day you play)
+    if (got){ save.coins = (save.coins || 0) + got; persist(); flushCloud(); setTimeout(() => banner(`💰 +${got} coins!`, why), 2500); } }
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
 }
@@ -4415,9 +4417,14 @@ function buildCoast(){
   // ---- the ground: in tiles 200 m long (so only the ones in view are drawn), finest on the bluff and around the Incline ----
   { const S = [-7.6, -7, -6, -5, -4, -3, -2, -1.5, -1, -.5]; for (let v = 0; v < 40; v += 2) S.push(v); for (let v = 40; v < 300; v += 12) S.push(v); for (let v = 300; v < 416; v += 2.5) S.push(v); for (let v = 416; v <= 1260; v += 15) S.push(v);
     const Tl = []; for (let v = -2700; v < -2300; v += 20) Tl.push(v); for (let v = -2300; v < -1480; v += 10) Tl.push(v); for (let v = -1480; v < -1030; v += 4) Tl.push(v); for (let v = -1030; v < 200; v += 10) Tl.push(v); for (let v = 200; v <= 420; v += 20) Tl.push(v);
+    // stairwells down through a shop floor (Barnes & Noble): the ground must open up there, or you'd look down into... the ground
+    const WELLS = promRooms().filter(r => r.down).map(r => { const a = r.fs + r.inw*r.down.o0, b = r.fs + r.inw*r.down.o1; return [Math.min(a, b), Math.max(a, b), r.down.tm - r.down.ow, r.down.tm + r.down.ow, r.down.yB - 1.5]; });
+    for (const [s0, s1, t0, t1] of WELLS){ S.push(s0 - .05, s0 + .05, s1 - .05, s1 + .05); Tl.push(t0 - .05, t0 + .05, t1 - .05, t1 + .05); }
+    S.sort((a, b) => a - b); Tl.sort((a, b) => a - b);
+    const inWell = (s, t) => { for (const w of WELLS) if (s > w[0] && s < w[1] && t > w[2] && t < w[3]) return w[4]; return null; };
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), c = new THREE.Color(), NS = S.length;
     for (let j0 = 0; j0 < Tl.length - 1;){ const j1 = Math.min(Tl.length - 1, j0 + 24), NT = j1 - j0 + 1, pos = new Float32Array(NS*NT*3), col = new Float32Array(NS*NT*3);
-      for (let j = 0; j < NT; j++) for (let i = 0; i < NS; i++){ const s = S[i], t = Tl[j0 + j], k = (j*NS + i)*3, [x, y] = landXY(s, t), h = i === 0 ? -shelfD(7.6) - 1.2 : landH(s, t);   // (a skirt under the edge)
+      for (let j = 0; j < NT; j++) for (let i = 0; i < NS; i++){ const s = S[i], t = Tl[j0 + j], k = (j*NS + i)*3, [x, y] = landXY(s, t), wl = inWell(s, t), h = i === 0 ? -shelfD(7.6) - 1.2 : wl ?? landH(s, t);   // (a skirt under the edge; and dropped away under a stairwell)
         pos[k] = x*U; pos[k + 1] = h; pos[k + 2] = y*U; landColor(s, t, h, c); col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b; }
       const idx = []; for (let j = 0; j < NT - 1; j++) for (let i = 0; i < NS - 1; i++){ const a = j*NS + i, b = a + 1, d = a + NS, e = d + 1; idx.push(a, d, b, b, d, e); }
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere();
@@ -4841,7 +4848,7 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Bruxie': [M('🧇', 'Waffle sandwich', 10), M('🍦', 'Frozen custard', 5)], 'Trastevere': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12)],
   "IT'SUGAR": [M('🐻', 'Giant gummy bear', 15), M('🍭', 'Giant lollipop', 10), M('🍫', 'Chocolate bar', 6), M('🌈', 'Sour belts', 6)],
   'MINISO': [M('🧸', 'Plush toy', 15, 'hug'), M('🎧', 'Pink headphones', 25, 'wear', { slot: 'phones', col: '#f48fb1' }), M('🎧', 'White headphones', 25, 'wear', { slot: 'phones', col: '#f4f4f0' }), M('🖊️', 'Cute pen', 3, 'play', { say: 'So cute!' })],
-  'Wilson': [M('🏀', 'Basketball', 20, 'play', { say: 'Swish!' }), M('🎾', 'Tennis racket', 30, 'play', { say: 'Ace!' }), M('🏈', 'Football', 20, 'play', { say: 'Touchdown!' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e' })],
+  'Wilson': [M('🏀', 'Basketball', 20, 'ball', { ball: 'bball' }), M('🎾', 'Tennis racket and ball', 30, 'ball', { ball: 'tennis' }), M('🏈', 'Football', 20, 'ball', { ball: 'football' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e' })],
   'Gacha & Catch': [M('🥚', 'Capsule toy', 5, 'gacha'), M('🥚', 'Capsule toy (5 pack)', 20, 'gacha', { left: 5 })],
   'Holey Moley': [M('🍔', 'Slider', 8), M('🍕', 'Pizza', 10), M('🥨', 'Churros', 6), M('🍦', 'Ice cream', 6), M('🍋', 'Lemonade', 4, 'drink')],
   'TMNT Pizzeria': [M('🍕', 'Cheese slice', 6), M('🍕', 'Pepperoni slice', 7), M('🍕', 'Whole pie to share', 22, 'eat', { bites: 8 }), M('🧄', 'Garlic knots', 5), M('🥤', 'Soda', 4, 'drink')],   // (New York–style pies)
@@ -4849,7 +4856,10 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
   'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
   'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')] };
-const ACT_DO = { froyo: 'Eat a spoonful', gacha: 'Open it', puzzle: 'Do the puzzle', game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
+const PLAY_VERB = [[/lip gloss/i, 'Put it on'], [/nail polish/i, 'Paint your nails'], [/lotion/i, 'Rub it on'], [/yo-yo/i, 'Yo-yo it'], [/duck/i, 'Squeeze it'], [/snow globe/i, 'Shake it'], [/necklace/i, 'Put it on'], [/keychain/i, 'Jingle it'], [/postcard/i, 'Read it'], [/lego/i, 'Build it'],
+  [/tote/i, 'Swing it'], [/fossil|space rock/i, 'Look closer'], [/geode/i, 'Crack it open'], [/microphone/i, 'Sing'], [/pen\b/i, 'Doodle'], [/figure/i, 'Play']];
+const playVerb = n => (PLAY_VERB.find(([re]) => re.test(n || '')) || [0, 'Play'])[1];
+const ACT_DO = { ball: 'Play', froyo: 'Eat a spoonful', gacha: 'Open it', puzzle: 'Do the puzzle', game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
 const ACT_SAY = { gacha: 'Tap Open it to see what you got', puzzle: 'Tap Do the puzzle', game: 'Tap Play to play it', eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
 const JOKES = ['Why did the fish blush? Because it saw the ocean\'s bottom!', 'What do you call a dinosaur that is sleeping? A dino-snore!', 'Why don\'t crabs share? Because they\'re shellfish!', 'What did the ocean say to the beach? Nothing, it just waved.',
   'What do you call a fish with no eyes? A fsh!', 'Why did the cookie go to the doctor? It was feeling crummy.', 'What\'s an ice cream\'s favorite day? Sundae!', 'How do you make an octopus laugh? With ten-tickles!'];
@@ -5641,7 +5651,7 @@ const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landS
 /* Phone booths: step inside one and dial another, and you're zapped there. San Francisco's is coming next. */
 const PHONE_BOOTHS = [
   { id: 'prom', name: '3rd Street Promenade', s: 645.4, t: -458, face: 1, more: 'at Santa Monica Boulevard' },
-  { id: 'pier', name: 'Santa Monica Pier', s: 205, t: -19, face: 0, more: 'by the carousel', deck: true },
+  { id: 'pier', name: 'Santa Monica Pier', s: 87.5, t: -3.4, face: 0, more: "at Route 66's End of the Trail sign", deck: true },
   { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
   { id: 'sf', name: "San Francisco: Fisherman's Wharf", soon: true, more: 'Being built next! Drive or zap there soon' } ];
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
@@ -6178,6 +6188,24 @@ function rcStep(o, w, dt){ o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = fa
   if (Math.abs(w.v) > .3 && (w.buzz = (w.buzz || 0) - dt) <= 0){ w.buzz = .09; sfx(220 + Math.abs(w.v)*60, .07, 'sawtooth', .012); }   // (the little motor)
   const [x, y] = landXY(w.s, w.t), [xa, ya] = landXY(w.s + Math.cos(w.ang), w.t + Math.sin(w.ang)); rcObj.position.set(x*U, groundAt(x, y), y*U); rcObj.rotation.set(0, -Math.atan2(ya - y, xa - x), 0);
   rcObj.children.forEach(c => { if (c.geometry?.type === 'CylinderGeometry') c.rotation.y += w.v*dt/.032; }); }
+// ball games: bounce a tennis ball on your racket, dribble a basketball, toss a football. Tap at the right moment; it counts your streak.
+let ballObj = null;
+function ballTap(o, it){ const b = it.bs || (it.bs = { y: 0, v: 0, n: 0, best: it.best || 0, on: false, idle: 0 }); initAudio();
+  if (it.ball === 'bball'){ if (b.y > -.4){ b.v = -5.2; b.on = true; b.n++; b.idle = 0; sfx(140, .08, 'square', .04); } return; }
+  if (!b.on){ b.on = true; b.v = 4.4; b.y = 0; b.n = 0; sfx(it.ball === 'tennis' ? 900 : 300, .05, 'square', .04); return; }
+  if (b.y < .55 && b.v < 0){ b.v = 4.4; b.n++; sfx(it.ball === 'tennis' ? 900 + Math.min(600, b.n*20) : 300, .05, 'square', .04); if (b.n % 10 === 0){ heartsAt = time; coach(`${b.n} in a row! 🔥`, 1.5); } } }
+function ballDone(it, b, why){ if (b.n > b.best){ b.best = it.best = b.n; } banner(why, b.n ? `${b.n} in a row${b.best > b.n ? ` · your best is ${b.best}` : ' · a new best!'}` : 'Tap at the right moment and keep it going'); b.on = false; b.y = 0; b.v = 0; b.n = 0; it.n2 = 0; }
+function ballStep(dt, o){ const it = treat; if (!it || it.act !== 'ball' || paused) return; const b = it.bs; if (!b || !b.on) return; b.v -= 9.8*dt; b.y += b.v*dt; it.n2 = b.n;
+  if (it.ball === 'bball'){ const floor = -1.05; if (b.y < floor){ b.y = floor; b.v = -b.v*.8; sfx(110, .06, 'triangle', .04); } b.idle += dt; if (b.idle > 2.6 && b.y < -.9 && Math.abs(b.v) < 2) ballDone(it, b, 'The ball rolled away!'); else if (b.idle > 4) ballDone(it, b, 'Lost the dribble!'); return; }
+  if (b.y < -.6) ballDone(it, b, it.ball === 'tennis' ? 'Dropped it! 🎾' : 'Dropped it! 🏈'); }
+function drawBall(o, m, hand){ if (!ballObj){ ballObj = new THREE.Group(); const tball = new THREE.Mesh(new THREE.SphereGeometry(.035, 14, 10), std(0xd4e157, .7)), bb = new THREE.Mesh(new THREE.SphereGeometry(.12, 18, 12), std(0xe65100, .75)), fb = new THREE.Mesh(new THREE.SphereGeometry(.09, 16, 10), std(0x6d3b1f, .7)); fb.scale.set(1.6, 1, 1);
+    const rk = new THREE.Group(), head = new THREE.Mesh(new THREE.TorusGeometry(.13, .012, 6, 24), std(0x263238, .4)), strings = new THREE.Mesh(new THREE.CircleGeometry(.125, 20), new THREE.MeshStandardMaterial({ color: 0xeeeeee, transparent: true, opacity: .5, side: THREE.DoubleSide })), grip = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .3, 6), std(0x111111, .8));
+    head.position.y = .3; strings.position.y = .3; grip.position.y = .1; rk.add(head, strings, grip); head.rotation.x = strings.rotation.x = Math.PI/2; ballObj.add(tball, bb, fb, rk); ballObj.userData = { tball, bb, fb, rk }; oceanScene.add(ballObj); }
+  if (ballObj.parent !== oceanScene) oceanScene.add(ballObj); const it = treat, U2 = ballObj.userData, b = it.bs || { y: 0 }; ballObj.visible = true; ballObj.position.set(0, 0, 0);
+  U2.tball.visible = it.ball === 'tennis'; U2.rk.visible = it.ball === 'tennis'; U2.bb.visible = it.ball === 'bball'; U2.fb.visible = it.ball === 'football';
+  const top = it.ball === 'tennis' ? .32 : it.ball === 'bball' ? .1 : .12, ball = it.ball === 'tennis' ? U2.tball : it.ball === 'bball' ? U2.bb : U2.fb;
+  U2.rk.position.copy(hand); U2.rk.rotation.set(0, -o.ang, 0);
+  ball.position.set(hand.x + Math.cos(o.ang)*(it.ball === 'bball' ? .15 : 0), hand.y + top + Math.max(it.ball === 'bball' ? -1.05 : -.6, b.y) + (it.ball === 'tennis' ? .0 : 0), hand.z + Math.sin(o.ang)*(it.ball === 'bball' ? .15 : 0)); if (it.ball === 'football') ball.rotation.z += .2; }
 let kiteObj = null; const _kv = new THREE.Vector3();
 function drawKite(o, m, hand){
   if (!kiteObj){ kiteObj = new THREE.Group(); const kg = new THREE.Group(); kiteObj.add(kg);
@@ -6269,9 +6297,10 @@ function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o);
   else if (it.act === 'gacha'){ const T = [['🦖', 'Tiny dinosaur'], ['🐙', 'Squishy octopus'], ['🦄', 'Rainbow unicorn'], ['🐸', 'Little frog'], ['🚗', 'Mini car'], ['🐱', 'Lucky cat'], ['🦈', 'Baby shark'], ['🍩', 'Donut keychain'], ['👾', 'Space buddy'], ['🐼', 'Panda'], ['🦦', 'Sea otter'], ['🌟', 'Glow star']], [e, n] = T[(Math.random()*T.length)|0], more = (it.left || 1) - 1;
     [784, 988, 1319].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); heartsAt = time; banner(`${e} You got a ${n.toLowerCase()}!`, more ? `${more} more capsule${more > 1 ? 's' : ''} to open` : 'Tap Play to play with it');
     if (more) treat = { ...it, left: more }; else treat = n === 'Mini car' ? { e, n, act: 'rc' } : { e, n, act: 'play', say: `Your ${n.toLowerCase()} loves you!` }; }
-  else if (it.act === 'play'){ banner(it.e + ' ' + it.n, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
+  else if (it.act === 'play'){ heartsAt = time; banner(`${it.e} ${playVerb(it.n) === 'Play' ? it.n : playVerb(it.n) + '!'}`, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
   else if (it.act === 'selfie') takePhoto();
   else if (it.act === 'rc') startRC(o);
+  else if (it.act === 'ball') ballTap(o, it);
   else if (it.act === 'kite'){ if (!it.fly && (roomAt(...landST(o.x, o.y)) || inHomeBuilding?.(o))) return banner('Go outside to fly it!', 'Kites need the wind. The beach and the park are best'); it.fly = !it.fly; it.flyT = time;
     if (it.fly){ [523, 659, 784, 1046].forEach((f, i) => sfx(f, .12, 'triangle', .04, i*.1)); banner('🪁 Up, up and away!', coastS(o.x, o.y) > -320 ? 'Great wind here by the ocean! Tap again to reel it in' : 'Tap again to reel it in. It flies higher by the beach'); } else { sfx(400, .3, 'sine', .03, 0, -150); banner('Reeled it in', 'Tap to fly it again'); } }
   else if (it.act === 'tune'){ if (song?.from === 'hand'){ stopSong(); banner('Music off', ''); } else { const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner(`🎶 ${SONGS[i].title}`, SONGS[i].by); } }
@@ -6280,7 +6309,7 @@ function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o);
 const treatTex = {};
 function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
-  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.bike ? '🚲 Get off' : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : treat.act === 'kite' ? (treat.fly ? 'Reel in' : 'Fly it') : treat.act === 'rc' ? 'Drive' : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
+  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.bike ? '🚲 Get off' : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : treat.act === 'kite' ? (treat.fly ? 'Reel in' : 'Fly it') : treat.act === 'rc' ? 'Drive' : treat.act === 'ball' ? ({ tennis: 'Hit it up', bball: 'Dribble', football: 'Toss it' }[treat.ball] + (treat.n2 ? ` · ${treat.n2}` : '')) : treat.act === 'play' ? playVerb(treat.n) : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
   placeNow = paused ? null : placeAction(o); if (song && ac && ac.currentTime > song.end){ song = null; if (!$('musicPanel').hidden) renderMusic(); } const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
@@ -6289,7 +6318,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(.068, .048, .09, 16), std(0xf8e1ee, .6)); cup.position.y = -.01; treatObj.add(cup);
     const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp, cup }; }
   if (treatObj.parent !== oceanScene) oceanScene.add(treatObj);
-  const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (kiteObj){ kiteObj.visible = false; kiteObj.userData.line.visible = false; } if (!show) return;
+  const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (kiteObj){ kiteObj.visible = false; kiteObj.userData.line.visible = false; } if (ballObj) ballObj.visible = false; if (!show) return;
   const { cn, sc, sp, cup } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick' || treat.act === 'froyo';
   cn.visible = cone3 && !treat.cup; cup.visible = cone3 && !!treat.cup; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
   if (!cone3){ if (!treatTex[treat.e]) treatTex[treat.e] = canvasTex(96, 96, (c, w, h) => emo(c, treat.e, w/2, h/2 + 4, 76), false); if (sp.material.map !== treatTex[treat.e]){ sp.material.map = treatTex[treat.e]; sp.material.needsUpdate = true; } }
@@ -6298,6 +6327,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
   treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
   if (treat.act === 'kite'){ sp.visible = false; drawKite(o, m, _cv); }
+  if (treat.act === 'ball'){ sp.visible = false; drawBall(o, m, _cv); }
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
 $('puzzleBoard').addEventListener('pointerdown', tapPuzzle); $('puzzleClose').onclick = closePuzzle; $('puzzleEasy').onclick = () => newPuzzle(3); $('puzzleHard').onclick = () => newPuzzle(4);
 $('puzzleNext').onclick = () => newPuzzle(puzzle?.n || 3, ((puzzle?.pic ?? 0) + 1) % PUZZLE_PICS.length);
@@ -6451,7 +6481,10 @@ function buildRooms(g, P3){
         side('brick', T0 + .01, .3, D, y0, y1, D/1.2, 3.5/.6);
         for (const tt of [T0, T1]) quad(shell, P3(front, tt, yB), P3(back, tt, yB), P3(back, tt, y0 - .35), P3(front, tt, y0 - .35), 0xf4f2ee);
         quad(shell, P3(front, T0, yB), P3(front, T1, yB), P3(front, T1, y0 - .35), P3(front, T0, y0 - .35), 0xf4f2ee); quad(shell, P3(back, T0, yB), P3(back, T1, yB), P3(back, T1, y0 - .35), P3(back, T0, y0 - .35), 0xf4f2ee);
-        flat('carpet', .3, D, T0, T1, yB, (D - .3)/2, W/2);   // (gray carpet downstairs)
+        flat('carpet', .3, D, T0, T1, yB, (D - .3)/2, W/2);   // (carpet downstairs)
+        for (const [tt, n] of [[T0 + .015, 1], [T1 - .015, -1]]){ quad(shell, P3(front, tt, yB + .02), P3(back, tt, yB + .02), P3(back, tt, y0 - .4), P3(front, tt, y0 - .4), 0xcfe6f2);   // the kids' floor: sky-blue walls with a rainbow stripe
+          ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'].forEach((c, k) => quad(shell, P3(front, tt + n*.005, yB + 2.4 + k*.12), P3(back, tt + n*.005, yB + 2.4 + k*.12), P3(back, tt + n*.005, yB + 2.52 + k*.12), P3(front, tt + n*.005, yB + 2.52 + k*.12), parseInt(c.slice(1), 16))); }
+        for (let d = 1; d < D - 1; d += 2.6) for (let t = T0 + 1; t < T1 - 1; t += 2.6) if (Math.abs(t - tm) > 3.2 || d < St.d0 - .5 || d > St.d1 + .5) quad(shell, P3(S(d), t, yB + .012), P3(S(d + 1.2), t, yB + .012), P3(S(d + 1.2), t + 1.2, yB + .012), P3(S(d), t + 1.2, yB + .012), [0xffcdd2, 0xc8e6c9, 0xbbdefb, 0xfff9c4][((d + t)|0) % 4]);   // and colorful carpet squares
         for (let d = 2; d < D - .5; d += 3.2){ box(props, S(d), S(d + .05), T0 + .6, T1 - .6, y1 - .1, y1 - .05, BLK); for (let t = T0 + 1; t < T1 - .8; t += 1.4) box(props, S(d - .05), S(d + .1), t, t + .12, y1 - .28, y1 - .1, BLK);   // black track lights
           lit.push(...P3(S(d), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 3.5, y0 - .37), ...P3(S(d), tm - 4.5, y0 - .37), ...P3(S(d + .8), tm - 3.5, y0 - .37), ...P3(S(d), tm - 3.5, y0 - .37));   //   (and lights downstairs)
           lit.push(...P3(S(d), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 4.5, y0 - .37), ...P3(S(d), tm + 3.5, y0 - .37), ...P3(S(d + .8), tm + 4.5, y0 - .37), ...P3(S(d), tm + 4.5, y0 - .37)); }
@@ -6481,10 +6514,13 @@ function buildRooms(g, P3){
         across('sign:DOWNSTAIRS: KIDS · TOYS & GAMES · VINYL|9', O0 - .1, tm - 1.6, tm + 1.6, y0 + 3, y0 + 3.35, 1, 1, inw < 0);
         // the stairs: wide oak steps on black stringers, with black railings
         const N = 24, run = (St.d1 - St.d0)/N;   // (H = St.hw)
-        for (let k = 0; k < N; k++){ const da = St.d0 + run*k, h = (y0 - yB)*(1 - (k + .5)/N); box(props, S(da), S(da + run + .01), tm - H, tm + H, yB + h - .06, yB + h, 0xc8a274);
-          for (const tt of [tm - H, tm + H - .08]) box(props, S(da), S(da + run + .01), tt, tt + .08, yB + h - .5, yB + h - .04, BLK);
-          if (k % 2 === 0) for (const tt of [tm - H + .02, tm + H - .05]) box(props, S(da + run/2 - .015), S(da + run/2 + .015), tt, tt + .03, yB + h, yB + h + .95, BLK);
-          for (const tt of [tm - H + .01, tm + H - .06]) box(props, S(da), S(da + run + .01), tt, tt + .05, yB + h + .92, yB + h + .97, BLK); }
+        const beam = (da, ya, db, yb, tt, w, hh, hex) => { const A = new THREE.Vector3(...P3(S(da), tt, ya)), Bv = new THREE.Vector3(...P3(S(db), tt, yb)), m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, A.distanceTo(Bv)), std(hex, .5)); m.position.copy(A).add(Bv).multiplyScalar(.5); m.lookAt(Bv); g.add(m); };   // (one long sloped piece)
+        const stepH = (y0 - yB)/N;
+        for (let k = 0; k < N; k++){ const da = St.d0 + run*k, h = (y0 - yB)*(1 - (k + .5)/N); box(props, S(da), S(da + run + .01), tm - H, tm + H, yB + h - .06, yB + h, 0xc8a274);   // the tread,
+          box(props, S(da + run - .03), S(da + run + .01), tm - H, tm + H, yB + h - stepH - .02, yB + h - .06, 0x8f6b45);   //   its riser (the step's front),
+          if (k % 2 === 0) for (const tt of [tm - H + .03, tm + H - .03]) box(props, S(da + run/2 - .015), S(da + run/2 + .015), tt - .015, tt + .015, yB + h, yB + h + .92, BLK); }   //   and a baluster every other step
+        for (const tt of [tm - H - .04, tm + H + .04]) beam(St.d0, y0 - .25, St.d1, yB - .25, tt, .08, .5, BLK);   // the black stringers along each side,
+        for (const tt of [tm - H + .03, tm + H - .03]) beam(St.d0 - .2, y0 + .95, St.d1 + .2, yB + .95, tt, .06, .06, BLK);   // and a smooth handrail down each side
         counter(OAK);
         // the elevator, by the checkout (on both floors)
         for (const [yy, BB] of [[y0, B], [yB, B2]]){ BB(D - 2.3, D - .05, T1 - 2, T1 - .05, 0, 3.3, 0xb7bec4);
@@ -6959,7 +6995,7 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); foodStep(dt, o);
+    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); foodStep(dt, o); ballStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
@@ -8999,6 +9035,7 @@ async function startAccount(){
     resetPick(); paused = false; if (ocean) buildMinimap(); loadNeighbors(); banner(`Logged in as ${fbAuth.name}!`, 'Your swimmer now saves to your account.'); return; }
   if (!list.length){ const local = readLocal(), sv = hasSwimmer(local) && !local.sid ? { ...local, sid: newSid(), label: fbAuth.name } : newSwimmer(fbAuth.name);
     try { await putSwimmer(sv); } catch(e){} swimmers = [sv]; playSwimmer(sv, `Hi, ${fbAuth.name}!`); return; }
+  if (resumeSid){ const sv = list.find(x => x.sid === resumeSid); resumeSid = null; if (sv){ playSwimmer(sv); return; } }   // (back from an update: the same swimmer, no questions)
   if (list.length === 1){ playSwimmer(list[0], `Welcome back, ${list[0].label || fbAuth.name}!`); return; }
   showSwimmers();
 }
@@ -9342,22 +9379,23 @@ addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-
 let last = performance.now(), chipT = 0;
 const SWASH = { time: { value: 0 } };   // (the clock for the waves on the beach)
 // ---- live updates: when a new version of the game goes up, it loads itself (between books and shops) and puts you right back where you were ----
-const UPD_KEY = 'smw.resume'; let updTag = null, updPending = false, updGoing = false;
+const UPD_KEY = 'smw.resume'; let updTag = null, updPending = false, updGoing = false, resumeSid = null;   // (resumeSid: the swimmer you were playing before an update, to go straight back to)
 async function checkUpdate(){ if (document.hidden || updPending) return;
   try { const r = await fetch(location.pathname + '?u=' + Date.now(), { method: 'HEAD', cache: 'no-store' }), tag = r.ok && (r.headers.get('etag') || r.headers.get('last-modified')); if (!tag) return;
     if (updTag == null) updTag = tag; else if (tag !== updTag) updPending = true; } catch(e){} }
 setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 20000);
 function updStep(){ if (!updPending || updGoing || !loadGone) return; if (mode !== 'title' && (paused || menuEl())) return;   // (not while you're reading, shopping or in the menu)
   updGoing = true; try { persist(); flushCloud(); } catch(e){}
-  if (mode === 'ocean' && ocean){ const o = ocean; try { sessionStorage.setItem(UPD_KEY, JSON.stringify({ at: Date.now(), x: o.x, y: o.y, ang: o.ang, onLand: !!o.onLand, gh: o.gh, depth: o.depth || 0, walkRef, camHead, skates: !!o.skates })); } catch(e){} }
+  if (mode === 'ocean' && ocean){ const o = ocean; try { sessionStorage.setItem(UPD_KEY, JSON.stringify({ at: Date.now(), sid: account?.sid || save.sid || null, x: o.x, y: o.y, ang: o.ang, onLand: !!o.onLand, gh: o.gh, depth: o.depth || 0, walkRef, camHead, skates: !!o.skates, treat: treat && !treat.scoops ? treat : treat ? { ...treat } : null, bike: o.bike ? { color: o.bike.color } : null })); } catch(e){} }
   if (mode === 'ocean'){ snapWant = url => { try { sessionStorage.setItem('smw.freeze', url); } catch(e){} location.reload(); }; setTimeout(() => location.reload(), 1500); }   // (a picture of right now, to show while the new version loads)
   else location.reload(); }
 function unfreeze(){ const f = $('freeze'); if (!f) return; f.style.opacity = '0'; setTimeout(() => f.remove(), 600); }
 function resumeAfterUpdate(){ let R = null; try { R = JSON.parse(sessionStorage.getItem(UPD_KEY) || 'null'); sessionStorage.removeItem(UPD_KEY); } catch(e){} if (!R || Date.now() - R.at > 5*60*1000) return unfreeze();
   if (STANDALONE && !fbAuth) return unfreeze();   // (not logged in: start from the title as usual)
-  setTimeout(unfreeze, 12000); bannerQuietUntil = performance.now() + 5000;   // (just in case; and no welcome-back banners)
+  resumeSid = R.sid || null; setTimeout(unfreeze, 12000); bannerQuietUntil = performance.now() + 8000;   // (just in case; and no welcome-back banners)
   let tries = 0; const go = () => { if (mode !== 'ocean' || !ocean){ if (++tries < 100) setTimeout(go, 200); return; } const o = ocean;
     Object.assign(o, { x: R.x, y: R.y, ang: R.ang, onLand: R.onLand, gh: R.gh, depth: R.depth, vx: 0, vy: 0, skates: R.skates }); walkRef = R.walkRef; camHead = R.camHead; camInit = false;
+    if (R.treat) treat = R.treat; if (R.bike) o.bike = { ph: 0, wh: 0, color: R.bike.color };   // (still holding what you had, still on your bike)
     if (!$('shopPanel').hidden) closeShop(); requestAnimationFrame(() => requestAnimationFrame(unfreeze)); coach('✨ New stuff just arrived!', 2.5); };
   $('continueBtn').click(); go(); }
 function frame(now){

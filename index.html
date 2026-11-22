@@ -3001,6 +3001,7 @@ const landST = (x, y) => [(x - coastX(y))*U, y*U];
 const landXY = (s, t) => [coastX(t*METERS) + s*METERS, t*METERS];   // (back to units)
 { const L = LANDMARKS.find(L => L.kind === 'smpier'); if (L){ const [x, y] = landXY(-38, 68); L.x = x; L.y = y; L.r = 700; } }   // (the landmark is the real pier's Pacific Wheel now)
 function landH(s, t){   // the ground (what the 3D land shows)
+  if (s > 20000){ const [x, y] = landXY(s, t); return sfWalkH(x*U, y*U); }   // (San Francisco)
   if (s < 0){ const h0 = Math.min(.3, landH(0, t)); return Math.max(h0 - shelfD(-s), h0 + s*.3); }   // (the wet sand slopes gently on down into the sea, so you can wade in: no step at the water's edge)
   const m = bluffMid(t); let h = !isNaN(m) && Math.abs(s - m) < 25 ? smElev(m + clamp((s - m)*2.2, -25, 25), t) : smElev(s, t);   // (the bluff face made steep again)
   h = Math.min(h, .3 + s*.12);   // the sand slopes up out of the water
@@ -3065,6 +3066,7 @@ function mariH(s, t){ const M = MARI, A = 390 - s, off = -t; if (A < M.A0 - .05 
   for (const [a0, a1, b0, b1] of lv ? M.walls1 : M.walls0) if (A > a0 - .12 && A < a1 + .12 && off > b0 - .12 && off < b1 + .12) return dk + 8;   // (a wall, a window or the rail)
   return dk + h; }
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
+  if (inSFu(x)) return sfWalkH(x*U, y*U);   // (San Francisco)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
   { const st = pierStairH(s, t); if (st != null) h = Math.max(h, st); }
@@ -3077,6 +3079,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   return h;
 }
 function landName(x, y){
+  if (inSFu(x)) return sfPlaceName(x*U, y*U);
   const [s, t] = landST(x, y);
   if (t < -2500) return 'Malibu'; if (t > 200) return 'Palos Verdes';
   if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return '3rd Street';
@@ -3753,9 +3756,9 @@ function updOcean(dt){
   if (o.onLand){ const [hx, hy] = landXY(...DIVE_SHOP), nearHut = Math.hypot(o.x - hx, o.y - hy) < 2.2*METERS; if (nearHut && !o.shopNear){ o.shopNear = true; openShop(); return; } if (!nearHut) o.shopNear = false; }
   o.saveT += dt; if (o.saveT > 4){ o.saveT = 0; persist(); }
   const ashore = o.onLand && (onMainland(o.x, o.y) || onPierNow(o));
-  $('hudLbl').textContent = ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
+  const inSF = inSFu(o.x); $('hudLbl').textContent = inSF ? 'San Francisco' : ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
   $('hudProg').hidden = true;
-  $('hudSub').textContent = `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
+  $('hudSub').textContent = inSF ? 'Fisherman\'s Wharf · the phone booth zaps you home' : `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
 }
 
 /* minimap: zones you've found are colored in */
@@ -4463,6 +4466,91 @@ function buildPierRailings(g, P3){ const posts = [], rails = [], H = 1.1, s0 = P
   const geos = []; for (const [a, b] of rails) for (const [y, th] of [[H, .1], [.55, .06]]){ const [xa, ya] = landXY(...a), [xb, yb] = landXY(...b), va = new THREE.Vector3(xa*U, pierDeckH(a[0]) + y, ya*U), vb = new THREE.Vector3(xb*U, pierDeckH(b[0]) + y, yb*U), L = va.distanceTo(vb);
     const q = new THREE.BoxGeometry(L, th, .08); q.applyMatrix4(new THREE.Matrix4().makeRotationY(-Math.atan2(vb.z - va.z, vb.x - va.x)).setPosition(va.clone().add(vb).multiplyScalar(.5))); geos.push(q); }
   if (geos.length) g.add(new THREE.Mesh(mergeGeometries(geos), wood)); }
+/* San Francisco: Fisherman's Wharf, real size from OpenStreetMap (sf.json, loaded the first time you go). In the game's world it sits
+   by itself, 30 km inland of Santa Monica. SF meters: x east, y north, from the crab wheel sign at Jefferson & Taylor. */
+const SF = { X: coastX(0)*U + 30000, Z: 0, x0: -1060, y0: -545, W: 2010, H: 1000, LAND: 2.2, data: null, walk: null, bid: null, loading: null, group: null };
+const sfLocal = (wx, wz) => [wx - SF.X, SF.Z - wz];   // (world meters → SF meters)
+const inSFu = xu => xu*U > SF.X - 3000;               // (is this world x, in units, out in San Francisco?)
+function sfInPoly(f, x, y){ let c = false; for (let i = 0, j = f.length - 2; i < f.length; j = i, i += 2){ const a = f[i], b = f[i + 1], cx = f[j], cy = f[j + 1]; if ((b > y) !== (cy > y) && x < (cx - a)*(y - b)/(cy - b) + a) c = !c; } return c; }
+function sfWalkH(wx, wz){ const [x, y] = sfLocal(wx, wz); if (!SF.walk){ loadSF(); return SF.LAND; }
+  const i = Math.floor(x - SF.x0), j = Math.floor(SF.y0 + SF.H - y); if (i < 0 || j < 0 || i >= SF.W || j >= SF.H) return -6;
+  const k = j*SF.W + i, b = SF.bid[k]; if (b){ const B = SF.data.b[b - 1]; if (B && sfInPoly(B.p, x, y)) return (B.w && B.t === 'ship' ? 0 : SF.LAND) + B.hh; }
+  return SF.walk[k] ? SF.LAND : -6; }
+function sfPlaceName(wx, wz){ const [x, y] = sfLocal(wx, wz); let best = null, bd = 70; for (const [n, px, py] of SF.data?.poi || []){ const d = Math.hypot(px - x, py - y); if (d < bd){ bd = d; best = n; } }
+  return best ? best.replace(/ \(.*\)| - ESTIMATED|, .*$/g, '') : "Fisherman's Wharf"; }
+function loadSF(){ if (SF.loading) return SF.loading; return SF.loading = fetch('sf.json').then(r => r.json()).then(D => { SF.data = D; sfGrid(D); buildSF(D); }).catch(e => { SF.loading = null; console.warn('SF', e); }); }
+function sfGrid(D){ const { W, H, x0, y0 } = SF, mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c.getContext('2d'); }, X = x => x - x0, Y = y => y0 + H - y;
+  const path = (g, f) => { g.beginPath(); for (let i = 0; i < f.length; i += 2) g[i ? 'lineTo' : 'moveTo'](X(f[i]), Y(f[i + 1])); g.closePath(); };
+  const w = mk(); w.fillStyle = '#fff'; path(w, D.land); w.fill(); for (const P of D.piers) if (P.k !== 'float'){ path(w, P.p); w.fill(); }
+  w.strokeStyle = '#fff'; w.lineCap = 'round'; for (const d of D.docks){ w.lineWidth = Math.max(1.5, d.w); w.beginPath(); for (let i = 0; i < d.l.length; i += 2) w[i ? 'lineTo' : 'moveTo'](X(d.l[i]), Y(d.l[i + 1])); w.stroke(); }
+  const wd = w.getImageData(0, 0, W, H).data; SF.walk = new Uint8Array(W*H); for (let k = 0; k < W*H; k++) SF.walk[k] = wd[k*4] > 127 ? 1 : 0;
+  const b = mk(); b.imageSmoothingEnabled = false; D.b.forEach((B, n) => { B.hh = B.t === 'ship' ? 7 : Math.max(3, B.h || 8); const id = n + 1; b.fillStyle = `rgb(${id & 255},${id >> 8},0)`; path(b, B.p); b.fill(); });
+  const bd = b.getImageData(0, 0, W, H).data; SF.bid = new Uint16Array(W*H); for (let k = 0; k < W*H; k++) SF.bid[k] = bd[k*4] + (bd[k*4 + 1] << 8); }
+const SF_MENU_SPOTS = [['Crab Station', -24.3, 9.4], ["Frankie's Crab Stand", 104.6, 80], ['Supreme Crab', -69, -42.1], ['Boudin Bakery', 74.6, 22.6], ['Boudin Bakery', 507.5, 61.4], ['In-N-Out Burger', -241.3, -62.4], ['Ghirardelli', -578.3, -284.8], ['Ghirardelli', -669.6, -268], ['Buena Vista Cafe', -444.5, -201.2], ["Alioto's", -27.9, 39.5], ["Scoma's", -239.7, 68.4], ['Bubba Gump', 482.7, 304.8]];
+function sfDo(o){ const [x, y] = sfLocal(o.x*U, o.y*U); for (const [n, px, py] of SF_MENU_SPOTS) if (Math.hypot(px - x, py - y) < 9) return { label: `🦀 ${n}`, go: () => openPlaceMenu(n, 'food') };
+  if (Math.hypot(x - 365, y - 256) < 40) return { label: '🦭 Bark at the sea lions', go: () => { sfx(180, .25, 'sawtooth', .06, 0, -60); sfx(160, .3, 'sawtooth', .06, .3, -40); banner('🦭 ARF! ARF!', 'California sea lions have hauled out on these K-Dock floats since 1990. Sometimes more than a thousand!'); } };
+  if (Math.hypot(x + 485.3, y + 142.9) < 10) return { label: '🚋 Push the cable car round', go: () => { SF.ttSpin = time; sfx(300, .6, 'square', .02); banner('🚋 Round it goes!', 'At the end of the line, the gripman and riders push the cable car round on the turntable'); } };
+  return null; }
+function buildSF(D){ const g = new THREE.Group(), L = SF.LAND, W3 = (x, y, h) => [SF.X + x, h, SF.Z - y];
+  const shapeOf = f => { const sh = new THREE.Shape(); for (let i = 0; i < f.length; i += 2) sh[i ? 'lineTo' : 'moveTo'](f[i], f[i + 1]); return sh; };
+  const flatGeo = (f, h) => { const q = new THREE.ShapeGeometry(shapeOf(f)); q.rotateX(-Math.PI/2); q.translate(SF.X, h, SF.Z); return q; };
+  const slab = (f, h0, h1) => { const q = new THREE.ExtrudeGeometry(shapeOf(f), { depth: h1 - h0, bevelEnabled: false }); q.rotateX(-Math.PI/2); q.translate(SF.X, h0, SF.Z); return q; };
+  const add = (geos, mt, ro = 0) => { if (!geos.length) return null; const m = new THREE.Mesh(mergeGeometries(geos.map(q => { q = q.index ? q.toNonIndexed() : q; for (const a of Object.keys(q.attributes)) if (a !== 'position' && a !== 'normal') q.deleteAttribute(a); return q; })), mt); m.renderOrder = ro; m.receiveShadow = true; g.add(m); return m; };
+  const off = n => { const m = std(n, .9); m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2; return m; };
+  // the ground: the land a little above the water, sand at Aquatic Park, wood piers, the sea-lion floats down low, the docks, and the bay floor
+  add([slab(D.land, -6, L)], std(0xc9c3b6, .95));
+  { const f = new THREE.Mesh(new THREE.PlaneGeometry(4000, 3000), std(0x2f5d62, 1)); f.rotation.x = -Math.PI/2; f.position.set(SF.X - 50, -6.2, SF.Z + 50); g.add(f); }
+  { const wtr = new THREE.Mesh(new THREE.PlaneGeometry(16000, 12000), new THREE.MeshStandardMaterial({ color: 0x3f6f86, roughness: .25, metalness: .2, transparent: true, opacity: .85 })); wtr.rotation.x = -Math.PI/2; wtr.position.set(SF.X - 2000, -.06, SF.Z - 2000); g.add(wtr); }   // (the bay, out to the Golden Gate: gray-green, the way it usually looks)
+  add(D.beach.map(f => flatGeo(f, L + .02)), off(0xe6d3a3));
+  add(D.piers.filter(P => P.k !== 'float').map(P => P.o ? slab(P.p, L - 1.2, L) : flatGeo(P.p, L + .03)), off(0x8d7b68));
+  add(D.piers.filter(P => P.k === 'float').map(P => slab(P.p, -.3, .35)), std(0x7d7468, .9));
+  { const geos = []; for (const d of D.docks) for (let i = 0; i + 3 < d.l.length; i += 2){ const ax = d.l[i], ay = d.l[i + 1], bx2 = d.l[i + 2], by = d.l[i + 3], len = Math.hypot(bx2 - ax, by - ay); if (len < .2) continue;
+      const q = new THREE.BoxGeometry(len, .3, Math.max(1.2, d.w)); q.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(by - ay, bx2 - ax)).setPosition(SF.X + (ax + bx2)/2, L - .15, SF.Z - (ay + by)/2)); geos.push(q); } add(geos, std(0x9a8c78, .9)); }
+  // streets and plazas: asphalt with the cable car and streetcar rails in it
+  { const geos = []; for (const r of D.rd){ const w = r.k === 'pedestrian' ? 0 : Math.max(5, r.w + 2); if (!w) continue; for (let i = 0; i + 3 < r.l.length; i += 2){ const ax = r.l[i], ay = r.l[i + 1], bx2 = r.l[i + 2], by = r.l[i + 3], len = Math.hypot(bx2 - ax, by - ay); if (len < .2) continue;
+      const q = new THREE.PlaneGeometry(len + w*.5, w); q.rotateX(-Math.PI/2); q.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(by - ay, bx2 - ax)).setPosition(SF.X + (ax + bx2)/2, L + .04, SF.Z - (ay + by)/2)); geos.push(q); } } add(geos, off(0x3e4147), 1); }
+  add(D.ped.map(f => flatGeo(f, L + .05)), off(0xb9a48a), 2);
+  { const geos = []; for (const r of D.ra){ const ga = r.k === 'cable_car' ? 1.067 : 1.435; for (let i = 0; i + 3 < r.l.length; i += 2){ const ax = r.l[i], ay = r.l[i + 1], bx2 = r.l[i + 2], by = r.l[i + 3], len = Math.hypot(bx2 - ax, by - ay); if (len < .2) continue;
+      for (const sd of r.k === 'cable_car' ? [-ga/2, 0, ga/2] : [-ga/2, ga/2]){ const q = new THREE.BoxGeometry(len, .05, sd === 0 ? .05 : .08); q.translate(0, 0, sd); q.applyMatrix4(new THREE.Matrix4().makeRotationY(-Math.atan2(-(by - ay), bx2 - ax)).setPosition(SF.X + (ax + bx2)/2, L + .07, SF.Z - (ay + by)/2)); geos.push(q); } } } add(geos, std(0x9ea3a8, .3, .8), 3); }
+  for (const [x, y] of D.tt){ const t = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, .1, 28), std(0x6d5a48, .8)); t.position.set(...W3(x, y, L + .06)); g.add(t); if (Math.abs(x + 485.3) < 1) SF.tt = t; }
+  // buildings, by kind: Pier 39's weathered wood, ships, and San Francisco's pale stucco and brick
+  { const by = new Map(), mats = { wood: std(0x8a7a66, .9), ship: std(0x3d4650, .6, .3), brick: std(0x9c4a3a, .85), a: std(0xe8e2d4, .85), b: std(0xd9cdb6, .85), c: std(0xf0e6c8, .85), d: std(0xc9d3d6, .85), e: std(0xe3c9b4, .85) };
+    for (const B of D.b){ const cx = B.p.reduce((a, v, i) => i % 2 ? a : a + v, 0)/(B.p.length/2), cy = B.p.reduce((a, v, i) => i % 2 ? a + v : a, 0)/(B.p.length/2);
+      const k = B.t === 'ship' ? 'ship' : (cx > 330 && cx < 620 && cy > 0) ? 'wood' : /Ghirardelli|Cannery/i.test(B.n) || (cx < -560 && cy < -230) ? 'brick' : 'abcde'[Math.abs(Math.round(cx*7 + cy*13)) % 5];
+      const base = B.t === 'ship' ? 0 : L; (by.get(k) || by.set(k, []).get(k)).push(slab(B.p, base, base + B.hh)); }
+    for (const [k, geos] of by) add(geos, mats[k]); }
+  // signs: the crab wheel at Jefferson & Taylor, and the big names
+  { const post = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 4.4, 8), std(0x2f3a45, .5)); post.position.set(...W3(0, 0, L + 2.2)); g.add(post);
+    const tex = canvasTex(512, 512, (x, w, h) => { x.fillStyle = '#1565c0'; x.beginPath(); x.arc(w/2, h/2, 250, 0, TAU); x.fill(); x.fillStyle = '#fdd835'; for (let k = 0; k < 8; k++){ const a = k/8*TAU; x.beginPath(); x.arc(w/2 + Math.cos(a)*236, h/2 + Math.sin(a)*236, 16, 0, TAU); x.fill(); }
+      x.fillStyle = '#fff'; x.beginPath(); x.arc(w/2, h/2, 175, 0, TAU); x.fill(); x.fillStyle = '#d32f2f'; x.beginPath(); x.ellipse(w/2, h/2 + 10, 95, 62, 0, 0, TAU); x.fill(); for (const sx of [-1, 1]){ x.beginPath(); x.ellipse(w/2 + sx*120, h/2 - 50, 34, 22, sx*.6, 0, TAU); x.fill(); for (let l = 0; l < 3; l++){ x.fillRect(w/2 + sx*(85 + l*14) - 6, h/2 + 20 + l*16, sx*50, 9); } }
+      x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 34px Nunito, sans-serif'; x.fillText("FISHERMAN'S WHARF", w/2, 78); x.font = '900 30px Nunito, sans-serif'; x.fillText('OF SAN FRANCISCO', w/2, 456); }, false);
+    for (const ry of [0, Math.PI]){ const m = new THREE.Mesh(new THREE.CircleGeometry(1.7, 40), new THREE.MeshBasicMaterial({ map: tex })); m.position.set(...W3(0, 0, L + 5.2)); m.rotation.y = ry; m.translateZ(.04); g.add(m); } }
+  const big = (txt, x, y, h, w, bg, fg, ry = 0) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, w*.18), new THREE.MeshBasicMaterial({ map: labelTex(txt, bg, fg, 1024, 184, 110), side: THREE.DoubleSide })); m.position.set(...W3(x, y, L + h)); m.rotation.y = ry; g.add(m); };
+  big('PIER 39', 436.7, 33, 7.5, 9, '#0d47a1', '#ffffff'); big('MUSÉE MÉCANIQUE', -6, 92, 6, 8, '#8e1b1b', '#fdd835'); big('BOUDIN', 74.6, 16, 7, 6, '#f5f0e1', '#8d1c1c'); big('AQUARIUM OF THE BAY', 564.2, 44, 6, 9, '#00838f', '#ffffff');
+  big('IN-N-OUT BURGER', -241.3, -70, 5, 7, '#ffffff', '#d32f2f'); big('GHIRARDELLI', -636, -262, 22, 22, 'rgba(0,0,0,0)', '#ffffff'); big('THE CANNERY', -322.3, -125, 6, 8, '#5d4037', '#fdd835'); big('USS PAMPANITO', -59.3, 170, 6, 7, '#263238', '#ffffff');
+  big('ALCATRAZ FERRY · PIER 33', 1000, -140, 6, 10, '#1b5e20', '#ffffff', -Math.PI/2); big('CRAB STATION', -24.3, 4, 3.4, 5, '#c62828', '#ffffff');
+  // a cable car waiting on the Hyde & Beach turntable: red and cream, POWELL & HYDE on the roof sign
+  { const cc = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(8.4, 1.6, 2.4), std(0xb71c1c, .5)); body.position.y = 1.3; cc.add(body); const top = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.4, 2.5), std(0xf3e5c0, .5)); top.position.y = 2.8; cc.add(top);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(8.8, .25, 2.7), std(0x3e2723, .6)); roof.position.y = 3.6; cc.add(roof); const sg = new THREE.Mesh(new THREE.PlaneGeometry(3, .5), new THREE.MeshBasicMaterial({ map: labelTex('POWELL & HYDE', '#111111', '#ffffff', 512, 86, 56), side: THREE.DoubleSide })); sg.position.set(0, 4, 0); cc.add(sg);
+    for (const z of [-1.25, 1.25]) for (const x of [-3.5, -1.2, 1.2, 3.5]){ const p = new THREE.Mesh(new THREE.BoxGeometry(.08, 1.4, .08), std(0x3e2723, .6)); p.position.set(x, 2.8, z); cc.add(p); }
+    cc.position.set(...W3(-485.3, -142.9, L + .1)); g.add(cc); SF.car = cc; }
+  // sea lions on the K-Dock floats off Pier 39
+  { const R = mulberry(39), slG = new THREE.CapsuleGeometry(.32, 1.2, 4, 8), slM = std(0x6d4c41, .5), floats = D.piers.filter(P => P.k === 'float' && P.p[0] > 330 && P.p[1] > 220), list = [];
+    for (const P of floats){ const cx = P.p.reduce((a, v, i) => i % 2 ? a : a + v, 0)/(P.p.length/2), cy = P.p.reduce((a, v, i) => i % 2 ? a + v : a, 0)/(P.p.length/2); for (let k = 0; k < 2 + (R()*3|0); k++) list.push([cx + (R() - .5)*3, cy + (R() - .5)*5, R()*TAU]); }
+    const im = new THREE.InstancedMesh(slG, slM, list.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(); list.forEach(([x, y, a], i) => { m4.compose(new THREE.Vector3(...W3(x, y, .62)), q.setFromEuler(e.set(0, a, Math.PI/2)), new THREE.Vector3(1, 1, 1)); im.setMatrixAt(i, m4); }); g.add(im); }
+  // out in the bay: Alcatraz (with the cellhouse and lighthouse), Angel Island, and the Golden Gate Bridge, seen through the haze
+  { const far = c => new THREE.MeshLambertMaterial({ color: c, fog: false }), A = D.alc;
+    const isl = new THREE.Mesh(slab(A.o, -2, 22), far(0x8a8f7a)); g.add(isl); add(A.b.map(B => slab(B.p, 22, 22 + Math.min(14, B.h))), far(0xd8d2c4));
+    if (A.lh){ const lh = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2, A.lh.height, 8), far(0xf0eee8)); lh.position.set(...W3(A.lh.center[0], A.lh.center[1], 22 + A.lh.height/2)); g.add(lh); }
+    const K = .6, sc = f => f.map(v => v*K);   // (past the camera's reach, so drawn 60% as far and 60% as big: they look the same size from the Wharf)
+    g.add(new THREE.Mesh(slab(sc(D.ang), -2, 240*K), far(0x4f6b4a)));
+    const T = D.gg.towers, orange = far(0xc0362c), [a, b] = D.gg.deckEnds.map(q => q.map(v => v*K)), dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy), ux = dx/len, uy = dy/len;   // the Golden Gate Bridge: two towers, the deck, the main cables
+    for (const t of T){ const cx = t.center[0]*K, cy = t.center[1]*K; for (const sd of [-1, 1]){ const tw = new THREE.Mesh(new THREE.BoxGeometry(6*K, 227*K, 6*K), orange); tw.position.set(...W3(cx - uy*sd*12*K, cy + ux*sd*12*K, 113*K)); g.add(tw); } const xb = new THREE.Mesh(new THREE.BoxGeometry(4*K, 8*K, 30*K), orange); xb.position.set(...W3(cx, cy, 215*K)); xb.rotation.y = Math.atan2(dy, dx); g.add(xb); }
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(len, 6*K, 27*K), orange); deck.position.set(...W3((a[0] + b[0])/2, (a[1] + b[1])/2, 67*K)); deck.rotation.y = Math.atan2(dy, dx); g.add(deck);
+    for (const sd of [-1, 1]){ const pts = []; const tA = T[1].center, tB = T[0].center; for (let k = -6; k <= 36; k++){ const f = k/30, x = lerp(tA[0], tB[0], f)*K - uy*sd*12*K, y = lerp(tA[1], tB[1], f)*K + ux*sd*12*K; pts.push(new THREE.Vector3(...W3(x, y, K*(f < 0 || f > 1 ? 70 + 150*Math.min(1, Math.abs(f < 0 ? -f : f - 1)*0) + (227 - 70)*(1 - Math.min(1, (f < 0 ? -f : f - 1)*5)) : 72 + 155*(2*f - 1)**2)))); }
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, 1.5*K, 6), orange)); } }
+  oceanWorld.add(g); SF.group = g; }
+function sfStep(dt){ if (SF.car && SF.ttSpin && time - SF.ttSpin < 4){ const k = (time - SF.ttSpin)/4; SF.car.rotation.y = Math.PI*k; if (SF.tt) SF.tt.rotation.y = Math.PI*k; } }
 function buildCoast(){
   const g = new THREE.Group(); coastGroup = g; bldIndex();
   const at = (obj, s, t, lift = 0, h) => { const [x, y] = landXY(s, t); obj.position.set(x*U, (h ?? landH(s, t)) + lift, y*U); g.add(obj); return obj; };
@@ -4882,6 +4970,9 @@ const STORE_MENU = {
   movies: [M('🎟️', 'Ticket: Ocean Wonders', 10, 'movie'), M('🍿', 'Popcorn', 8), M('🥤', 'Soda', 5, 'drink'), M('🍫', 'Movie candy', 5)],
   theatre: [M('🎟️', 'Ticket to the show', 10, 'movie'), M('🍪', 'Cookie', 5)] };
 const BRAND_MENU = {   // what the real places sell (a few favorites each)
+  'Crab Station': [M('🦀', 'Dungeness crab cocktail', 14), M('🥣', 'Clam chowder in a sourdough bread bowl', 12), M('🍤', 'Shrimp cocktail', 10)], "Frankie's Crab Stand": [M('🦀', 'Steamed Dungeness crab', 16), M('🥣', 'Clam chowder bread bowl', 12)], 'Supreme Crab': [M('🦀', 'Crab sandwich on sourdough', 15), M('🥣', 'Clam chowder', 9)],
+  'Boudin Bakery': [M('🍞', 'Sourdough loaf', 8), M('🐢', 'Turtle-shaped sourdough', 10), M('🥣', 'Clam chowder in a bread bowl', 12)], 'In-N-Out Burger': [M('🍔', 'Double-Double', 8), M('🍟', 'Fries', 4), M('🥤', 'Chocolate shake', 5, 'drink')],
+  'Ghirardelli': [M('🍨', 'Hot fudge sundae', 12), M('🍫', 'Chocolate squares', 6), M('☕', 'Hot cocoa', 5, 'drink')], 'Buena Vista Cafe': [M('🍳', 'Breakfast', 12), M('☕', 'Hot cocoa', 5, 'drink')], "Alioto's": [M('🐟', 'Fish and chips', 15), M('🦀', 'Cioppino', 20)], "Scoma's": [M('🐟', 'Sand dabs', 18), M('🦀', 'Crab cakes', 16)],
   'Starbucks': [M('🍫', 'Hot chocolate', 6, 'drink'), M('🥤', 'Pink Drink', 7, 'drink'), M('🍭', 'Cake pop', 4), M('🥤', 'Frappuccino', 8, 'drink')],
   'The Coffee Bean & Tea Leaf': [M('🥤', 'Ice Blended', 8, 'drink'), M('🍫', 'Hot cocoa', 6, 'drink'), M('🍪', 'Cookie', 4)],
   'Chipotle': [M('🌯', 'Burrito', 12), M('🌮', 'Tacos', 10), M('🥑', 'Chips & guac', 6)],
@@ -5740,7 +5831,7 @@ const PHONE_BOOTHS = [
   { id: 'prom', name: '3rd Street Promenade', s: 645.4, t: -458, face: 1, more: 'at Santa Monica Boulevard' },
   { id: 'pier', name: 'Santa Monica Pier', s: 85, t: 5.2, face: 0, more: "at Route 66's End of the Trail sign", deck: true },
   { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
-  { id: 'sf', name: "San Francisco: Fisherman's Wharf", soon: true, more: 'Being built next! Drive or zap there soon' } ];
+  (() => { const [x, y] = [(SF.X + 8)/U, (SF.Z - 6)/U], [s, t] = landST(x, y); return { id: 'sf', name: "San Francisco: Fisherman's Wharf", s, t, face: 0, more: 'at the crab wheel sign, Jefferson & Taylor', city: 'San Francisco' }; })() ];
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
 function openBooth(from){ const o = ocean; if (!o) return; paused = true; $('boothPanel').querySelector('.kicker').textContent = '☎️ Phone booth'; $('boothPanel').querySelector('h2').textContent = 'Where do you want to go?'; $('boothPanel').querySelector('.explain').textContent = 'Pick up the phone and dial another phone booth. Zap! You come out of that one.'; $('boothClose').textContent = 'Hang up'; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12)); const box = $('boothList'); box.innerHTML = '';
   for (const b of PHONE_BOOTHS){ if (b === from) continue; const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + (b.soon ? 'secondary' : 'primary'); bt.disabled = !!b.soon;
@@ -5750,8 +5841,9 @@ function closeBooth(){ $('boothPanel').hidden = true; paused = false; graceAfter
 $('boothClose').onclick = closeBooth;
 function zapTo(b){ const o = ocean; $('boothPanel').hidden = true; let z = $('zap'); if (!z){ z = document.createElement('div'); z.id = 'zap'; document.body.appendChild(z); }
   z.style.opacity = '1'; [523, 784, 1046, 1568].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.05)); sfx(200, .5, 'sawtooth', .03, 0, 1400);
-  setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
-    paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`☎️ ${b.name}`, b.more); }, 120); }, 380); }
+  const go = () => setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
+    paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`☎️ ${b.name}`, b.more); }, 120); }, 380);
+  if (b.id === 'sf' && !SF.walk) loadSF().then(go); else go(); }
 /* 3rd Street between Wilshire and California (the 1100 block), building by building from Google Street View (Jul 2025,
    the middle of the block Feb 2022) and listings. side 1 = the inland side (fronts face the ocean), -1 = the ocean side. */
 const BLOCK1100 = [
@@ -6296,6 +6388,7 @@ function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.M
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   { const b = !o.workout && boothAt(o); if (b) return { label: '☎️ Use the phone booth', go: () => openBooth(b) }; }
+  if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   if (!o.workout && !o.bike && rackAt(o)) return { label: '🚲 Ride a bike', go: () => bikeOn(o) };
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
@@ -7231,6 +7324,7 @@ function updCoast(o){
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
+  if (SF.group) sfStep(dt);
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
     const dn = !!(r?.down && downIn(o)); if (dn !== !!updCoast.down){ updCoast.down = dn; if (dn) banner('Downstairs', "Kids' books, toys, games and records"); else if (r?.down) banner('Upstairs', 'Fiction, mysteries, sci-fi and New & Noteworthy'); } }   //   (and going downstairs)
   // the dinosaur fountains spout, and the people on the Promenade stroll

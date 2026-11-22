@@ -4545,7 +4545,7 @@ const PROM_DINOS = [[653, -240, 'tri'], [653, -520, 'stego'], [653, -797, 'tri']
 // the glass front and the inside of that kind of shop. Inside, walkH is the shop floor; the walls between shops are the building itself.
 const STORE_KIND = { 'JOHN REED Fitness': 'gym', 'Sephora': 'beauty', 'MAC Cosmetics': 'beauty', 'Sunglass Hut': 'shades', 'Sunsations': 'shades', 'Skechers': 'shoes', 'Foot Locker': 'shoes', 'Aldo': 'shoes',
   'Barnes & Noble': 'books', 'T-Mobile': 'tech', 'Apple Store': 'tech', 'Google Store': 'tech', 'Puzzle Zoo': 'toys', "IT'SUGAR": 'candy', "McConnell's": 'icecream', 'American Childrens Theatre': 'theatre',
-  'For Lease': 'vacant', 'MINISO': 'gift', 'Wilson': 'clothes', 'Beyond Yoga': 'clothes', 'Culto': 'shoes', 'Gacha & Catch': 'gacha', 'Holey Moley': 'golf', 'Museum of Illusions': 'illusions', 'PicklePop': 'pickle', 'Yogurtland': 'froyo',
+  'For Lease': 'vacant', 'MINISO': 'gift', 'Wilson': 'clothes', 'Beyond Yoga': 'clothes', 'Culto': 'shoes', 'Gacha & Catch': 'gacha', 'Holey Moley': 'golf', 'Museum of Illusions': 'illusions', 'PicklePop': 'pickle', 'Yogurtland': 'froyo', "Victoria's Secret": 'beauty',
   'Outlandish': 'tech', 'The Cube VR': 'vr', 'Santa Monica Art Museum': 'gallery', 'Surrender Tattoo': 'tattoo', 'Wonders of the World': 'gift', 'Santa Monica Souvenirs': 'gift', 'Vans': 'shoes', 'JD Sports': 'shoes',
   'Sole & Laces': 'shoes', 'Oakley': 'shades', 'Uniqlo': 'clothes', 'Gallini': 'gift', 'Seasons By': 'clothes', '2bella': 'clothes', 'Cherokee of California': 'clothes',   // (Gallini, Seasons By, 2bella, Cherokee: what they sell is a guess)
   'See Sea': 'gift', 'Dodgers Clubhouse': 'clothes', 'Trastevere': 'food', "Carlo's Bake Shop": 'bakery', 'HOLEY MOLLY': 'bakery' };
@@ -4588,6 +4588,8 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   "Carlo's Bake Shop": [M('🧁', 'Cupcake', 6), M('🍰', 'Rainbow cake slice', 10), M('🍪', 'Cookie', 4)],
   'HOLEY MOLLY': [M('🍩', 'Donut', 5), M('🍩', 'Sprinkle donut', 6)],
   'Silverlake Ramen': [M('🍜', 'Ramen', 14), M('🥟', 'Dumplings', 8)],
+  "Victoria's Secret": [M('👕', 'PINK hoodie', 40, 'wear', { slot: 'shirt', col: '#ff7ab8' }), M('🩷', 'Pajama top', 30, 'wear', { slot: 'shirt', col: '#f7c6dc' }), M('🌸', 'Bare Vanilla body mist', 15, 'spritz'), M('🌺', 'Velvet Petals body mist', 15, 'spritz'),
+    M('🧴', 'Hand lotion', 10, 'play', { say: 'Mmm, so soft!' }), M('💄', 'Lip gloss', 12, 'play', { say: 'So shiny!' }), M('👜', 'PINK tote bag', 20, 'play', { say: 'Room for everything!' })],   // (the kid-friendly side of the store: PINK, the body mists)
   'Ugo Trattoria': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12), M('🍨', 'Gelato', 6)],
   'Wonders of the World': [M('🦴', 'Dinosaur fossil', 25, 'play', { say: 'A real fossil, millions of years old!' }), M('☄️', 'Space rock', 20, 'play', { say: 'It fell from outer space!' }), M('💎', 'Geode', 15, 'play', { say: 'Crack it open: crystals inside!' })],
   'Santa Monica Souvenirs': [M('🧢', 'Santa Monica cap', 20, 'wear', { slot: 'hat', col: '#1f6b8a' }), M('👕', 'Santa Monica T-shirt', 25, 'wear', { slot: 'shirt', col: '#f4f4f0' }), M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],

@@ -259,6 +259,8 @@
   .item .lvl i.legend.on{background:var(--gold)}
   .item .lvl span{margin-left:4px}
   .item p.next{color:var(--deep)}
+  .booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
+  #zap{position:fixed;inset:0;z-index:9000;pointer-events:none;background:radial-gradient(circle,#fff 0,#fff 30%,#ffe082 60%,rgba(255,224,130,0) 100%);opacity:0;transition:opacity .35s}
   .panel.mappanel{max-width:940px;width:calc(100vw - 24px);padding:12px 14px}
   .maphead{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.maphead h2{margin:0}
   #mapFind{flex:1;min-width:180px;font:inherit;font-size:16px;padding:8px 12px;border-radius:12px;border:2px solid rgba(8,43,69,.18)}
@@ -623,6 +625,12 @@
   </div>
 </div>
 
+<div id="boothPanel" class="overlay" hidden>
+  <div class="panel small"><p class="kicker">☎️ Phone booth</p><h2>Where do you want to go?</h2>
+    <p class="explain">Pick up the phone and dial another phone booth. Zap! You come out of that one.</p>
+    <div id="boothList" class="booths"></div>
+    <div class="row2"><button id="boothClose" class="btn secondary" type="button">Hang up</button></div></div>
+</div>
 <div id="storePanel" class="overlay" hidden>
   <div class="panel">
     <div><p class="kicker">3rd Street Promenade</p><h2 id="storeName">Shop</h2></div>
@@ -4686,6 +4694,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
+  buildBooths(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1f4f9e, .5), cream = std(0xf3ead2, .6), span = 7.6, H = 5.8;
@@ -5576,8 +5585,38 @@ const SPOT = { rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Pu
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''], gallery: ['🖼️ Test your eyes', ''], vr: ['🥽 Try VR', ''], froyo: ['🍨 Fill a cup', ''], pickle: ['🏓 Play pickleball', '🏓 Hit!'] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
+/* Phone booths: step inside one and dial another, and you're zapped there. San Francisco's is coming next. */
+const PHONE_BOOTHS = [
+  { id: 'prom', name: '3rd Street Promenade', s: 645.4, t: -458, face: 1, more: 'at Santa Monica Boulevard' },
+  { id: 'pier', name: 'Santa Monica Pier', s: 205, t: -19, face: 0, more: 'by the carousel', deck: true },
+  { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
+  { id: 'home', name: 'Home (3rd & California)', s: 662.8, t: -1066, face: 3, more: 'by 1045 3rd Street' },
+  { id: 'sf', name: "San Francisco: Fisherman's Wharf", soon: true, more: 'Being built next! Drive or zap there soon' } ];
+const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
+function openBooth(from){ const o = ocean; if (!o) return; paused = true; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12)); const box = $('boothList'); box.innerHTML = '';
+  for (const b of PHONE_BOOTHS){ if (b === from) continue; const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + (b.soon ? 'secondary' : 'primary'); bt.disabled = !!b.soon;
+    bt.innerHTML = `${b.soon ? '🚧' : '☎️'} ${htmlText(b.name)}<small>${htmlText(b.more)}</small>`; bt.onclick = () => zapTo(b); box.appendChild(bt); }
+  $('boothPanel').hidden = false; resetPick(); }
+function closeBooth(){ $('boothPanel').hidden = true; paused = false; graceAfterPause(); }
+$('boothClose').onclick = closeBooth;
+function zapTo(b){ const o = ocean; $('boothPanel').hidden = true; let z = $('zap'); if (!z){ z = document.createElement('div'); z.id = 'zap'; document.body.appendChild(z); }
+  z.style.opacity = '1'; [523, 784, 1046, 1568].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.05)); sfx(200, .5, 'sawtooth', .03, 0, 1400);
+  setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
+    paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`☎️ ${b.name}`, b.more); }, 120); }, 380); }
+function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPHONE', '#111111', '#ffffff', 512, 96, 60) });
+  for (const b of PHONE_BOOTHS){ if (b.soon) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));
+    { const [x1, y1] = landXY(b.s + 1, b.t), [x0, y0] = landXY(b.s, b.t); bg.rotation.y = -Math.atan2(y1 - y0, x1 - x0) + b.face*Math.PI/2; }
+    const bx = (w, h, d, x, y, z, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = m !== glass; bg.add(me); return me; };
+    bx(1.1, .1, 1.1, 0, .05, 0, red); for (const [x, z] of [[-.5, -.5], [.5, -.5], [-.5, .5], [.5, .5]]) bx(.1, 2.3, .1, x, 1.2, z, red);
+    bx(1.16, .22, 1.16, 0, 2.42, 0, red); bx(.9, .14, .9, 0, 2.6, 0, red);
+    for (const [x, z, ry] of [[0, -.56, 0], [0, .56, Math.PI], [-.56, 0, Math.PI/2], [.56, 0, -Math.PI/2]]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(.9, .17), signM); sg.position.set(x*1.04, 2.42, z*1.04); sg.rotation.y = ry + Math.PI; bg.add(sg); }
+    bx(.9, 2, .03, 0, 1.15, -.5, glass); bx(.03, 2, .9, -.5, 1.15, 0, glass); bx(.03, 2, .9, .5, 1.15, 0, glass);   // glass on three sides; the open side is the door (+z)
+    for (const y of [.75, 1.45]) for (const sd of [[0, -.5, .9, .04], [-.5, 0, .04, .9], [.5, 0, .04, .9]]) bx(sd[2], .05, sd[3], sd[0], y, sd[1], red);   // the window bars
+    bx(.26, .4, .1, 0, 1.35, -.44, std(0x263238, .4, .4)); bx(.06, .2, .06, .09, 1.42, -.37, std(0x111111, .5));   // the phone, and its handset
+    g.add(bg); } }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
+  { const b = !o.workout && boothAt(o); if (b) return { label: '☎️ Use the phone booth', go: () => openBooth(b) }; }
   if (o.workout?.pier) return null;   // (no getting off a ride halfway)
   { const ps = nearPierSpot(o); if (ps && !o.workout) return { label: ps.k === 'wheel' ? '🎡 Ride the Pacific Wheel' : '🎢 Ride the West Coaster', go: () => startRide(ps) }; }
   if (o.workout) return { label: o.workout.k === 'stage' ? '⏹ Get off the stage' : o.workout.k === 'dj' ? '⏹ Stop the music' : '⏹ Stop', go: stopWorkout };

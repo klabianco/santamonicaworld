@@ -725,6 +725,8 @@
       <button id="shopBtn" class="btn primary" type="button">Dive Shop</button>
       <button id="homeBtn" class="btn primary" type="button" hidden>Go to my island</button>
       <button id="promBtn" class="btn primary" type="button" hidden>Back to the Promenade</button>
+      <button id="aptWayBtn" class="btn primary" type="button" hidden>Show me the way home</button>
+      <button id="aptBtn" class="btn secondary" type="button" hidden>Go home</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
       <button id="switchBtn" class="btn secondary" type="button" hidden>Switch swimmer</button>
@@ -2299,6 +2301,7 @@ const GUIDE_HERE = { grotto: [8, 'Look for the door deep under water'], eagleroc
 // what the gold arrow points at: home (after someone gives you directions), else the league goal you picked, else the quest the quest chip shows
 let homeGuide = false;
 function drawGuideArrow(o){
+  if (aptGuide){ const [x, y] = landXY(HOME_APT.front - 3, HOME_APT.mid); if (Math.hypot(x - o.x, y - o.y) < 6*METERS || inHomeBuilding(o)){ aptGuide = false; banner("You're home! 🏠", 'Up the steps to apartment 303'); return; } return arrowTo(o, x, y, 'Home'); }
   if (homeGuide){ if (Math.hypot(HOUSE.x - o.x, HOUSE.y - o.y) < 20*METERS || o.onLand && onHome(o)){ homeGuide = false; return; } return arrowTo(o, HOUSE.x, HOUSE.y, 'Your house'); }
   if (!leagueGuide || !leagueTrack){ const qt = save.board?.[questPick] && questTarget(save.board[questPick]); if (qt) arrowTo(o, qt.x, qt.y, qt.label); return; }   // otherwise: the quest you're on
   const at = LEAGUE_AT[leagueTrack], d = Math.hypot(at.x - o.x, at.y - o.y)/METERS, [near, msg] = GUIDE_HERE[leagueTrack];
@@ -2428,6 +2431,12 @@ $('bZoomOut').onclick = () => { buildZoom = Math.min(30, buildZoom + 3); };
 // Menu: jump straight to your island once you've found it
 $('homeBtn').onclick = () => { const o = ocean; if (!o) return; closePanel(); o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.x = HOUSE.x; o.y = HOUSE.y + (HOUSE.r - 110); o.vx = o.vy = 0; o.depth = 0; o.onLand = true; o.homeDone = true;
   o.onShip = false; o.onBoat = null; o.ride = null; o.ang = -Math.PI/2; camInit = false; banner('Welcome home!', 'Press Build to build around your house'); };
+// home on 3rd Street: the gold arrow shows the way (to the steps up from the sidewalk), or go straight there
+let aptGuide = false;
+$('aptWayBtn').onclick = () => { closePanel(); aptGuide = true; leagueGuide = false; homeGuide = false; sfx(700, .08, 'triangle', .05); banner('Follow the gold arrow home!', 'Home is on 3rd Street, between California and Washington'); };
+$('aptBtn').onclick = () => { const o = ocean; if (!o) return; closePanel(); if (o.car){ const c = o.car; parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color }); o.car = null; myCar.visible = false; }
+  o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.workout = null; o.skates = false; o.onShip = false; o.onBoat = null; o.ride = null; o.climb = null; o.jumpY = 0; o.jumpV = 0; o.glide = false; aptGuide = false;
+  const [x, y] = landXY(...homeST(HOME_APT.startU, HOME_APT.startV)); Object.assign(o, { x, y, vx: 0, vy: 0, depth: 0, onLand: true, gh: homeFloor(3), ang: Math.PI }); walkRef = homeFloor(3) + .5; camHead = o.ang; camInit = false; banner('Home sweet home!', 'Apartment 303'); };
 $('promBtn').onclick = () => { const o = ocean; if (!o) return; closePanel();   // lost out at sea? straight back to where every trip starts (the boat waits for you at sea)
   if (o.car){ const c = o.car; parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color }); o.car = null; myCar.visible = false; }   // (your car stays parked where you left it)
   o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.workout = null; o.skates = false; o.onShip = false; o.onBoat = null; o.ride = null; o.climb = null; o.jumpY = 0; o.jumpV = 0; o.glide = false;
@@ -4318,13 +4327,26 @@ function buildCoast(){
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
     const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, side: THREE.DoubleSide }); const mesh = new THREE.Mesh(geo, m); mesh.receiveShadow = true; g.add(mesh); }
   // ---- buildings: every footprint from OpenStreetMap at its real height, with windows; merged in tiles ----
-  const winTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d');
-    x.fillStyle = '#fff'; x.fillRect(0, 0, 64, 64); x.fillStyle = '#4a5a6a'; x.fillRect(10, 14, 18, 26); x.fillRect(38, 14, 18, 26); x.fillStyle = '#d8d8d8'; x.fillRect(0, 46, 64, 4);
-    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();
-  const bldMat = new THREE.MeshStandardMaterial({ map: winTex, vertexColors: true, roughness: .85 });
-  const PAL = [[0xf1e6cf, 0xf4f2ee, 0xe2cfae, 0xe9c6bd, 0xeadcc0], [0xf4efe4, 0xe8d9c0, 0xd9c2a8, 0xc9b79c], [0xe9dcc6, 0xd8cfc4, 0xf0e2d0, 0xc7b8a8, 0xb9c4c8], [0xcfd3d6, 0xbfc6cc, 0xe0ddd6, 0xa9b4bb], [0xf4f2ee, 0x63c7bd, 0xeee3cf, 0xf1d9c4], [0xf2ede2], [0x9aa0a6], [0xc0bfbb]];
+  const WIN = [[18, 26, 34, 50], [74, 26, 34, 50]];   // (two windows a floor, every 3.2 m: x, y, w, h on a 128 px cell)
+  const winTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 128, 128); x.fillStyle = 'rgba(0,0,0,.05)'; x.fillRect(0, 96, 128, 6);   // (a band at each floor)
+    for (const [wx, wy, ww, wh] of WIN){ x.fillStyle = '#e9e9e9'; x.fillRect(wx - 4, wy - 4, ww + 8, wh + 8);   // the frame,
+      const gr = x.createLinearGradient(0, wy, 0, wy + wh); gr.addColorStop(0, '#3e4f60'); gr.addColorStop(.55, '#5d7387'); gr.addColorStop(1, '#2f3c49'); x.fillStyle = gr; x.fillRect(wx, wy, ww, wh);   //   the glass (sky in it),
+      x.fillStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.moveTo(wx, wy + wh*.55); x.lineTo(wx + ww*.6, wy); x.lineTo(wx + ww, wy); x.lineTo(wx, wy + wh); x.fill();
+      x.fillStyle = '#d0d0d0'; x.fillRect(wx + ww/2 - 1.5, wy, 3, wh); x.fillRect(wx, wy + wh*.45, ww, 3);   //   the bars,
+      x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(wx, wy, ww, 4); x.fillRect(wx, wy, 4, wh);   //   the shadow at the top of the recess,
+      x.fillStyle = '#f4f4f4'; x.fillRect(wx - 6, wy + wh + 4, ww + 12, 5); x.fillStyle = 'rgba(0,0,0,.25)'; x.fillRect(wx - 6, wy + wh + 9, ww + 12, 3); }   //   and the sill
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANI; return t; })();
+  const winNor = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d'); x.fillStyle = 'rgb(128,128,255)'; x.fillRect(0, 0, 128, 128);
+    for (const [wx, wy, ww, wh] of WIN){ x.fillStyle = 'rgb(128,60,200)'; x.fillRect(wx, wy, ww, 5); x.fillStyle = 'rgb(128,200,200)'; x.fillRect(wx, wy + wh - 5, ww, 5);   // (the recess: its top and bottom faces,
+      x.fillStyle = 'rgb(200,128,200)'; x.fillRect(wx, wy, 5, wh); x.fillStyle = 'rgb(60,128,200)'; x.fillRect(wx + ww - 5, wy, 5, wh);   //  its sides,
+      x.fillStyle = 'rgb(128,40,180)'; x.fillRect(wx - 6, wy + wh + 8, ww + 12, 3); }   //  and the edge of the sill)
+    const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const bldMat = new THREE.MeshStandardMaterial({ map: winTex, normalMap: winNor, normalScale: new THREE.Vector2(1.4, 1.4), vertexColors: true, roughness: .85 });
+  const parMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, side: THREE.DoubleSide });   // (the parapets along the rooflines)
+  const PAL = [[0xf1e6cf, 0xf4f2ee, 0xe2cfae, 0xe9c6bd, 0xeadcc0, 0xd8a88a, 0xc9d3d6, 0xe8c98f], [0xf4efe4, 0xe8d9c0, 0xd9c2a8, 0xc9b79c, 0xcf9f82, 0xb9c7cc], [0xe9dcc6, 0xd8cfc4, 0xf0e2d0, 0xc7b8a8, 0xb9c4c8], [0xcfd3d6, 0xbfc6cc, 0xe0ddd6, 0xa9b4bb], [0xf4f2ee, 0x63c7bd, 0xeee3cf, 0xf1d9c4], [0xf2ede2], [0x9aa0a6], [0xc0bfbb]];
   const tiles = new Map(), cc = new THREE.Color(), rc = new THREE.Color();
-  const extrude = (p, base, top, color, roofHex) => { const tk = Math.floor(p[0][1]/200), arr = tiles.get(tk) || tiles.set(tk, { pos: [], uv: [], col: [] }).get(tk); cc.setHex(color); rc.setHex(roofHex ?? color).multiplyScalar(.82);
+  const extrude = (p, base, top, color, roofHex) => { const tk = Math.floor(p[0][1]/200), arr = tiles.get(tk) || tiles.set(tk, { pos: [], uv: [], col: [] }).get(tk); cc.setHex(color).multiplyScalar(.9 + (Math.abs(Math.round(p[0][0]*3 + p[0][1]*5)) % 7)*.025); rc.setHex(roofHex ?? color).multiplyScalar(.82);   // (each building its own shade)
     const H = top - base; let along = 0;
     for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
       const cut = promWallCut(a, b);
@@ -4332,9 +4354,16 @@ function buildCoast(){
           arr.pos.push(...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], top)); arr.uv.push(u0, va, u1, va, u1, v1, u0, va, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); }
         along += L; continue; }   // (over a shop, the wall starts above its ceiling: the shopfront below is glass you can see into)
       const A0 = P3(a[0], a[1], base), A1 = P3(a[0], a[1], top), B0 = P3(b[0], b[1], base), B1 = P3(b[0], b[1], top), u0 = along/3.2, u1 = (along + L)/3.2, v1 = H/3;
-      arr.pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1); arr.uv.push(u0, 0, u1, 0, u1, v1, u0, 0, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); along += L; }
+      arr.pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1); arr.uv.push(u0, 0, u1, 0, u1, v1, u0, 0, u1, v1, u0, v1); for (const lo of [1, 1, 0, 1, 0, 0]) arr.col.push(cc.r*(lo ? .8 : 1), cc.g*(lo ? .8 : 1), cc.b*(lo ? .8 : 1)); along += L; }   // (a little darker down at the street)
     const tri = THREE.ShapeUtils.triangulateShape(p.map(([s, t]) => new THREE.Vector2(s, t)), []);
-    for (const [i, j, k] of tri) for (const v of [p[i], p[k], p[j]]){ arr.pos.push(...P3(v[0], v[1], top)); arr.uv.push(.02, .02); arr.col.push(rc.r, rc.g, rc.b); } };
+    for (const [i, j, k] of tri) for (const v of [p[i], p[k], p[j]]){ arr.pos.push(...P3(v[0], v[1], top)); arr.uv.push(.02, .02); arr.col.push(rc.r, rc.g, rc.b); }
+    if (H > 3.5){ const par = arr.par || (arr.par = { pos: [], col: [] }); let area = 0; for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length]; area += a[0]*b[1] - b[0]*a[1]; }   // a parapet round the roof: a low wall along every edge, with a lip sticking out
+      const q = (A, B, C, D, f) => { par.pos.push(...A, ...B, ...C, ...A, ...C, ...D); for (let k = 0; k < 6; k++) par.col.push(cc.r*f, cc.g*f, cc.b*f); };
+      for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .3) continue; const sg = area > 0 ? 1 : -1, nx = sg*(b[1] - a[1])/L, ny = -sg*(b[0] - a[0])/L;
+        const ao = [a[0] + nx*.12, a[1] + ny*.12], bo = [b[0] + nx*.12, b[1] + ny*.12], ai = [a[0] - nx*.16, a[1] - ny*.16], bi = [b[0] - nx*.16, b[1] - ny*.16], y1 = top + .6, y0 = top - .3;
+        q(P3(ao[0], ao[1], y0), P3(bo[0], bo[1], y0), P3(bo[0], bo[1], y1), P3(ao[0], ao[1], y1), .86);   // outside (hanging down a bit: a cornice)
+        q(P3(ao[0], ao[1], y1), P3(bo[0], bo[1], y1), P3(bi[0], bi[1], y1), P3(ai[0], ai[1], y1), 1.02);   // the cap
+        q(P3(ai[0], ai[1], top), P3(bi[0], bi[1], top), P3(bi[0], bi[1], y1), P3(ai[0], ai[1], y1), .75); } } };   // inside
   const hashOf = b => Math.abs(Math.round(b.p[0][0]*7 + b.p[0][1]*13)), pavilions = [];
   const promWallCut = (a, b) => {   // a building wall along the Promenade, split where shops are: [from, to (0-1 along the wall), the wall's bottom there (null: the ground)]
     if (Math.abs(a[0] - b[0]) > .6 || Math.abs(a[1] - b[1]) < .5) return null; const sm = (a[0] + b[0])/2, side = Math.abs(sm - PROM.s0) < 2.6 ? -1 : Math.abs(sm - PROM.s1) < 2.6 ? 1 : 0; if (!side) return null;
@@ -4414,7 +4443,16 @@ function buildCoast(){
     const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, z] = at3(c1 + 1, 0); sign.position.set(x, roofY + 2, z); } hm.add(sign);   // up on the roof, over 303
     g.add(hm); homeSign = sign; }
   for (const arr of tiles.values()){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr.pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(arr.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(arr.col, 3)); geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, bldMat); m.receiveShadow = true; g.add(m); }
+    const m = new THREE.Mesh(geo, bldMat); m.receiveShadow = true; g.add(m);
+    if (arr.par){ const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(arr.par.pos, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(arr.par.col, 3)); pg.computeVertexNormals(); const pm = new THREE.Mesh(pg, parMat); pm.receiveShadow = true; g.add(pm); } }
+  // up on the roofs: air conditioners, and the boxes over the stairs (on the bigger buildings)
+  { const R = mulberry(77), M4 = new THREE.Matrix4(), Q = new THREE.Quaternion(), V = new THREE.Vector3(), SC = new THREE.Vector3(), C3 = new THREE.Color(), list = [];
+    for (const b of CITY.bldgs){ if (!b.box || !(b.top - b.base > 5)) continue; const [s0, t0, s1, t1] = b.box, area = (s1 - s0)*(t1 - t0); if (area < 120) continue; const n = area > 900 ? 4 : area > 400 ? 3 : area > 200 ? 2 : 1;
+      for (let k = 0; k < n; k++){ const s = lerp(s0, s1, .25 + R()*.5), t = lerp(t0, t1, .25 + R()*.5); if (!inPoly(b.p, s, t)) continue; const stair = k === 0 && area > 300;
+        list.push([s, t, b.top, stair ? 2.6 : 1.2 + R()*.8, stair ? 2.4 : .9 + R()*.4, stair ? 2.6 : .9 + R()*.6, stair ? 0xd9d4ca : [0xb6bcc2, 0xa9afb5, 0xc4c8cc][k % 3]]); } }
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, .5, 0), new THREE.MeshStandardMaterial({ roughness: .7, metalness: .1 }), list.length);
+    list.forEach(([s, t, y, w, h, d, hex], i) => { const [x, yy, z] = P3(s, t, y); M4.compose(V.set(x, yy, z), Q, SC.set(w, h, d)); im.setMatrixAt(i, M4); im.setColorAt(i, C3.setHex(hex)); });
+    im.receiveShadow = true; g.add(im); }
   if (parts.length){ const m = new THREE.Mesh(mergeGeometries(parts), bldMat); m.receiveShadow = true; g.add(m); }
   // ---- palms: Mexican fan palms (tall and skinny) and Canary Island date palms (thick, with a big round crown) in rows down Palisades Park ----
   const canary = (h = 6) => { const p = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.32, .42, h, 9), std(0x7a5f43, .95)); tr.position.y = h/2; p.add(tr);
@@ -7920,7 +7958,7 @@ function renderPanel(){
     ? ZONES.map((z,i) => save.worlds.includes(i)
       ? `<span class="wchip on" style="background:rgb(${z.water.join(',')})">${z.name}</span>` : `<span class="wchip">??? world</span>`).join('')
     : `<span class="wchip">7 ocean worlds are waiting past the gate</span>`;
-  $('homeBtn').hidden = !(mode === 'ocean' && (save.houseFound || save.homeRuns)); $('promBtn').hidden = mode !== 'ocean';
+  $('homeBtn').hidden = !(mode === 'ocean' && (save.houseFound || save.homeRuns)); $('promBtn').hidden = $('aptWayBtn').hidden = $('aptBtn').hidden = mode !== 'ocean';
   $('logoutBtn').hidden = !(STANDALONE && fbAuth && account); $('switchBtn').hidden = $('shareBtn').hidden = !(STANDALONE && fbAuth && account && save.sid); $('moveBtn').hidden = STANDALONE;
   $('saveInfo').textContent = STANDALONE ? (fbAuth && account ? `Logged in as ${fbAuth.name}. Your swimmer saves to your account.` : 'Not logged in. Progress saves on this device only.') : account ? 'Progress saves to your account, so you can continue on any device.'
     : 'Progress saves on this device. Use Continue on the title screen to log in and keep it on your account.';

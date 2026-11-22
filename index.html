@@ -165,6 +165,18 @@
   .bk .pg{flex:1;padding:24px 28px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
   .bk .l{border-right:2px solid #e2d6bb;background:linear-gradient(90deg,#fbf6ea 60%,#efe5cf)}
   .bk .l span{font-size:120px;line-height:1}
+  .bk .l svg{width:100%;height:auto;max-height:300px;border-radius:8px}
+  .bk .l img{max-width:100%;max-height:300px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+  .bk .r h3{font:800 18px/1.3 Nunito,sans-serif;color:#5a4a36;margin:0 0 10px}
+  .bk .r .blurb{font:500 15px/1.45 Nunito,sans-serif;margin:6px 0 0;color:#3a3024}
+  .bk.prose .l{display:none}
+  .bk.prose .r{justify-content:flex-start;align-items:stretch;text-align:left;font:500 18px/1.6 Georgia,serif;max-height:62vh;overflow:auto}
+  .bk.prose .r p{margin:0 0 12px}
+  .sampleend{text-align:center;margin-top:8px}.sampleend p{font-weight:800}
+  .shop .sect{grid-column:1/-1;margin:6px 0 -4px;font-size:18px}
+  .item .bcov{height:110px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  #puzzlePanel .panel{max-width:560px;width:calc(100% - 32px)}
+  #puzzleBoard{width:100%;max-width:460px;align-self:center;border-radius:8px;touch-action:none;cursor:pointer}
   .bk .r{background:linear-gradient(270deg,#fbf6ea 60%,#efe5cf);font:600 21px/1.55 Georgia,'Times New Roman',serif}
   .bk .r p{margin:0}
   .bk .r h2{font:800 30px/1.2 Georgia,serif;margin:0 0 12px}
@@ -580,6 +592,16 @@
   </div>
 </div>
 
+<div id="puzzlePanel" class="overlay" hidden>
+  <div class="panel">
+    <div><p class="kicker">Puzzle</p><h2 id="puzzleName">Puzzle</h2></div>
+    <p class="savechip" id="puzzleMsg"></p>
+    <canvas id="puzzleBoard" width="600" height="600"></canvas>
+    <div class="row2"><button id="puzzleEasy" class="btn secondary" type="button">Easy (3×3)</button><button id="puzzleHard" class="btn secondary" type="button">Hard (4×4)</button></div>
+    <div class="row2"><button id="puzzleNext" class="btn primary" type="button">Another picture</button><button id="puzzleClose" class="btn secondary" type="button">Put the puzzle away</button></div>
+  </div>
+</div>
+
 <div id="gamePanel" class="overlay" hidden>
   <div class="panel">
     <div><p class="kicker">Board game</p><h2>Snakes &amp; Ladders</h2></div>
@@ -831,6 +853,7 @@ function closeTopWindow(){
   else if (!$('bookPanel').hidden) closeBook();
   else if (!$('musicPanel').hidden) closeMusic();
   else if (!$('gamePanel').hidden) closeGame();
+  else if (!$('puzzlePanel').hidden) closePuzzle();
   else if (!$('storePanel').hidden) closeStore();
   else if (!$('leaguePanel').hidden) closeLeague();
   else if (!$('questPanel').hidden) closeQuests();
@@ -4447,7 +4470,7 @@ const STORE_MENU = {
   shoes: [['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h })),
   shades: [['Black', '#111111'], ['Pink', '#f06292'], ['Gold', '#d4a020'], ['Blue mirror', '#2f80ed'], ['Red', '#e53935']].map(([c, h]) => M('🕶️', `${c} sunglasses`, 30, 'wear', { slot: 'shades', col: h })),
   books: 'books',   // (bookshops: read any book for free, or buy one to take with you; see BOOKS)
-  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
+  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'puzzle'), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
   tech: [M('📱', 'Phone', 150, 'selfie'), M('🎧', 'Headphones', 80, 'tune'), M('⌚', 'Watch', 100, 'time')],
   beauty: [M('🌸', 'Perfume', 25, 'spritz'), M('💅', 'Nail polish', 15, 'play', { say: 'Your nails look amazing!' }), M('💄', 'Lip gloss', 15, 'play', { say: 'So shiny!' })],
   gift: [M('🔮', 'Snow globe', 20, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('🐚', 'Shell necklace', 15, 'play', { say: 'So pretty!' }), M('🔑', 'Keychain', 8, 'play', { say: 'Jingle jingle!' }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
@@ -4471,84 +4494,218 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
   'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
   'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')] };
-const ACT_DO = { game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
-const ACT_SAY = { game: 'Tap Play to play it', eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
+const ACT_DO = { puzzle: 'Do the puzzle', game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
+const ACT_SAY = { puzzle: 'Tap Do the puzzle', game: 'Tap Play to play it', eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
 const JOKES = ['Why did the fish blush? Because it saw the ocean\'s bottom!', 'What do you call a dinosaur that is sleeping? A dino-snore!', 'Why don\'t crabs share? Because they\'re shellfish!', 'What did the ocean say to the beach? Nothing, it just waved.',
   'What do you call a fish with no eyes? A fsh!', 'Why did the cookie go to the doctor? It was feeling crummy.', 'What\'s an ice cream\'s favorite day? Sundae!', 'How do you make an octopus laugh? With ten-tickles!'];
 const DINO_FACTS = ['Triceratops had three horns and a big bony frill.', 'Stegosaurus had a brain about the size of a lime!', 'T. rex had teeth as long as bananas.', 'Some dinosaurs had feathers, just like birds. Birds ARE dinosaurs!', 'The biggest dinosaurs were as long as three school buses.'];
-// ---- books you can really read: open one in any bookshop (free, like a real bookstore) or buy it to take with you. Pages are [picture, words, answer] ----
+// ---- pictures for the books (drawn to match the words: a sea lion has ear flaps and stands on its flippers, a seal lies on its belly...) ----
+const SEA = '<rect width="200" height="150" fill="#bfe3f5"/><rect y="104" width="200" height="46" fill="#3d8fc4"/>', UNDER = '<defs><linearGradient id="uw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fb3d9"/><stop offset="1" stop-color="#155a85"/></linearGradient></defs><rect width="200" height="150" fill="url(#uw)"/>';
+const svgPic = (body, bg = SEA) => `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">${bg}${body}</svg>`;
+const SEALION = '<path d="M14 150 Q40 116 100 114 Q160 112 190 150Z" fill="#8a8f94"/>'
+  + '<path d="M45 122 C40 95 70 70 100 55 C112 40 125 30 140 32 C152 33 160 38 168 44 C160 50 148 52 140 54 C134 70 132 95 128 120 Z" fill="#6b4226"/>'
+  + '<path d="M124 96 C134 108 146 116 160 122 L154 127 C140 126 126 118 116 110 Z" fill="#4f2f1a"/><path d="M48 120 C36 126 24 126 12 121 C22 132 38 134 54 128 Z" fill="#4f2f1a"/>'
+  + '<ellipse cx="133" cy="37" rx="2.4" ry="6" transform="rotate(-25 133 37)" fill="#3a2212"/><circle cx="148" cy="39" r="2.8" fill="#111"/><circle cx="167" cy="44" r="2" fill="#222"/>'
+  + '<path d="M160 47 L178 44 M160 48 L178 50 M159 49 L175 55" stroke="#2a1a10" stroke-width=".8"/>';
+const SEAL = '<rect y="112" width="200" height="38" fill="#e2cf9e"/>'
+  + '<path d="M28 118 C15 110 8 112 4 116 C10 120 12 126 6 132 C14 132 22 128 28 124 Z" fill="#6f777c"/>'
+  + '<path d="M25 120 C30 97 70 90 110 93 C135 95 150 99 158 108 C166 118 158 128 140 129 L40 131 C30 131 24 127 25 120 Z" fill="#8e979c"/>'
+  + '<circle cx="160" cy="101" r="20" fill="#8e979c"/><ellipse cx="177" cy="106" rx="9" ry="7" fill="#7d868b"/><circle cx="163" cy="96" r="3.2" fill="#111"/><circle cx="184" cy="104" r="1.8" fill="#222"/>'
+  + '<circle cx="150" cy="95" r="1.3" fill="#333"/><ellipse cx="126" cy="127" rx="9" ry="4" fill="#6f777c"/>'
+  + ['50,105', '68,112', '82,101', '96,116', '108,104', '122,112', '62,122', '138,107', '88,124', '154,116'].map(p => `<ellipse cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" rx="3.5" ry="2.4" fill="#5b6368"/>`).join('')
+  + '<path d="M176 109 L194 106 M176 110 L194 113" stroke="#333" stroke-width=".8"/>';
+const PELICAN = '<rect x="88" y="108" width="18" height="42" fill="#7a5a3c"/><path d="M92 108 L96 96 M102 108 L100 96" stroke="#3a3a3a" stroke-width="2.5"/>'
+  + '<ellipse cx="90" cy="88" rx="34" ry="17" transform="rotate(-8 90 88)" fill="#8b8b82"/><path d="M60 84 C80 72 104 74 118 86 C100 92 80 96 62 92 Z" fill="#5e5e56"/>'
+  + '<path d="M116 84 C128 74 120 58 128 48" stroke="#6a4a32" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="130" cy="44" r="9.5" fill="#f4efdc"/><circle cx="133" cy="42" r="1.8" fill="#111"/>'
+  + '<path d="M136 41 L194 55 L192 59 L137 48 Z" fill="#c9a06a"/><path d="M137 48 Q162 72 192 59 Z" fill="#a77b57"/>';
+const GARIBALDI = '<path d="M46 76 C28 52 16 56 12 62 C17 70 17 82 12 90 C16 96 28 100 46 76 Z" fill="#ff6a00"/><ellipse cx="96" cy="76" rx="54" ry="34" fill="#ff7a00"/>'
+  + '<path d="M60 46 C80 34 120 36 138 50 L120 52 C100 44 80 44 62 50 Z" fill="#ff8f1f"/><path d="M68 106 C84 116 108 114 120 104 Z" fill="#ff8f1f"/>'
+  + '<circle cx="128" cy="68" r="7" fill="#fff"/><circle cx="130" cy="68" r="3.8" fill="#111"/><path d="M146 80 Q150 84 146 87" stroke="#a33d00" stroke-width="2" fill="none"/><path d="M98 60 Q92 76 98 92" stroke="#e86400" stroke-width="2" fill="none"/>';
+const LEOPARD = '<path d="M24 80 L4 58 L12 80 L4 102 Z" fill="#9c8e7a"/><path d="M20 78 C50 66 120 62 160 70 C175 72 185 76 190 80 C182 85 166 89 150 89 C110 93 60 91 20 83 Z" fill="#a89a86"/>'
+  + '<path d="M98 66 L112 44 L118 66 Z" fill="#9c8e7a"/><path d="M50 71 L58 58 L62 72 Z" fill="#9c8e7a"/><path d="M118 86 L104 104 L128 88 Z" fill="#9c8e7a"/><path d="M40 85 C90 92 150 90 186 81 C170 88 150 90 120 91 C80 92 50 89 40 85Z" fill="#e8e0d2"/>'
+  + ['40,74,7,3', '62,70,8,3', '86,67,8,3', '112,66,7,3', '136,68,7,3', '158,72,5,2.5', '74,78,3,2', '100,76,3,2', '126,76,3,2', '52,80,3,2'].map(p => { const [x, y, a, b] = p.split(','); return `<ellipse cx="${x}" cy="${y}" rx="${a}" ry="${b}" fill="#4a3f33"/>`; }).join('')
+  + '<circle cx="170" cy="75" r="2.4" fill="#111"/>';
+const KELP = [30, 70, 115, 160].map((x, i) => `<path d="M${x} 150 C${x - 12} 110 ${x + 14} 80 ${x - 4} 40 C${x - 10} 25 ${x + 6} 12 ${x} 0" stroke="#8a6d1c" stroke-width="4" fill="none"/>`
+  + [130, 104, 78, 52, 26].map((y, k) => `<ellipse cx="${x + (k % 2 ? 12 : -12)}" cy="${y}" rx="13" ry="4.5" transform="rotate(${k % 2 ? -30 : 30} ${x + (k % 2 ? 12 : -12)} ${y})" fill="${['#b8902a', '#a8821f', '#c49a35'][(i + k) % 3]}"/><circle cx="${x + (k % 2 ? 2 : -2)}" cy="${y + 4}" r="3" fill="#9c7a20"/>`).join('')).join('');
+const SEASTAR = '<rect width="200" height="150" fill="#e8d6a8"/><circle cx="30" cy="30" r="3" fill="#d6c08e"/><circle cx="170" cy="120" r="4" fill="#d6c08e"/><circle cx="160" cy="25" r="2" fill="#d6c08e"/>'
+  + '<polygon points="100.0,27.0 111.8,65.8 152.3,65.0 119.0,88.2 117.6,106.3 100.0,102.0 67.7,126.5 81.0,88.2 47.7,65.0 88.2,65.8" fill="#ff7043" stroke="#d84315" stroke-width="2" stroke-linejoin="round"/>'
+  + ['100,45', '100,62', '125,68', '140,66', '113,95', '83,100', '75,113', '88,72', '62,66', '100,80'].map(p => `<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="2.4" fill="#ffccbc"/>`).join('');
+const SKY = '<rect width="200" height="150" fill="#cfe9f5"/><rect y="118" width="200" height="32" fill="#9bc46a"/>';
+const DINO = {
+  tri: '<path d="M50 92 C30 94 14 100 4 108 C20 108 36 104 54 100Z" fill="#5c7c40"/><ellipse cx="90" cy="92" rx="46" ry="26" fill="#6d8f4e"/><rect x="62" y="104" width="12" height="20" rx="4" fill="#5c7c40"/><rect x="104" y="104" width="12" height="20" rx="4" fill="#5c7c40"/><rect x="76" y="106" width="11" height="17" rx="4" fill="#4e6a36"/>'
+    + '<ellipse cx="142" cy="72" rx="20" ry="30" transform="rotate(-20 142 72)" fill="#8fae6a" stroke="#6d8f4e" stroke-width="3" stroke-dasharray="4 3"/><path d="M134 86 C150 78 168 80 182 90 L176 100 C160 102 144 100 134 96Z" fill="#6d8f4e"/>'
+    + '<path d="M150 76 L192 56 L156 82Z M160 80 L196 66 L164 86Z" fill="#f4ecd8"/><path d="M176 88 L186 78 L180 92Z" fill="#f4ecd8"/><circle cx="160" cy="88" r="2.4" fill="#111"/>',
+  steg: '<path d="M44 96 C30 98 18 100 6 98 L10 104 C26 106 40 104 52 102Z" fill="#7a8a4e"/><path d="M12 98 L4 86 M18 98 L14 84 M10 103 L2 108 M16 103 L10 112" stroke="#e8dcc0" stroke-width="3" stroke-linecap="round"/>'
+    + [[52, 74], [66, 62], [82, 56], [98, 56], [114, 62], [128, 72]].map(([x, y]) => `<path d="M${x - 8} ${y + 14} L${x} ${y - 6} L${x + 8} ${y + 14}Z" fill="#d9763a"/>`).join('')
+    + '<path d="M40 100 C46 70 120 54 150 90 C158 98 168 102 182 104 C186 110 176 114 168 112 C156 110 146 108 136 108 L56 108 C46 108 40 106 40 100Z" fill="#8a9a5a"/><circle cx="174" cy="105" r="1.8" fill="#111"/>'
+    + '<rect x="58" y="104" width="12" height="20" rx="4" fill="#7a8a4e"/><rect x="118" y="104" width="12" height="20" rx="4" fill="#7a8a4e"/>',
+  trex: '<path d="M70 82 C46 80 22 84 4 96 C24 96 46 94 72 92Z" fill="#7c6a4e"/><ellipse cx="90" cy="82" rx="34" ry="22" transform="rotate(-15 90 82)" fill="#8c7a5a"/>'
+    + '<path d="M108 66 C118 40 150 32 176 40 C186 44 190 54 186 60 L150 66 C140 70 130 74 120 78Z" fill="#8c7a5a"/><path d="M150 62 L186 60 L184 70 L152 70Z" fill="#7c6a4e"/>'
+    + '<path d="M156 62 l3 5 l3 -5 l3 5 l3 -5 l3 5 l3 -5 l3 5 l3 -5" fill="#fff" stroke="#fff" stroke-width="1.2"/><circle cx="160" cy="46" r="3" fill="#111"/>'
+    + '<path d="M112 86 L122 92 M114 90 L120 96" stroke="#6c5a3e" stroke-width="3" stroke-linecap="round"/>'
+    + '<path d="M80 96 L74 124 L88 124 M98 96 L100 124 L114 124" stroke="#7c6a4e" stroke-width="9" fill="none" stroke-linejoin="round"/>',
+  raptor: '<path d="M70 70 C50 68 24 66 4 60 C22 72 46 78 70 80Z" fill="#9a6a3a"/><ellipse cx="92" cy="74" rx="24" ry="13" fill="#b07a44"/><path d="M108 66 C114 50 124 42 138 42 C150 42 160 46 166 52 L140 56 C132 58 124 62 116 72Z" fill="#b07a44"/>'
+    + '<circle cx="146" cy="47" r="2.2" fill="#111"/><path d="M96 74 C104 82 112 86 122 84 L118 92 C108 92 98 86 92 80Z" fill="#7a4a24"/><path d="M98 78 L94 96 M104 80 L102 98 M110 82 L110 98" stroke="#5a3418" stroke-width="2"/>'
+    + '<path d="M84 84 L80 110 L94 112 M96 84 L98 110 L110 112" stroke="#9a6a3a" stroke-width="6" fill="none" stroke-linejoin="round"/><path d="M92 112 C90 104 96 102 98 106" stroke="#222" stroke-width="2.5" fill="none"/>',
+  big: '<path d="M60 92 C40 92 20 90 2 80 C20 96 40 102 64 102Z" fill="#6f8796"/><ellipse cx="90" cy="88" rx="38" ry="18" fill="#7f97a6"/><path d="M118 82 C132 64 146 40 166 26 L174 34 C158 46 144 66 130 92Z" fill="#7f97a6"/><ellipse cx="172" cy="27" rx="10" ry="6" fill="#7f97a6"/><circle cx="175" cy="25" r="1.6" fill="#111"/>'
+    + '<rect x="66" y="98" width="10" height="16" rx="3" fill="#6f8796"/><rect x="108" y="98" width="10" height="16" rx="3" fill="#6f8796"/>'
+    + [6, 70, 134].map(x => `<rect x="${x}" y="120" width="58" height="22" rx="4" fill="#ffc107"/><rect x="${x + 4}" y="124" width="40" height="8" fill="#bfe3f5"/><circle cx="${x + 12}" cy="143" r="5" fill="#333"/><circle cx="${x + 46}" cy="143" r="5" fill="#333"/>`).join(''),
+  anky: '<path d="M44 96 C30 96 18 94 14 92" stroke="#6b5e3c" stroke-width="7" stroke-linecap="round"/><ellipse cx="12" cy="92" rx="11" ry="8" fill="#6b5e3c"/><ellipse cx="96" cy="94" rx="56" ry="22" fill="#8a7a52"/>'
+    + [[60, 82], [76, 76], [94, 74], [112, 76], [128, 82], [68, 94], [86, 90], [104, 90], [122, 94], [140, 94]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#6b5e3c"/>`).join('')
+    + '<path d="M148 92 C160 86 174 88 180 96 C176 102 164 104 150 102Z" fill="#8a7a52"/><circle cx="168" cy="93" r="2" fill="#111"/><rect x="64" y="108" width="12" height="14" rx="3" fill="#6b5e3c"/><rect x="118" y="108" width="12" height="14" rx="3" fill="#6b5e3c"/>',
+  brachio: '<circle cx="182" cy="40" r="16" fill="#3e8e41"/><circle cx="166" cy="30" r="14" fill="#43a047"/><circle cx="188" cy="22" r="12" fill="#388e3c"/><rect x="180" y="50" width="7" height="70" fill="#7a5a3c"/>'
+    + '<path d="M50 100 C34 100 18 104 4 112 C20 112 36 110 54 108Z" fill="#6f8796"/><ellipse cx="80" cy="96" rx="34" ry="18" transform="rotate(-12 80 96)" fill="#7f97a6"/>'
+    + '<path d="M100 82 C110 64 124 44 140 30 L150 36 C136 50 122 70 112 92Z" fill="#7f97a6"/><ellipse cx="148" cy="30" rx="10" ry="6" fill="#7f97a6"/><circle cx="151" cy="28" r="1.6" fill="#111"/>'
+    + '<rect x="96" y="92" width="10" height="30" rx="3" fill="#6f8796"/><rect x="58" y="104" width="10" height="18" rx="3" fill="#6f8796"/>',
+  spino: '<rect y="110" width="200" height="40" fill="#3d8fc4"/><path d="M60 80 C70 30 120 24 136 76Z" fill="#c0583a"/><path d="M76 74 L82 40 M92 74 L98 32 M108 74 L112 34 M122 74 L124 48" stroke="#8a3a22" stroke-width="2"/>'
+    + '<path d="M60 84 C40 86 20 90 4 100 C24 100 44 96 64 94Z" fill="#7a6a4e"/><ellipse cx="100" cy="84" rx="40" ry="16" fill="#8c7a5a"/><path d="M134 76 C150 70 176 72 196 78 L194 84 C174 84 152 86 136 90Z" fill="#8c7a5a"/><circle cx="150" cy="75" r="2" fill="#111"/>'
+    + '<path d="M168 82 C176 74 188 74 192 80 C188 88 176 90 168 82Z M166 82 L158 76 L158 88Z" fill="#90a4ae"/><path d="M86 96 L84 116 M110 96 L112 116" stroke="#7a6a4e" stroke-width="7" stroke-linecap="round"/>',
+};
+const TOPIARY = (night) => `<rect width="200" height="150" fill="${night ? '#1a2240' : '#cfe9f5'}"/>${night ? '<circle cx="168" cy="26" r="12" fill="#fff6c2"/><circle cx="30" cy="20" r="1.5" fill="#fff"/><circle cx="70" cy="34" r="1.2" fill="#fff"/><circle cx="120" cy="16" r="1.5" fill="#fff"/>' : ''}`
+  + '<rect y="122" width="200" height="28" fill="#b9b2a4"/><rect x="34" y="112" width="130" height="16" rx="3" fill="#8d6e63"/>'
+  + '<g fill="#2e7d32" stroke="#1b5e20" stroke-width="2" stroke-dasharray="3 3"><path d="M56 96 C40 96 26 100 18 108 C34 108 46 106 60 104Z"/><ellipse cx="96" cy="94" rx="40" ry="20"/><rect x="70" y="100" width="12" height="16" rx="4"/><rect x="110" y="100" width="12" height="16" rx="4"/>'
+  + '<ellipse cx="140" cy="76" rx="16" ry="22" transform="rotate(-20 140 76)"/><path d="M132 86 C146 80 160 82 172 90 L166 98 C152 100 140 98 132 94Z"/></g><path d="M144 80 L176 62 L150 86Z" fill="#43a047"/><circle cx="154" cy="88" r="2.2" fill="#111"/>'
+  + (night ? '' : '<path d="M172 92 Q186 70 196 96 M172 94 Q190 78 198 110" stroke="#4fc3f7" stroke-width="3" fill="none" stroke-dasharray="4 4"/>');
+const ART = { sealion: svgPic(SEALION), seal: svgPic(SEAL, '<rect width="200" height="150" fill="#cfe9f5"/>'), pelican: svgPic(PELICAN), garibaldi: svgPic(GARIBALDI, UNDER), leopard: svgPic(LEOPARD, UNDER), kelp: svgPic(KELP, UNDER), seastar: svgPic(SEASTAR, ''),
+  sealvs: `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="150" fill="#f4efe2"/><g transform="translate(0 4) scale(.5)">${SEA}${SEALION}</g><g transform="translate(100 4) scale(.5)"><rect width="200" height="150" fill="#cfe9f5"/>${SEAL}</g>`
+    + '<circle cx="66" cy="22" r="9" fill="none" stroke="#e53935" stroke-width="2"/><circle cx="175" cy="51" r="7" fill="none" stroke="#e53935" stroke-width="2"/>'
+    + '<text x="50" y="100" text-anchor="middle" font-size="13" font-weight="800" font-family="Nunito,sans-serif" fill="#2b2218">Sea lion</text><text x="50" y="113" text-anchor="middle" font-size="7" font-family="Nunito,sans-serif" fill="#2b2218">ear flaps</text><text x="50" y="122" text-anchor="middle" font-size="7" font-family="Nunito,sans-serif" fill="#2b2218">walks on flippers</text>'
+    + '<text x="150" y="100" text-anchor="middle" font-size="13" font-weight="800" font-family="Nunito,sans-serif" fill="#2b2218">Seal</text><text x="150" y="113" text-anchor="middle" font-size="7" font-family="Nunito,sans-serif" fill="#2b2218">ear holes</text><text x="150" y="122" text-anchor="middle" font-size="7" font-family="Nunito,sans-serif" fill="#2b2218">scoots on its belly</text></svg>',
+  topiary: svgPic(TOPIARY(false), ''), topiarynight: svgPic(TOPIARY(true), ''), ...Object.fromEntries(Object.entries(DINO).map(([k, v]) => [k, svgPic(v, SKY)])) };
+ART.turkey = svgPic(DINO.raptor + '<text x="150" y="122" font-size="34">🦃</text>', SKY);
+ART.bananas = svgPic(DINO.trex + '<text x="22" y="140" font-size="22">🍌</text>', SKY);
+// ---- books you can really read: kids' books downstairs at Barnes & Noble (board books, picture books, little chapter books), and the owners' own books.
+//      Pages are [picture, words, answer, chapter title]; a picture is emoji or svg:name (see ART) ----
 const BOOKS = {
-  dino: { title: 'The Dinosaur Who Went for a Walk', e: '🦕', c: '#2e7d4f', kind: 'A picture book', pages: [
-    ['🦕', 'On the 3rd Street Promenade there is a dinosaur made of leaves. Water sprays out of her mouth all day long.'],
-    ['🌙', 'Every night the shops close and everyone goes home. "Nobody ever plays with me," the dinosaur sighs.'],
+  colors: { shelf: 'board', title: 'Colors at the Beach', e: '🌈', c: '#1e88e5', kind: 'A board book', pages: [
+    ['🌊', 'The ocean is blue.'], ['☀️', 'The sun is yellow.'], ['🦀', 'The crab is red.'], ['🌴', 'The palm tree is green.'], ['svg:garibaldi', 'The garibaldi fish is orange.'], ['🏖️', 'The sand is tan.'], ['🌈', 'So many colors!']] },
+  count: { shelf: 'board', title: 'Count the Sea Friends', e: '🔢', c: '#00897b', kind: 'A board book', pages: [
+    ['🐙', 'One octopus.'], ['🦀🦀', 'Two crabs.'], ['🐟🐟🐟', 'Three fish.'], ['🐚🐚🐚🐚', 'Four shells.'], ['🐬🐬🐬🐬🐬', 'Five dolphins.'], ['🎉', 'Let\'s count again! 1, 2, 3, 4, 5!']] },
+  goodnight: { shelf: 'board', title: 'Goodnight, Pier', e: '🌙', c: '#283593', kind: 'A board book', pages: [
+    ['🎡', 'Goodnight, Ferris wheel.'], ['🎠', 'Goodnight, carousel.'], ['🌊', 'Goodnight, waves.'], ['svg:sealion', 'Goodnight, sea lion.'], ['🌙', 'Goodnight, moon.'], ['😴', 'Goodnight, you.']] },
+  arf: { shelf: 'board', title: 'Who Says Arf?', e: '🦭', c: '#6d4c41', kind: 'A board book', pages: [
+    ['svg:sealion', 'Who says arf, arf? The sea lion!'], ['🐬', 'Who says click, click? The dolphin!'], ['🐄', 'Who says moo? Not in the ocean... the cow!'], ['🦖', 'Who says ROAR? The dinosaur!'], ['😄', 'Who says goodnight? You do!']] },
+  dino: { shelf: 'picture', title: 'The Dinosaur Who Went for a Walk', e: '🦕', c: '#2e7d32', kind: 'A picture book', cover: 'svg:topiary', pages: [
+    ['svg:topiary', 'On the 3rd Street Promenade there is a dinosaur made of leaves. Water sprays out of her mouth all day long.'],
+    ['svg:topiarynight', 'Every night the shops close and everyone goes home. "Nobody ever plays with me," the dinosaur sighs.'],
     ['👣', 'So one night she pulls her big leafy feet out of the planter. Squelch! Squelch! Off she goes for a walk.'],
     ['🍦', 'She smells ice cream! She presses her nose on the window, but the shop is closed. "Tomorrow," she says, and licks her lips.'],
     ['🎡', 'She walks all the way to the pier. The Ferris wheel is lit up red, yellow and blue.'],
-    ['🦭', 'She dips her toes in the ocean. "Brrr!" A sea lion pops up and barks hello. "Arf! Arf!"'],
+    ['svg:sealion', 'She dips her toes in the ocean. "Brrr!" A sea lion pops up and barks hello. "Arf! Arf!"'],
     ['🌅', 'The sun is coming up! She hurries back up the hill and climbs into her planter just in time.'],
-    ['💦', 'Next time you walk by her, look closely. Are her feet a little bit sandy? Now you know why.'],
-    ['🌟', 'The End']] },
-  otter: { title: 'Pip the Sea Otter', e: '🦦', c: '#6b4a32', kind: 'A picture book', pages: [
+    ['svg:topiary', 'Next time you walk by her, look closely. Are her feet a little bit sandy? Now you know why. The End']] },
+  otter: { shelf: 'picture', title: 'Pip the Sea Otter', e: '🦦', c: '#6b4a32', kind: 'A picture book', pages: [
     ['🦦', 'Pip is a little sea otter. She floats on her back all day and has a favorite rock.'],
-    ['🪨', 'Pip uses her rock to crack open clams and crabs. Tap, tap, CRACK! Lunch!'],
-    ['😮', 'One morning Pip reaches for her rock... it is gone! "Oh no! Where is my rock?"'],
-    ['🐟', 'She asks a garibaldi. "Have you seen my rock?" "Not me," says the orange fish, "but I\'ll help you look!"'],
+    ['🦦🪨', 'Pip uses her rock to crack open clams and crabs. Tap, tap, CRACK! Lunch!'],
+    ['🦦❓', 'One morning Pip reaches for her rock... it is gone! "Oh no! Where is my rock?"'],
+    ['svg:garibaldi', 'She asks a garibaldi. "Have you seen my rock?" "Not me," says the orange fish, "but I\'ll help you look!"'],
     ['🐙', 'An octopus changes color to hide. "I\'m not hiding your rock," she giggles. "But I\'ll help you look!"'],
-    ['🌿', 'They search the kelp forest. Pip wraps herself in kelp to rest, so she won\'t float away.'],
-    ['✨', 'Something is tangled in the kelp. It\'s her rock! It was tucked in her kelp bed the whole time.'],
-    ['🤝', 'That night the otters hold paws while they sleep, so nobody drifts away. Pip holds her rock too.'],
-    ['🌟', 'The End']] },
-  ocean: { title: 'Ocean Animals of Santa Monica Bay', e: '🐬', c: '#1e6fa8', kind: 'A book of true facts', pages: [
-    ['🐟', 'The garibaldi is bright orange. It is California\'s state marine fish, and it lives around rocks and kelp.'],
+    ['svg:kelp', 'They search the kelp forest. Pip wraps herself in kelp to rest, so she won\'t float away.'],
+    ['🪨✨', 'Something is tangled in the kelp. It\'s her rock! It was tucked in her kelp bed the whole time.'],
+    ['🦦🤝🦦', 'That night the otters hold paws while they sleep, so nobody drifts away. Pip holds her rock too. The End']] },
+  ocean: { shelf: 'picture', title: 'Ocean Animals of Santa Monica Bay', e: '🐬', c: '#1e6fa8', kind: 'A picture book of true facts', cover: 'svg:kelp', pages: [
+    ['svg:garibaldi', 'The garibaldi is bright orange. It is California\'s state marine fish, and it lives around rocks and kelp.'],
     ['🐙', 'An octopus has three hearts, blue blood and eight arms. It can change color in a blink to hide.'],
-    ['🦭', 'California sea lions bark loudly. They have little ear flaps, and they can walk on their flippers.'],
+    ['svg:sealion', 'California sea lions are brown and LOUD. Arf! Arf! They have little ear flaps, and they can turn their back flippers forward to walk on land.'],
+    ['svg:seal', 'Harbor seals live here too. Seals have no ear flaps, just tiny ear holes. They can\'t walk on their flippers, so they scoot along on their bellies like caterpillars.'],
+    ['svg:sealvs', 'Sea lion or seal? Look for ear flaps! Ear flaps and walking on flippers: a sea lion. Ear holes and scooting on its belly: a seal.'],
     ['🐬', 'Bottlenose dolphins swim in the bay, often close to the beach. They talk to each other with clicks and whistles.'],
     ['🐋', 'Every winter, gray whales swim past on their way from Alaska to Mexico. It is one of the longest trips any animal makes!'],
-    ['🦈', 'Leopard sharks have spots like a leopard. They eat little crabs and clams, and they are shy around people.'],
-    ['🌿', 'Giant kelp grows like an underwater forest. It can grow up to 2 feet in a single day!'],
-    ['⭐', 'A sea star can grow back an arm it has lost.'],
-    ['🐦', 'Brown pelicans glide over the waves, then dive in headfirst to scoop up fish.']] },
-  dinos: { title: 'Dinosaurs!', e: '🦖', c: '#8d5a3b', kind: 'A book of true facts', pages: [
-    ...DINO_FACTS.map((f, i) => [['🦕', '🦴', '🦖', '🪶', '🚌'][i], f]),
-    ['🦃', 'Velociraptor was only about the size of a turkey, with feathers and a big claw on each foot.'],
-    ['🔨', 'Ankylosaurus was covered in armor, and it had a heavy club at the end of its tail.'],
-    ['🌳', 'Brachiosaurus had front legs longer than its back legs, so it could reach the tops of trees.'],
-    ['🐟', 'Spinosaurus had a big sail on its back and loved to eat fish.']] },
-  jokes: { title: 'The Big Joke Book', e: '😂', c: '#e2a400', kind: 'Jokes! (wait for the answer...)', pages: [
-    ...JOKES.map((j, i) => { const k = j.indexOf('? '); return [['🐟', '🦕', '🦀', '🌊', '👀', '🍪', '🍨', '🐙'][i] || '😂', j.slice(0, k + 1), j.slice(k + 2)]; }),
-    ['🐄', 'Where do cows go on a Saturday night?', 'To the moo-vies!'],
-    ['🦈', 'What is a shark\'s favorite game?', 'Swallow the leader!'],
-    ['🐝', 'What do you call a bee that can\'t make up its mind?', 'A maybe!']] },
-  pearl: { title: 'The Case of the Missing Pearl', e: '🔍', c: '#22303c', kind: 'A mystery', pages: [
-    ['🦪', 'Detective Dot was the best detective on the whole Santa Monica Pier. Her magnifying glass was always ready.'],
-    ['😱', 'One morning the giant pink pearl at the pier\'s gift shop was gone! "Who took it?" cried the shopkeeper.'],
-    ['🔍', 'Dot looked closely. On the counter: sand, a white feather and a tiny three-toed footprint.'],
-    ['🐱', 'Was it the cat? No, cats have round paw prints, not three toes. And cats don\'t drop feathers.'],
-    ['🦀', 'Was it the crab? No, crabs walk sideways and leave little dots. And crabs don\'t have feathers either.'],
-    ['🎡', 'Dot looked up at the Ferris wheel. Something shiny was glinting at the very top...'],
-    ['🐦', 'A seagull\'s nest! Inside were bottle caps, a spoon, a shiny key... and the pink pearl!'],
-    ['💡', '"Seagulls love shiny things," said Dot. "Case closed!" The seagull got a nice shiny bottle cap instead.'],
-    ['🌟', 'The End']] },
-  space: { title: 'Space Turtle', e: '🐢', c: '#5b2c83', kind: 'Science fiction', pages: [
-    ['🐢', 'Tilly the sea turtle looked up at the night sky and wondered, "What is up there?"'],
-    ['🔧', 'She built a rocket out of driftwood, a big kelp bulb and fifty bottles of fizzy soda.'],
+    ['svg:leopard', 'Leopard sharks have spots like a leopard. They eat little crabs and clams, and they are shy around people.'],
+    ['svg:kelp', 'Giant kelp grows like an underwater forest. It can grow up to 2 feet in a single day!'],
+    ['svg:seastar', 'A sea star can grow back an arm it has lost. See the short arm? It\'s growing back!'],
+    ['svg:pelican', 'Brown pelicans glide over the waves, then dive in headfirst and scoop up fish in the big pouch under their beak.']] },
+  dinos: { shelf: 'picture', title: 'Dinosaurs!', e: '🦖', c: '#8d5a3b', kind: 'A picture book of true facts', cover: 'svg:tri', pages: [
+    ['svg:tri', 'Triceratops had three horns and a big bony frill around its neck.'],
+    ['svg:steg', 'Stegosaurus had big plates on its back and spikes on its tail, but a brain only about the size of a lime!'],
+    ['svg:bananas', 'T. rex had teeth as long as bananas, and teeny tiny arms.'],
+    ['svg:raptor', 'Some dinosaurs had feathers, just like birds. Birds ARE dinosaurs!'],
+    ['svg:big', 'The biggest dinosaurs were as long as three school buses.'],
+    ['svg:turkey', 'Velociraptor was only about the size of a turkey, with feathers and a big curved claw on each foot.'],
+    ['svg:anky', 'Ankylosaurus was covered in armor, and it had a heavy club at the end of its tail.'],
+    ['svg:brachio', 'Brachiosaurus had front legs longer than its back legs, so it could reach the tops of trees.'],
+    ['svg:spino', 'Spinosaurus had a big sail on its back and loved to eat fish.']] },
+  space: { shelf: 'picture', title: 'Space Turtle', e: '🐢', c: '#5b2c83', kind: 'A picture book', pages: [
+    ['🐢✨', 'Tilly the sea turtle looked up at the night sky and wondered, "What is up there?"'],
+    ['🐢🔧🚀', 'She built a rocket out of driftwood, a big kelp bulb and fifty bottles of fizzy soda.'],
     ['🚀', '3... 2... 1... WHOOSH! Tilly zoomed up past the pier, past the clouds, all the way to space.'],
     ['🌍', 'Earth looked like a big blue marble. "Most of it is ocean!" said Tilly. "It\'s my home!"'],
     ['🌕', 'She landed on the Moon. It was gray and dusty and there was no water anywhere to swim in.'],
     ['👽', 'A friendly alien said hello. "What is an ocean?" it asked. Tilly told it all about waves and fish and kelp.'],
-    ['💙', '"I miss the water," said Tilly. So she waved goodbye and flew all the way home. SPLASH!'],
-    ['🌟', 'The End']] } };
-const BOOK_LIST = ['dino', 'otter', 'ocean', 'dinos', 'jokes', 'pearl', 'space'];
+    ['🐢🌊', '"I miss the water," said Tilly. So she waved goodbye and flew all the way home. SPLASH! The End']] },
+  jokes: { shelf: 'picture', title: 'The Big Joke Book', e: '😂', c: '#e2a400', kind: 'Jokes! (wait for the answer...)', pages: [
+    ...JOKES.map((j, i) => { const k = j.indexOf('? '); return [['🐟😳', '🦕💤', '🦀', '🌊👋', '🐟', '🍪🩺', '🍨', '🐙'][i] || '😂', j.slice(0, k + 1), j.slice(k + 2)]; }),
+    ['🐄🎬', 'Where do cows go on a Saturday night?', 'To the moo-vies!'], ['🦈', 'What is a shark\'s favorite game?', 'Swallow the leader!'], ['🐝', 'What do you call a bee that can\'t make up its mind?', 'A maybe!']] },
+  pearl: { shelf: 'chapter', title: 'Detective Dot and the Missing Pearl', e: '🔍', c: '#22303c', kind: 'A little chapter book: 3 chapters', pages: [
+    ['🕵️‍♀️', 'Detective Dot was the best detective on the whole Santa Monica Pier. She always carried a magnifying glass and a little notebook.', null, 'Chapter 1: The Pink Pearl'],
+    ['🦪', 'The pier\'s gift shop had a giant pink pearl in a glass case. People came from all over to see it shine.'],
+    ['😱', 'But one morning the case was open, and the pearl was gone! "Who took it?" cried the shopkeeper. "Detective Dot, please help!"'],
+    ['🔍🪶', 'Dot looked closely at the counter. She found sand, one white feather and a tiny footprint with three toes. She wrote it all in her notebook.', null, 'Chapter 2: Clues'],
+    ['🐱', '"Was it the cat?" asked the shopkeeper. "No," said Dot. "Cats have round paw prints, not three toes. And cats don\'t drop feathers."'],
+    ['🦀', '"Was it the crab?" "No," said Dot. "Crabs walk sideways and leave little dots. And crabs don\'t have feathers either."'],
+    ['🎡✨', 'Dot looked up. Something was shining at the very top of the Ferris wheel. She climbed into a car and rode all the way up.', null, 'Chapter 3: Up, Up, Up'],
+    ['🪺✨', 'There, in a seagull\'s nest, were bottle caps, a spoon, a shiny key... and the pink pearl!'],
+    ['💡', '"Seagulls love shiny things," said Dot. She traded the seagull a shiny bottle cap for the pearl. "Case closed!" The End']] },
+  lulu: { shelf: 'chapter', title: 'Lulu and the Big Wave', e: '🏄', c: '#0277bd', kind: 'A little chapter book: 3 chapters', pages: [
+    ['🏄', 'Lulu loved Santa Monica Beach. Every day she watched the surfers ride the waves and said, "Someday that will be me."', null, 'Chapter 1: Lulu Wants to Surf'],
+    ['🏖️', 'Her aunt brought a big soft surfboard. First they practiced on the sand. "Lie down, paddle, then POP up to your feet!"'],
+    ['💪', 'Lulu popped up. And again. And again, until she could do it fast. "Now you\'re ready for the water," said her aunt.'],
+    ['🌊😵', 'The first wave knocked Lulu right off the board. SPLASH! She came up sputtering, with salty water up her nose.', null, 'Chapter 2: Splash!'],
+    ['🐬', 'Then she saw fins nearby. Dolphins! They were surfing the waves too. "If they can do it, I can do it," Lulu said.'],
+    ['🌊', 'She paddled out again. She waited. She watched. Here came a wave that was just right.', null, 'Chapter 3: The Big Wave'],
+    ['🏄‍♀️', 'Paddle, paddle, POP! Lulu stood up, and the wave carried her all the way to the sand.'],
+    ['🎉', 'Everyone on the beach cheered. Lulu grinned the biggest grin ever. "Again!" she shouted. The End']] } };
+const KID_SHELVES = [['board', 'Board books'], ['picture', 'Picture books'], ['chapter', 'Little kid chapter books']];
+let OWNERS = null;   // the owners' own books (free samples, from books/owners.json)
+function loadOwners(then){ if (OWNERS) return then(); fetch('books/owners.json').then(r => r.json()).then(L => { OWNERS = L;
+  for (const b of L){ const pages = []; let cur = []; for (const p of b.sample || []){ cur.push(p); if (cur.join(' ').length > 700){ pages.push(cur); cur = []; } } if (cur.length) pages.push(cur);
+    BOOKS['own:' + b.id] = { shelf: b.kids ? 'ownkids' : 'own', title: b.title, by: b.by, e: '📘', c: '#2a5934', kind: b.by ? 'by ' + b.by : '', cover: b.cover, asin: b.asin, blurb: b.blurb || (b.sub ? [b.sub] : []), prose: true,
+      pages: pages.map(ps => ['', ps])  }; }
+  then(); }).catch(() => { OWNERS = []; then(); }); }
+const amazonUrl = asin => 'https://www.amazon.com/dp/' + asin;
 let bookOpen = null;   // { id, page, from: 'store' | 'hand' }
 function openBook(id, from = 'hand'){ if (!BOOKS[id]) return; initAudio(); bookOpen = { id, page: from === 'hand' && treat?.book === id ? treat.page || 0 : 0, from };
   paused = true; ptr.down = false; $('storePanel').hidden = true; $('bookPanel').hidden = false; drawBook(false); sfx(900, .06, 'triangle', .03); }
+const picHTML = (pic, big) => { if (!pic) return ''; if (pic.startsWith('svg:')) return ART[pic.slice(4)] || ''; if (/\.(jpg|png)$/.test(pic)) return `<img src="${pic}" alt="">`;
+  const n = [...pic.replace(/[‍️]/g, '')].length; return `<span style="font-size:${n > 4 ? 44 : n > 2 ? 64 : n > 1 ? 90 : big ? 120 : 120}px">${pic}</span>`; };
 function drawBook(turned){ const B = BOOKS[bookOpen.id], n = B.pages.length, i = bookOpen.page, bk = $('bookPages');
-  bk.className = 'bk' + (i === 0 ? ' cover' : ''); bk.style.setProperty('--c', B.c);
-  if (i === 0){ $('bookL').innerHTML = `<span>${B.e}</span>`; $('bookR').innerHTML = `<h2>${htmlText(B.title)}</h2><p class="by">${htmlText(B.kind)}</p><p class="by">Tap Next page to start reading</p>`; }
-  else { const [e, txt, ans] = B.pages[i - 1]; $('bookL').innerHTML = `<span>${e}</span>`; $('bookR').innerHTML = `<p>${htmlText(txt)}</p>${ans ? `<p class="ans">${htmlText(ans)}</p>` : ''}`; }
+  bk.className = 'bk' + (i === 0 ? ' cover' : '') + (B.prose && i > 0 ? ' prose' : ''); bk.style.setProperty('--c', B.c);
+  if (i === 0){ $('bookL').innerHTML = picHTML(B.cover || B.e, true);
+    $('bookR').innerHTML = `<h2>${htmlText(B.title)}</h2><p class="by">${htmlText(B.kind)}</p>${(B.blurb || []).slice(0, 2).map(p => `<p class="blurb">${htmlText(p)}</p>`).join('')}<p class="by">${B.prose ? 'Tap Next page to read the free sample' : 'Tap Next page to start reading'}</p>`; }
+  else { const [pic, txt, ans, chap] = B.pages[i - 1]; $('bookL').innerHTML = B.prose ? '' : picHTML(pic);
+    if (B.prose){ $('bookR').innerHTML = txt.map(p => p.startsWith('## ') ? `<h3>${htmlText(p.slice(3))}</h3>` : `<p>${htmlText(p)}</p>`).join('')
+      + (i === n ? `<div class="sampleend"><p>That's the end of the free sample!</p><a class="btn primary" href="${amazonUrl(B.asin)}" target="_blank" rel="noopener">Get the whole book on Amazon</a></div>` : ''); }
+    else $('bookR').innerHTML = `${chap ? `<h3>${htmlText(chap)}</h3>` : ''}<p>${htmlText(txt)}</p>${ans ? `<p class="ans">${htmlText(ans)}</p>` : ''}`; }
   $('bookNum').textContent = i === 0 ? '' : `Page ${i} of ${n}`; $('bookPrev').disabled = i === 0; $('bookNext').textContent = i >= n ? 'The end: close the book' : 'Next page ▶';
-  if (turned){ bk.classList.remove('turn'); void bk.offsetWidth; bk.classList.add('turn'); }
+  if (turned){ bk.classList.remove('turn'); void bk.offsetWidth; bk.classList.add('turn'); } $('bookR').scrollTop = 0;
   pick = Math.max(0, menuBtns().indexOf($('bookNext'))); showPick(); }
+// ---- a picture puzzle you really put together: tap two pieces to swap them until the picture is right ----
+const PUZZLE_PICS = [['The Santa Monica Pier', () => `<svg viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ps" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b3c88"/><stop offset=".5" stop-color="#ff7a59"/><stop offset="1" stop-color="#ffd27a"/></linearGradient></defs>
+  <rect width="300" height="190" fill="url(#ps)"/><circle cx="215" cy="150" r="34" fill="#ffe08a"/><rect y="180" width="300" height="120" fill="#1f6b9a"/><path d="M0 200 L300 200 M20 220 L120 220 M160 236 L280 236 M40 260 L200 260" stroke="#7fc4e8" stroke-width="3" stroke-dasharray="14 10"/>
+  <rect x="0" y="168" width="300" height="12" fill="#5a3c28"/>${[10, 50, 90, 130, 170, 210, 250, 290].map(x => `<rect x="${x}" y="180" width="6" height="40" fill="#4a2f1e"/>`).join('')}
+  <circle cx="90" cy="100" r="58" fill="none" stroke="#f4f4f0" stroke-width="4"/>${Array.from({ length: 12 }, (_, k) => { const a = k*Math.PI/6, x = 90 + Math.cos(a)*58, y = 100 + Math.sin(a)*58; return `<line x1="90" y1="100" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#f4f4f0" stroke-width="2"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="7" fill="${['#e53935', '#fdd835', '#1e88e5', '#43a047'][k % 4]}"/>`; }).join('')}
+  <path d="M70 168 L90 100 L110 168" stroke="#f4f4f0" stroke-width="4" fill="none"/><path d="M160 168 L160 120 Q190 90 220 120 L240 140 L260 120 L260 168" stroke="#e53935" stroke-width="4" fill="none"/>
+  <path d="M28 300 L36 190" stroke="#3b2a1a" stroke-width="7"/><g fill="#1b3d1f"><path d="M36 190 q-30 -4 -36 14 q22 -12 36 -14z"/><path d="M36 190 q30 -6 40 10 q-24 -10 -40 -10z"/><path d="M36 190 q-8 -26 -28 -30 q18 10 28 30z"/><path d="M36 190 q14 -26 34 -26 q-22 8 -34 26z"/></g></svg>`],
+  ['Under the sea', () => `<svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">${UNDER}${KELP}<g transform="translate(40 30) scale(.6)">${GARIBALDI}</g><g transform="translate(95 85) scale(.5)">${LEOPARD}</g><g transform="translate(10 95) scale(.3)">${'<polygon points="100.0,27.0 111.8,65.8 152.3,65.0 119.0,88.2 117.6,106.3 100.0,102.0 67.7,126.5 81.0,88.2 47.7,65.0 88.2,65.8" fill="#ff7043"/>'}</g></svg>`],
+  ['The Promenade dinosaur', () => ART.topiary]];
+let puzzle = null;   // { n, tiles, sel, img, done, pic }
+function openPuzzle(){ if (paused) return; initAudio(); paused = true; ptr.down = false; $('puzzlePanel').hidden = false; newPuzzle(3, (Math.random()*PUZZLE_PICS.length)|0); pick = 0; showPick(); }
+function closePuzzle(){ $('puzzlePanel').hidden = true; puzzle = null; paused = false; graceAfterPause(); showPick(); }
+function newPuzzle(n, pic = puzzle?.pic ?? 0){ const tiles = [...Array(n*n).keys()]; do { for (let i = tiles.length - 1; i > 0; i--){ const j = (Math.random()*(i + 1))|0; [tiles[i], tiles[j]] = [tiles[j], tiles[i]]; } } while (tiles.every((t, i) => t === i));
+  const img = new Image(); puzzle = { n, tiles, sel: -1, img, done: false, pic }; img.onload = drawPuzzle; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PUZZLE_PICS[pic][1]().replace('<svg ', '<svg width="600" height="600" preserveAspectRatio="none" '));
+  $('puzzleName').textContent = PUZZLE_PICS[pic][0]; $('puzzleMsg').textContent = 'Tap a piece, then tap where it goes. They swap!'; }
+function drawPuzzle(){ if (!puzzle) return; const cv = $('puzzleBoard'), x = cv.getContext('2d'), W = cv.width, { n, tiles, img, sel, done } = puzzle, cs = W/n; if (!img.complete) return;
+  x.fillStyle = '#222'; x.fillRect(0, 0, W, W);
+  if (done){ x.drawImage(img, 0, 0, W, W); return; }
+  tiles.forEach((t, k) => { const sx = (t % n)*cs, sy = Math.floor(t/n)*cs, dx = (k % n)*cs, dy = Math.floor(k/n)*cs; x.drawImage(img, sx*img.width/W, sy*img.height/W, cs*img.width/W, cs*img.height/W, dx, dy, cs, cs);
+    x.strokeStyle = k === sel ? '#ffd23f' : 'rgba(255,255,255,.7)'; x.lineWidth = k === sel ? 6 : 2; x.strokeRect(dx + (k === sel ? 3 : 1), dy + (k === sel ? 3 : 1), cs - (k === sel ? 6 : 2), cs - (k === sel ? 6 : 2)); }); }
+function tapPuzzle(e){ if (!puzzle || puzzle.done) return; const cv = $('puzzleBoard'), b = cv.getBoundingClientRect(), n = puzzle.n, k = Math.floor((e.clientY - b.top)/b.height*n)*n + Math.floor((e.clientX - b.left)/b.width*n);
+  if (k < 0 || k >= n*n) return;
+  if (puzzle.sel < 0){ puzzle.sel = k; sfx(700, .05, 'triangle', .03); }
+  else { const T = puzzle.tiles; [T[puzzle.sel], T[k]] = [T[k], T[puzzle.sel]]; puzzle.sel = -1; sfx(520, .07, 'triangle', .03);
+    const right = T.filter((t, i) => t === i).length; $('puzzleMsg').textContent = `${right} of ${n*n} pieces in the right place`;
+    if (right === n*n){ puzzle.done = true; heartsAt = time; $('puzzleMsg').textContent = 'You did it! The puzzle is finished! 🧩🎉'; [523, 659, 784, 1046, 1318].forEach((f, i) => sfx(f, .15, 'triangle', .05, i*.1)); } }
+  drawPuzzle(); }
 function turnBook(dir){ if (!bookOpen) return; const n = BOOKS[bookOpen.id].pages.length, j = bookOpen.page + dir; if (j < 0) return; if (j > n) return closeBook();
   bookOpen.page = j; if (treat?.book === bookOpen.id) treat.page = j; sfx(1500, .09, 'sawtooth', .012, 0, -1100); drawBook(true); }
 function closeBook(){ if (!bookOpen) return; const { id, page, from } = bookOpen; if (treat?.book === id) treat.page = page >= BOOKS[id].pages.length ? 0 : page; bookOpen = null; $('bookPanel').hidden = true;
@@ -4727,7 +4884,7 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
     const a = Math.sin(time*6.5); m.position.y += Math.abs(a)*.08; m.rotation.y += Math.sin(time*2)*.6; if (!human) return;
     u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
 let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
-const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
+const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'puzzle'), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
 const storeMenu = r => (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
 function atCounter(o){   // the shop whose counter you're standing at (or null)
   if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
@@ -4750,11 +4907,17 @@ function renderStore(){
     cv.appendChild(buy);
     fl.forEach(([n, c], i) => card(`<div class="sw" style="background:${c}"></div><h3>${htmlText(n)}</h3>`, cone.length >= 3 ? 'Your cone is full' : 'Add a scoop', () => { if (cone.length < 3){ cone.push(i); sfx(600 + cone.length*120, .08, 'triangle', .05); renderStore(); } }, cone.length >= 3, 'secondary'));
     return; }
-  if (menu === 'books'){ $('storeNote').textContent = `Read any book here for free, like in a real bookstore. Buy one (15 coins) to take it with you. You have ${save.coins || 0} coins.`;
-    for (const id of BOOK_LIST){ const B = BOOKS[id], mine = treat?.book === id, d = card(`<div class="em">${B.e}</div><h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, '📖 Read it', () => openBook(id, 'store'));
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn secondary'; b.textContent = mine ? "It's yours" : 'Buy · 15 coins'; b.disabled = mine;
-      b.onclick = () => { if (!payFor(15, 'that book')) return; treat = { e: B.e, n: B.title, act: 'read', book: id, page: 0 }; closeStore(); banner(`${B.title} is yours!`, 'Tap Read to read it anywhere'); }; d.appendChild(b); }
-    if (!storeDown) return; $('storeNote').textContent += " Downstairs there are toys, games and records too."; }
+  if (menu === 'books'){ const bn = !!r.down, shelves = bn ? (storeDown ? [...KID_SHELVES, ['ownkids', "Owners' Own Books for Kids"]] : [['own', "Owners' Own Books"]]) : KID_SHELVES;   // (Barnes & Noble: the kids' books are all downstairs)
+    if (shelves.some(([k]) => k.startsWith('own')) && !OWNERS){ $('storeNote').textContent = 'Getting the books...'; return loadOwners(() => { if (!$('storePanel').hidden) renderStore(); }); }
+    $('storeNote').textContent = bn && !storeDown ? "The owners' own books! Read a free sample right here. (The kids' books are downstairs.)" : `Read any book here for free, like in a real bookstore. Buy one (15 coins) to take it with you. You have ${save.coins || 0} coins.`;
+    for (const [sk, sname] of shelves){ const ids = Object.keys(BOOKS).filter(id => BOOKS[id].shelf === sk); if (!ids.length) continue; const h = document.createElement('h3'); h.className = 'sect'; h.textContent = sname; box.appendChild(h);
+      for (const id of ids){ const B = BOOKS[id], own = sk.startsWith('own'), mine = treat?.book === id, face = B.cover && !B.cover.startsWith('svg:') ? `<img class="bcov" src="${B.cover}" alt="">` : `<div class="em">${B.e}</div>`;
+        if (own){ const has = B.pages.length > 0, d = card(`${face}<h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, has ? '📖 Read a free sample' : '🛒 Get it on Amazon', () => has ? openBook(id, 'store') : window.open(amazonUrl(B.asin), '_blank', 'noopener'));
+          if (has){ const a = document.createElement('a'); a.className = 'btn secondary'; a.href = amazonUrl(B.asin); a.target = '_blank'; a.rel = 'noopener'; a.textContent = '🛒 Get it on Amazon'; d.appendChild(a); } continue; }
+        const d = card(`${face}<h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, '📖 Read it', () => openBook(id, 'store'));
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn secondary'; b.textContent = mine ? "It's yours" : 'Buy · 15 coins'; b.disabled = mine;
+        b.onclick = () => { if (!payFor(15, 'that book')) return; treat = { e: B.e, n: B.title, act: 'read', book: id, page: 0 }; closeStore(); banner(`${B.title} is yours!`, 'Tap Read to read it anywhere'); }; d.appendChild(b); } }
+    if (!storeDown) return; const h = document.createElement('h3'); h.className = 'sect'; h.textContent = 'Toys, games & records'; box.appendChild(h); }
   const worn = save.wear || {}, list = menu === 'books' ? DOWN_MENU : menu;
   for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === it.col;
     card(`<div class="em">${it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
@@ -4775,6 +4938,7 @@ function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it
   else if (it.act === 'hug'){ o.hugT = time + 2.6; heartsAt = time; banner('Big hug!', 'Your teddy bear loves you'); [784, 988, 1175].forEach((f, i) => sfx(f, .15, 'sine', .04, i*.1)); }
   else if (it.act === 'read') openBook(it.book || 'ocean', 'hand');
   else if (it.act === 'game') openGame('hand');
+  else if (it.act === 'puzzle') openPuzzle();
   else if (it.act === 'play'){ banner(it.e + ' ' + it.n, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
   else if (it.act === 'selfie') takePhoto();
   else if (it.act === 'tune'){ if (song?.from === 'hand'){ stopSong(); banner('Music off', ''); } else { const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner(`🎶 ${SONGS[i].title}`, SONGS[i].by); } }
@@ -4800,6 +4964,8 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
   treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
+$('puzzleBoard').addEventListener('pointerdown', tapPuzzle); $('puzzleClose').onclick = closePuzzle; $('puzzleEasy').onclick = () => newPuzzle(3); $('puzzleHard').onclick = () => newPuzzle(4);
+$('puzzleNext').onclick = () => newPuzzle(puzzle?.n || 3, ((puzzle?.pic ?? 0) + 1) % PUZZLE_PICS.length);
 $('musicClose').onclick = closeMusic; $('gameRoll').onclick = () => { if (game && game.turn === 0) rollGame(); }; $('gameClose').onclick = closeGame;
 $('gameNew').onclick = () => { if (!game || game.busy) return; Object.assign(game, { pos: [0, 0], turn: 0, die: 0, won: 0, msg: 'New game! You go first.' }); drawGame(); };
 $('bookPrev').onclick = () => turnBook(-1); $('bookNext').onclick = () => turnBook(1); $('bookClose').onclick = closeBook;
@@ -7117,7 +7283,7 @@ function limbsNow(){ return mode === 'race' ? race && race.limbs : mode === 'poo
 
 /* ---------- Keyboard menus: up/down to choose, Space or Enter to press ---------- */
 let pick = 0;
-function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','musicPanel','gamePanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
+function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','musicPanel','gamePanel','puzzlePanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
 function menuBtns(){ const el = menuEl(); return el ? [...el.querySelectorAll('.btn')].filter(b => !b.disabled) : []; }
 function showPick(){ const bs = menuBtns(); bs.forEach((b,i) => b.classList.toggle('picked', i === pick)); }
 function resetPick(){ pick = 0; showPick(); }

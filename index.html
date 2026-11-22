@@ -2332,7 +2332,7 @@ const GUIDE_HERE = { grotto: [8, 'Look for the door deep under water'], eagleroc
 let homeGuide = false;
 function drawGuideArrow(o){
   if (mapGuide){ if (Math.hypot(mapGuide.x - o.x, mapGuide.y - o.y) < 5*METERS){ banner("You're here!", mapGuide.name); mapGuide = null; return; } return arrowTo(o, mapGuide.x, mapGuide.y, mapGuide.name); }
-  if (aptGuide){ const [x, y] = landXY(HOME_APT.front - 3, HOME_APT.mid); if (Math.hypot(x - o.x, y - o.y) < 6*METERS || inHomeBuilding(o)){ aptGuide = false; banner("You're home! 🏠", 'Up the steps to apartment 303'); return; } return arrowTo(o, x, y, 'Home'); }
+  if (aptGuide){ const [x, y] = landXY(HOME_APT.front - 3, HOME_APT.mid); if (Math.hypot(x - o.x, y - o.y) < 6*METERS || inHomeBuilding(o)){ aptGuide = false; banner("You're home! 🏠", 'Up the steps to your apartment'); return; } return arrowTo(o, x, y, 'Home'); }
   if (homeGuide){ if (Math.hypot(HOUSE.x - o.x, HOUSE.y - o.y) < 20*METERS || o.onLand && onHome(o)){ homeGuide = false; return; } return arrowTo(o, HOUSE.x, HOUSE.y, 'Your house'); }
   if (!leagueGuide || !leagueTrack){ const qt = save.board?.[questPick] && questTarget(save.board[questPick]); if (qt) arrowTo(o, qt.x, qt.y, qt.label); return; }   // otherwise: the quest you're on
   const at = LEAGUE_AT[leagueTrack], d = Math.hypot(at.x - o.x, at.y - o.y)/METERS, [near, msg] = GUIDE_HERE[leagueTrack];
@@ -2462,12 +2462,12 @@ $('bZoomOut').onclick = () => { buildZoom = Math.min(30, buildZoom + 3); };
 // Menu: jump straight to your island once you've found it
 $('homeBtn').onclick = () => { const o = ocean; if (!o) return; closePanel(); o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.x = HOUSE.x; o.y = HOUSE.y + (HOUSE.r - 110); o.vx = o.vy = 0; o.depth = 0; o.onLand = true; o.homeDone = true;
   o.onShip = false; o.onBoat = null; o.ride = null; o.ang = -Math.PI/2; camInit = false; banner('Welcome home!', 'Press Build to build around your house'); };
-// home on 3rd Street: the gold arrow shows the way (to the steps up from the sidewalk), or go straight there
+// home: the gold arrow shows the way (to the steps up from the sidewalk), or go straight there
 let aptGuide = false;
-$('aptWayBtn').onclick = () => { closePanel(); aptGuide = true; leagueGuide = false; homeGuide = false; sfx(700, .08, 'triangle', .05); banner('Follow the gold arrow home!', 'Home is on 3rd Street, between California and Washington'); };
+$('aptWayBtn').onclick = () => { closePanel(); aptGuide = true; leagueGuide = false; homeGuide = false; sfx(700, .08, 'triangle', .05); banner('Follow the gold arrow home!', ''); };
 $('aptBtn').onclick = () => { const o = ocean; if (!o) return; closePanel(); if (o.car){ const c = o.car; parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color }); o.car = null; myCar.visible = false; }
   o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.workout = null; o.bike = null; if (bikeObj) bikeObj.visible = false; o.skates = false; o.onShip = false; o.onBoat = null; o.ride = null; o.climb = null; o.jumpY = 0; o.jumpV = 0; o.glide = false; aptGuide = false;
-  const [x, y] = landXY(...homeST(HOME_APT.startU, HOME_APT.startV)); Object.assign(o, { x, y, vx: 0, vy: 0, depth: 0, onLand: true, gh: homeFloor(3), ang: Math.PI }); walkRef = homeFloor(3) + .5; camHead = o.ang; camInit = false; banner('Home sweet home!', 'Apartment 303'); };
+  const [x, y] = landXY(...homeST(HOME_APT.startU, HOME_APT.startV)); Object.assign(o, { x, y, vx: 0, vy: 0, depth: 0, onLand: true, gh: homeFloor(3), ang: Math.PI }); walkRef = homeFloor(3) + .5; camHead = o.ang; camInit = false; banner('Home sweet home!', ''); };
 $('promBtn').onclick = () => { const o = ocean; if (!o) return; closePanel();   // lost out at sea? straight back to where every trip starts (the boat waits for you at sea)
   if (o.car){ const c = o.car; parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color }); o.car = null; myCar.visible = false; }   // (your car stays parked where you left it)
   o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.workout = null; o.bike = null; if (bikeObj) bikeObj.visible = false; o.skates = false; o.onShip = false; o.onBoat = null; o.ride = null; o.climb = null; o.jumpY = 0; o.jumpV = 0; o.glide = false;
@@ -2481,7 +2481,7 @@ function chestsNear(o){ const out = [], cx = Math.floor(o.x/CH), cy = Math.floor
   return out; }
 function jellyPos(j){ return [j.x + Math.cos(time*.1 + j.ph)*j.wr, j.y + Math.sin(time*.13 + j.ph)*j.wr, j.d0 + Math.sin(time*.35 + j.ph)*.5]; }
 const taken = new Set();
-const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(...homeST(HOME_APT.startU, HOME_APT.startV)))), gh: homeFloor(3), vx:0, vy:0, ang:Math.PI,   /* home: outside apartment 303, facing the stairs down to 3rd Street */ onLand:true, homeDone:true,   // everyone starts on their own island
+const newOcean = () => ({ ...((([x, y]) => ({ x, y }))(landXY(...homeST(HOME_APT.startU, HOME_APT.startV)))), gh: homeFloor(3), vx:0, vy:0, ang:Math.PI,   /* home: outside your apartment door, facing the stairs */ onLand:true, homeDone:true,   // everyone starts on their own island
    zone:0, bg:[...ZONES[0].water], dark:0, limbs:newLimbs(), edgeMsg:0, saveT:0,
     hurtT:0, sharks:[], sharkSpawnT:2, beatT:0, ride:null, rideFrom:null, rideAway:null, rideTarget:null });
 function startOcean(){
@@ -2498,7 +2498,7 @@ function startOcean(){
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
 }
-const OCEAN_HELLO = 'You\'re on the 3rd Street Promenade at Wilshire, right by the triceratops fountain, and everything here is real size! Shops and dinosaur fountains run three blocks down to Broadway. Home (1045 3rd Street, #303) is the other way up 3rd Street, just past California Avenue, with the red car parked out front. For the beach, walk down California Avenue to the cliffs and take the California Incline down (hold Run to go faster). Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
+const OCEAN_HELLO = 'You\'re on the 3rd Street Promenade at Wilshire, right by the triceratops fountain, and everything here is real size! Shops and dinosaur fountains run three blocks down to Broadway. For the beach, walk down California Avenue to the cliffs and take the California Incline down (hold Run to go faster). Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
 // Waves and currents: the pool is calm, the ocean pushes you around.
 const CURRENT = [45, 60, 95, 70, 85, 55, 75];     // strength per world
 function currentAt(x, y, t){
@@ -2657,7 +2657,7 @@ let mapV = null, mapSel = null, mapGuide = null;
 const MAP_CAT_E = { food: '🍔', icecream: '🍦', froyo: '🍦', candy: '🍬', bakery: '🥐', clothes: '👕', shoes: '👟', books: '📚', toys: '🧸', tech: '📱', gym: '💪', movies: '🎬', theatre: '🎭', beauty: '💄', gift: '🎁', gacha: '🥚', golf: '⛳', illusions: '🌀', pickle: '🏓', shades: '🕶️', tattoo: '🐉', vr: '🥽', gallery: '🖼️', star: '⭐' };
 function mapPlaces(){ if (mapPlaces.L) return mapPlaces.L; const L = [], add = (name, e, s, t, big = 1, more = '') => { const [x, y] = landXY(s, t); L.push({ name, e, x, y, big, more }); };
   add('Santa Monica Pier', '🎡', 330, 0, 3); add('Pacific Park (Ferris wheel, roller coaster)', '🎢', -38, 64, 2); add('End of the pier', '🎣', -225, 0, 1);
-  add('3rd Street Promenade', '🛍️', AVES.third, (PROM.t0 + PROM.t1)/2, 3); add('Home: 1045 3rd Street', '🏠', HOME_APT.front - 3, HOME_APT.mid, 3);
+  add('3rd Street Promenade', '🛍️', AVES.third, (PROM.t0 + PROM.t1)/2, 3);
   add('Frost on 5th ice rink', '⛸️', (ICE.site[0] + ICE.site[1])/2, (ICE.site[2] + ICE.site[3])/2, 2); add('Dive Shop (on the beach)', '🤿', ...DIVE_SHOP, 2);
   add('Santa Monica Place (mall)', '🏬', 700, -105, 2); add('Palisades Park', '🌴', 385, -900, 2); add('California Incline', '🛣️', 360, -1250, 1); add('Santa Monica Beach', '🏖️', 120, -300, 2);
   for (const r of BIKE_RACKS) add(`🚲 Bikes: ${r.name}`, '🚲', r.s, r.t, 2);
@@ -2945,12 +2945,12 @@ const pierHW = s => { const [a, b] = pierSides(s); return Math.max(-a, b); };
 const pierDeckH = s => s < PIER_L.s1 ? lerp(PIER_L.h0, PIER_L.h1, clamp((s - PIER_L.s0)/(PIER_L.s1 - PIER_L.s0), 0, 1)) : lerp(PIER_L.h1, PIER_L.h2, clamp((s - PIER_L.s1)/(PIER_L.s2 - PIER_L.s1), 0, 1));
 const onPierDeck = (s, t) => { if (!(s > PIER_L.s0 && s < PIER_L.s2)) return false; const [a, b] = pierSides(s); return t > a && t < b; };
 const pierStairH = (s, t) => { for (const [a, b, e, d] of PIER_STAIRS){ if (s < a || s > b) continue; const f = (t - e)*d; if (f < 0 || f > 9) continue; const g = landH(s, e + d*9.5); return lerp(pierDeckH(s), g, f/9); } return null; };   // (on the stairs: how high that step is)
-// Home: 1045 3rd Street, apartment 303 (Kevin's family lived here): the second building up 3rd Street from California Avenue, on the inland side.
+// Home: a courtyard apartment building (its address is deliberately not written anywhere in the game or here: the game is public).
 // Laid out from the satellite view and Street View: a light gray stucco block about 23 m along 3rd Street and 31 m deep, three floors of
 // apartments over a half-sunken garage, blue-gray balcony bands across the front, a brown tile edge on the roof. Wide steps go up from the
 // sidewalk between two lamp pillars into a passage through the front of the building to a long, narrow courtyard open to the sky (about
 // 5 m by 14 m). Every apartment door faces the courtyard; on the 2nd and 3rd floors the doors open onto catwalks running all the way around
-// it. The stairwell (under a little tile roof) is at the street end of the courtyard, beside the passage. So you come out of 303 at the far end,
+// it. The stairwell (under a little tile roof) is at the street end of the courtyard, beside the passage. So you come out of your door at the far end,
 // walk along the catwalk to the stairwell, go down past the 2nd floor to the 1st, walk out through the passage and down the steps to 3rd Street.
 // Plan coordinates: u = meters back from the front wall, v = meters along 3rd Street from the middle of the front (negative is away from California).
 // The catwalks, stairs and courtyard are stacked over each other, so walking picks the floor you're on (walkRef, see homeLayers).
@@ -3047,7 +3047,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
 function landName(x, y){
   const [s, t] = landST(x, y);
   if (t < -2500) return 'Malibu'; if (t > 200) return 'Palos Verdes';
-  if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return 'Home · 1045 3rd Street';
+  if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return '3rd Street';
   if (onPierDeck(s, t)) return s > PIER_L.s1 ? 'The Pier Bridge' : 'Santa Monica Pier';
   if (s > PIER_L.s2 - 1 && s < AVES.ocean - 9 && Math.abs(t) < 9) return 'The Pier Bridge';
   { const r = roomAt(s, t, true); if (r) return r.name; }
@@ -4511,7 +4511,7 @@ function buildCoast(){
     if (inSMP(sc, tc)) continue;
     { const lk = BLOCK1100.find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California: from Street View)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
-  // the corner building between home and California Avenue (not in OpenStreetMap; a guess, the size of its neighbors)
+  // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
     const n = CITY.bldgs.length - 1; for (let i = Math.floor(670/BLD_CELL); i <= Math.floor(698/BLD_CELL); i++) for (let j = Math.floor(-1081.5/BLD_CELL); j <= Math.floor(-1060/BLD_CELL); j++){ const k = bldKey(i, j); (bldCells.get(k) || bldCells.set(k, []).get(k)).push(n); } }
   for (const b of pavilions){ const [s0, t0, s1, t1] = b.box, k = new THREE.Group(), iron = std(0x2f5d4f, .5), base = landH((s0 + s1)/2, (t0 + t1)/2), H = b.top - base - .3;   // the food pavilions: open green iron kiosks with a counter inside
@@ -4522,7 +4522,7 @@ function buildCoast(){
     const board = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0 - 1.6, .9, t1 - t0 - 3), std(0xe8622c, .6)); board.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + 2.3)); k.add(board);
     g.add(k); mergeStatic(k); }
   const parts = [];   // (home's own walls go in with the buildings)
-  // home, 1045 3rd Street (see HOME_APT): gray stucco around a courtyard, catwalks, the stairwell under its tile roof, the passage and front steps
+  // home (see HOME_APT): gray stucco around a courtyard, catwalks, the stairwell under its tile roof, the passage and front steps
   { const H = HOME_APT, B = homeBase(), F = homeFloor, [c0, c1] = H.court, S = H.stair, roofY = F(3) + H.fh + .1, hm = new THREE.Group();
     const stucco = std(0xc4c6c2, .9), trim = std(0x9dbcd6, .6), conc = std(0xd4d2cc, .85), rail = std(0x5d7387, .5), tile = std(0x5a4334, .9), base = std(0x9da3a2, .9), dark = new THREE.MeshBasicMaterial({ color: 0x15181a });   // (from Street View: warm light gray stucco, light blue trim, a dark brown shingle roof)
     const at3 = (u, v) => { const [x, y] = landXY(...homeST(u, v)); return [x*U, y*U]; };
@@ -4581,13 +4581,12 @@ function buildCoast(){
         box(ub, ua, S.v0, hv, Fn - H.fh/2*(k + 1)/7 - .2, Fn - H.fh/2*(k + 1)/7, conc); box(ub, ua, hv, S.v1, Fn - H.fh + H.fh/2*(k + 1)/7 - .2, Fn - H.fh + H.fh/2*(k + 1)/7, conc); } }
     box(S.mid, S.u1, (S.v0 + S.v1)/2 - .06, (S.v0 + S.v1)/2 + .06, B, roofY - .4, stucco);
     mergeStatic(hm);
-    // doors onto the courtyard (and the catwalks), with numbers; 303's is red and its window is lit
+    // doors onto the courtyard (and the catwalks), with numbers; yours is red and its window is lit
     const wallFace = { n: 0, s: Math.PI, b: -Math.PI/2 }, faceOff = { n: [0, .04], s: [0, -.04], b: [-.04, 0] };
     for (const n of [1, 2, 3]) for (const [d, u, v, w] of H.doors){ const num = n + d, mine = num === '303', [du, dv] = faceOff[w], along = w === 'b' ? [0, 1] : [1, 0];
       plane(u + du, v + dv, F(n) + 1.05, .95, 2.1, std(mine ? 0xb8452e : [0x2f5d7c, 0x6b4a32, 0x3f6b4a][(n + +d) % 3], .55), wallFace[w]);
       plane(u + du*1.5 + along[0]*.0, v + dv*1.5, F(n) + 2.3, .5, .25, new THREE.MeshBasicMaterial({ map: labelTex(num, '#f7f4ec', '#22303c', 256, 128, 90) }), wallFace[w]);
       plane(u + du + along[0]*1.3, v + dv + along[1]*1.3, F(n) + 1.4, .8, .8, new THREE.MeshBasicMaterial({ color: mine ? 0xffd36b : 0x4d5e6b }), wallFace[w]); }
-    plane(-.18, 0, F(1) + 2.7, 1.2, .45, new THREE.MeshBasicMaterial({ map: labelTex('1045', '#22303c', '#f7f4ec', 256, 96, 72) }), -Math.PI/2);   // the street number, over the entrance
     const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, z] = at3(c1 + 1, 0); sign.position.set(x, roofY + 3.2, z); } hm.add(sign);   // up on the roof, over 303
     g.add(hm); homeSign = sign; }
   for (const arr of tiles.values()){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr.pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(arr.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(arr.col, 3)); geo.computeVertexNormals();
@@ -4761,7 +4760,7 @@ function buildCoast(){
   waterizeTree(g); oceanWorld.add(g);
   { const fill = new THREE.DirectionalLight(0xfff1dc, 0); fill.position.set(-1, .55, .3); oceanScene.add(fill, fill.target); coastFill = fill; }   // soft afternoon light off the sea, so the bluffs (which face the water) aren't in the dark
   buildTraffic(g);
-  // parked cars you can hop into: right outside home on 3rd Street, round the corner on California, along Ocean Avenue and in the beach lot by the pier
+  // parked cars you can hop into: right outside home, round the corner, along Ocean Avenue and in the beach lot by the pier
   for (const [ps, pt, toT, col] of [[659.5, -1112, 1, 0xd33a2c], [659.5, -1072, 1, 0x2b5fa8], [648.5, -1150, -1, 0xf4f4f0], [659.5, -1180, 1, 0x8a8f96], [700, -1040, 0, 0x1d1d1f], [560, -1051, 2, 0xf2c230],
     [AVES.ocean + 7.5, -1000, 1, 0x3f8a5a], [AVES.ocean + 7.5, -700, 1, 0xb8bcc2], [AVES.ocean - 7.5, -400, -1, 0xff7a2f], [AVES.second + 5.5, -900, 1, 0x2b5fa8], [AVES.fourth - 5.5, -560, -1, 0xd33a2c], [300, -150, 2, 0xf4f4f0], [300, -170, 2, 0x1d1d1f], [268, -1450, 2, 0xf2c230]]){
     const [x, y] = landXY(ps, pt), [x2, y2] = toT === 0 ? landXY(ps - 1, pt) : toT === 2 ? landXY(ps + 1, pt) : landXY(ps, pt + toT);
@@ -5627,7 +5626,6 @@ const PHONE_BOOTHS = [
   { id: 'prom', name: '3rd Street Promenade', s: 645.4, t: -458, face: 1, more: 'at Santa Monica Boulevard' },
   { id: 'pier', name: 'Santa Monica Pier', s: 205, t: -19, face: 0, more: 'by the carousel', deck: true },
   { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
-  { id: 'home', name: 'Home (3rd & California)', s: 662.8, t: -1066, face: 3, more: 'by 1045 3rd Street' },
   { id: 'sf', name: "San Francisco: Fisherman's Wharf", soon: true, more: 'Being built next! Drive or zap there soon' } ];
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
 function openBooth(from){ const o = ocean; if (!o) return; paused = true; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12)); const box = $('boothList'); box.innerHTML = '';

@@ -978,9 +978,10 @@ let camFollowOK = true, camHoldT = 0, camPitch = 0, camZoom = 1;
 // Like Roblox: on foot and swimming the camera stays where you put it (drag the screen to turn and tilt it, the mouse wheel zooms,
 // the ← → arrow keys turn it) and the stick or W A S D move you relative to it. In a car, a boat or on a dolphin it follows behind you.
 const camFollows = () => mode !== 'ocean' || !ocean || !!ocean.car || !!ocean.vehicle || !!ocean.ride || camMode === 'first';
+const gameArrows = () => mode === 'ocean' && (ocean?.workout?.k === 'golf' || ocean?.workout?.k === 'pickle');
 function moveInput(){
   let x = stick.x, y = stick.y;
-  if (!stick.active){ const arrows = camFollows(); x = (keys.d || (arrows && keys.arrowright) ? 1 : 0) - (keys.a || (arrows && keys.arrowleft) ? 1 : 0); y = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0); }
+  if (!stick.active){ const arrows = camFollows() || gameArrows(); x = (keys.d || (arrows && keys.arrowright) ? 1 : 0) - (keys.a || (arrows && keys.arrowleft) ? 1 : 0); y = (keys.w || keys.arrowup ? 1 : 0) - (keys.s || keys.arrowdown ? 1 : 0); }
   const m = Math.hypot(x, y); if (m > 1){ x /= m; y /= m; }
   return { x, y, m: Math.min(1, m) };
 }
@@ -4971,13 +4972,16 @@ function golfMeshes(){ if (golfVis) return golfVis; const ball = new THREE.Mesh(
   for (const m of [ball, line, club]){ m.visible = false; oceanScene.add(m); } return golfVis = { ball, line, club }; }
 function startGolf(r, sp){ const o = ocean; if (!o || paused) return; initAudio(); const H = r.golf[sp.hole];
   o.workout = { k: 'golf', r, sp, h: H, b: { d: H.tee[0], t: H.tee[1], vd: 0, vt: 0 }, aim: Math.atan2(H.cup[1] - H.tee[1], H.cup[0] - H.tee[0]), pow: 0, phase: 'aim', strokes: 0, t0: time, tapT: -9, lvl: 1, n: 0 };
-  golfBehind(o, o.workout); banner(`⛳ Hole ${sp.hole + 1}: ${H.name}`, 'Aim with left and right. Tap Putt when the yellow line is just right'); sfx(660, .1, 'triangle', .05); }
+  golfBehind(o, o.workout); camHead = o.ang; banner(`⛳ Hole ${sp.hole + 1}: ${H.name}`, 'Aim with left and right. Tap Putt when the yellow line is just right'); sfx(660, .1, 'triangle', .05); }
 function golfBehind(o, w){ const r = w.r, b = w.b, S = d => r.fs + r.inw*d, pd = b.d - Math.cos(w.aim)*.55, pt = b.t - Math.sin(w.aim)*.55;
   const [x, y] = landXY(S(pd), pt), [bx, by] = landXY(S(b.d), b.t); o.x = x; o.y = y; w.x = x; w.y = y; o.ang = Math.atan2(by - y, bx - x); }
 function golfStep(o, w, dt){ const r = w.r, H = w.h, b = w.b, S = d => r.fs + r.inw*d, G = golfMeshes(); o.vx = o.vy = 0; o.walking = false; o.air = airMax(); o.idle = 0; o.x = w.x; o.y = w.y;
-  if (w.phase === 'aim'){ const s = moveInput(); if (s.m > .15) w.aim += s.x*dt*1.3*(r.inw > 0 ? 1 : -1); w.pow = .5 - .5*Math.cos((time - w.t0)*2.4); golfBehind(o, w); }
+  if (w.phase === 'aim'){ const s = moveInput();
+    if (Math.abs(s.x) > .15){ const wa = a => { const [x0, y0] = landXY(S(b.d), b.t), [x1, y1] = landXY(S(b.d + Math.cos(a)), b.t + Math.sin(a)); return Math.atan2(y1 - y0, x1 - x0); };   // (which way round the aim turns in the world)
+      w.aim += s.x*dt*1.3*(angDiff(wa(w.aim + .01), wa(w.aim)) > 0 ? 1 : -1); }   // right: the line swings right on screen; left: left
+    w.pow = .5 - .5*Math.cos((time - w.t0)*2.4); golfBehind(o, w); }
   else if (w.phase === 'roll'){ const sp = Math.hypot(b.vd, b.vt);
-    if (sp < .06){ b.vd = b.vt = 0; w.phase = 'aim'; w.aim = Math.atan2(H.cup[1] - b.t, H.cup[0] - b.d); golfBehind(o, w); }
+    if (sp < .06){ b.vd = b.vt = 0; w.phase = 'aim'; w.aim = Math.atan2(H.cup[1] - b.t, H.cup[0] - b.d); golfBehind(o, w); camHead = o.ang; }   // (walk up to the ball, and look down the line)
     else { const k = Math.max(0, sp - 1.15*dt)/sp; b.vd *= k; b.vt *= k; let nd = b.d + b.vd*dt, nt = b.t + b.vt*dt, hit = false;
       if (nt < H.la + .08 || nt > H.lb - .08){ b.vt = -b.vt*.8; nt = clamp(nt, H.la + .08, H.lb - .08); hit = true; }
       if (nd < H.d0 + .08 || nd > H.d1 - .08){ b.vd = -b.vd*.8; nd = clamp(nd, H.d0 + .08, H.d1 - .08); hit = true; }
@@ -4989,9 +4993,10 @@ function golfStep(o, w, dt){ const r = w.r, H = w.h, b = w.b, S = d => r.fs + r.
   const y = r.floor + .07, [bx, by] = landXY(S(b.d), b.t); G.ball.visible = w.phase !== 'in'; G.ball.position.set(bx*U, y, by*U);
   const L = .3 + w.pow*1.6, [ex, ey] = landXY(S(b.d + Math.cos(w.aim)*L/2), b.t + Math.sin(w.aim)*L/2), [fx, fy] = landXY(S(b.d + Math.cos(w.aim)), b.t + Math.sin(w.aim));
   G.line.visible = w.phase === 'aim'; G.line.position.set(ex*U, r.floor + .03, ey*U); G.line.scale.x = L; G.line.rotation.y = -Math.atan2(fy - by, fx - bx);
-  G.club.visible = true; const sw = time - w.tapT < .35 ? Math.sin((time - w.tapT)/.35*Math.PI)*.5 : 0, [cx, cy] = landXY(S(b.d - Math.cos(w.aim)*(.16 + sw*.3)), b.t - Math.sin(w.aim)*(.16 + sw*.3));
+  G.club.visible = true; const sw = time - w.tapT < .35 ? Math.sin((time - w.tapT)/.35*Math.PI)*.5 : 0, hp = w.phase === 'aim' ? { d: b.d, t: b.t, aim: w.aim } : w.hit || { d: b.d, t: b.t, aim: w.aim },   // (in your hands, where you putted from: it doesn't follow the ball)
+    [cx, cy] = landXY(S(hp.d - Math.cos(hp.aim)*(.16 + sw*.3)), hp.t - Math.sin(hp.aim)*(.16 + sw*.3));
   G.club.position.set(cx*U, r.floor + .5, cy*U); G.club.rotation.set(0, -o.ang, .12); }
-function golfPutt(w){ if (w.phase !== 'aim') return; const v = .5 + w.pow*4.6; w.b.vd = Math.cos(w.aim)*v; w.b.vt = Math.sin(w.aim)*v; w.strokes++; w.phase = 'roll'; sfx(520, .05, 'square', .04); sfx(180, .08, 'triangle', .04); }
+function golfPutt(w){ if (w.phase !== 'aim') return; w.hit = { d: w.b.d, t: w.b.t, aim: w.aim }; const v = .5 + w.pow*4.6; w.b.vd = Math.cos(w.aim)*v; w.b.vt = Math.sin(w.aim)*v; w.strokes++; w.phase = 'roll'; sfx(520, .05, 'square', .04); sfx(180, .08, 'triangle', .04); }
 // ---- Frost on 5th (it was called ICE at Santa Monica): the winter ice rink in the parking lot on the corner of 5th and Arizona (1324 5th Street), copied from
 // photos (Nov 2026), the satellite view and the news (SMDP 2023-24): a 120 x 60 ft rink with clear boards, its end toward the Bank of America wall across the alley (they show movies on it:
 // the Chill Zone), a little kids' rink, a wood deck with glass railings, the skate building with its clear roof, three fire pits with seats right by the rink, white tents,
@@ -7613,7 +7618,7 @@ let fpPitch = 0, fpEye = .1, camAir = 0;   // camAir: how high a dolphin leap is
 function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   const follow = camFollows() || kind === 'race' || kind === 'pool' || kind === 'title';
   camHead = camMode === 'first' ? heading : !camInit ? heading : follow && camFollowOK && time > camHoldT ? lerpAngle(camHead, heading, Math.min(1, dt*(kind === 'car' ? 3.2 : 2.2))) : camHead;
-  if (!follow && !paused) camHead += ((keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0))*1.7*dt;   // (the arrow keys turn the camera)
+  if (!follow && !paused && !gameArrows()) camHead += ((keys.arrowright ? 1 : 0) - (keys.arrowleft ? 1 : 0))*1.7*dt;   // (the arrow keys turn the camera, except in mini golf and pickleball: there they aim and move)
   const boom = (d, h) => { const L = Math.hypot(d, h)*camZoom, a = clamp(Math.atan2(h, d) + camPitch, .04, 1.35); return [L*Math.cos(a), L*Math.sin(a)]; };   // (tilted and zoomed the way you set it)
   const fx = Math.cos(camHead), fz = Math.sin(camHead);
   if (kind !== 'title' && camMode === 'first'){   // through your own eyes

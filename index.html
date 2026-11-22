@@ -1423,11 +1423,11 @@ const ZONES = [
     facts:['The Santa Monica Pier is more than 100 years old. Its Ferris wheel lights up the bay at night.', 'Purple sand dollars live in big beds on the sandy bottom of the bay. They stand up on their edges to catch food.', 'Bottlenose dolphins swim along the beaches of Santa Monica Bay all year long.', 'Baby great white sharks grow up in Santa Monica Bay. Scientists call it a shark nursery!', 'The big neon sign over the pier entrance was first switched on in 1941. Today it is a California historic landmark.', 'Palisades Park, on top of the cliffs, has more than 1,200 trees, and almost half of them are palms.'] },
   { name:'Palos Verdes Kelp Forest', where:'Palos Verdes',     lon:-118.435, lat:33.77,  water:[31,128,112],  fish:['#ff8c1a'],
     facts:['Giant kelp can grow about 60 cm (2 feet) in a single day.', 'The bright orange garibaldi is California\'s state marine fish. Males guard their nests and grunt at divers!', 'Purple sea urchins eat kelp. Divers are helping the kelp forest grow back by clearing them away.', 'Sea otters lived in this kelp long ago. Today they are very rare this far south.'] },
-  { name:'The Whale Highway',     where:'off Point Vicente',  lon:-118.50,  lat:33.715, water:[42,112,150],  fish:['#c7d0d6'],
+  { name:'Point Vicente',         where:'Palos Verdes',  lon:-118.50,  lat:33.715, water:[42,112,150],  fish:['#c7d0d6'],
     facts:['Every winter and spring, gray whales swim right past Palos Verdes on their way between Alaska and Mexico.', 'People have counted gray whales from the cliffs at Point Vicente every winter for more than 40 years.', 'California sea lions love to nap on buoys. They pile on and bark at anyone who comes close!'] },
-  { name:'Redondo Reef',          where:'Redondo Beach',      lon:-118.405, lat:33.845, water:[40,160,178],  fish:['#ff8c1a','#ff6f91','#3a4a6a'],
+  { name:'Redondo Canyon',        where:'Redondo Beach',      lon:-118.405, lat:33.845, water:[40,160,178],  fish:['#ff8c1a','#ff6f91','#3a4a6a'],
     facts:['A deep underwater canyon starts right next to King Harbor in Redondo Beach, closer to shore than you would think.', 'California sheephead start life as girls and can turn into boys when they grow up.', 'Bat rays flap their wings like birds and dig up clams from the sand.'] },
-  { name:'The Old Wreck',         where:'off Santa Monica',   lon:-118.545, lat:33.985, water:[28,86,112],   fish:['#9aa7b0','#c7d0d6'],
+  { name:'Star of Scotland Wreck', where:'off Santa Monica',   lon:-118.545, lat:33.985, water:[28,86,112],   fish:['#9aa7b0','#c7d0d6'],
     facts:['The Star of Scotland sank in a storm in 1942, about two miles out from the Santa Monica Pier.', 'Before it sank, the Star of Scotland was a party ship and a fishing boat, anchored far out in the bay.', 'Old shipwrecks turn into reefs where fish make new homes. Giant sea bass, as big as a person, like to hide in them.'] },
   { name:'Malibu',                where:'Malibu',             lon:-118.68,  lat:34.008, water:[48,160,150],  fish:['#c7d0d6','#ff8c1a'],
     facts:['Surfrider Beach in Malibu is one of the most famous surfing beaches in the world.', 'Harbor seals rest on the rocks at Point Dume. Their spots are all different, like fingerprints.', 'Green sea turtles are rare here, but more of them are visiting Santa Monica Bay every year.', 'Humpback whales sometimes visit the bay. They gulp huge mouthfuls of little fish like anchovies.'] },
@@ -1479,17 +1479,18 @@ const PIER_MID = pierPt(PIER.x0 + PIER.len/2);
 const BREAKWATER = { x: -100, y: 2700, ang: 1.62, half: 11 };   // just off the beach, down the coast at Redondo
 const LANDMARKS = [
   { name:'Santa Monica Pier',        x:pierPt(PIER.wheel)[0], y:pierPt(PIER.wheel)[1], kind:'smpier', r: 520 },
-  { name:'The Palos Verdes Kelp Tower', x:-1000, y:4500, kind:'kelptower' },
-  { name:'The Sea Lion Buoy',        x:-2200, y:5300,  kind:'buoy' },
+  { name:'Point Vicente Pinnacles',  x:-1000, y:4500, kind:'kelptower' },   // (a real dive spot: rock pinnacles in the kelp, also called Whale Rock)
+  { name:'King Harbor Buoy',         x:-1000, y:2550,  kind:'buoy' },   // (the real one, off the King Harbor entrance in Redondo Beach, is always packed with barking sea lions)
   { name:'King Harbor Breakwater',   x:BREAKWATER.x, y:BREAKWATER.y, kind:'breakwater', r: 520 },
   { name:'The Star of Scotland',     x:-2550, y:0,     kind:'galleon' },
   { name:'Point Dume Rocks',         x:-2300, y:worldY(-6500), kind:'turtletown' },
-  { name:'The Glowing Canyon',       x:-1200, y:worldY(-4300), kind:'abyss' },
+  { name:'Dume Submarine Canyon',    x:-1200, y:worldY(-4300), kind:'abyss' },
   { name:'Catalina Island',          x:CAT.x, y:CAT.y, kind:'catalina', r: 1250 },
 ];
 // landmarks are saved by name: the old world's names count as the bay's new ones
-const LM_RENAME = { 'Catalina\'s Kelp Tower':'The Palos Verdes Kelp Tower', 'The Antarctic Ice Shelf':'The Sea Lion Buoy', 'Heron Reef':'King Harbor Breakwater',
-  'The Spanish Galleon':'The Star of Scotland', 'Honu Bay':'Point Dume Rocks', 'Challenger Deep':'The Glowing Canyon' };
+const LM_RENAME = { 'Catalina\'s Kelp Tower':'Point Vicente Pinnacles', 'The Antarctic Ice Shelf':'King Harbor Buoy', 'Heron Reef':'King Harbor Breakwater',
+  'The Spanish Galleon':'The Star of Scotland', 'Honu Bay':'Point Dume Rocks', 'Challenger Deep':'Dume Submarine Canyon',
+  'The Palos Verdes Kelp Tower':'Point Vicente Pinnacles', 'The Sea Lion Buoy':'King Harbor Buoy', 'The Glowing Canyon':'Dume Submarine Canyon' };   // (Nov 2026: real names)
 /* League 1's places (units; sizes and depths in meters). Two secrets on Redondo Reef and the Giant Eel off Malibu.
    Sea floor depth is fixed around each one (`floor`, flat out to `flat` m) and nothing random grows there. */
 const GROTTO = { x: -800, y: 3150, r: 5, h: 5, floor: 7, doorTop: 3.4, flat: 9 };   // the Hidden Sea Cave: a rock dome, top 2 m under water
@@ -2087,7 +2088,7 @@ function secretFound(id){
   [523, 659, 784, 1047, 1319].forEach((f, i) => sfx(f, .22, 'triangle', .07, i*.1));
   if (id === 'grotto'){ save.gear = [...new Set([...(save.gear || []), 'springfins'])]; save.gearLv = { ...(save.gearLv || {}), springfins: 1 };
     banner('Secret place found!', 'The Hidden Sea Cave · you got SPRING FINS');
-    say('Spring Fins', 'Now every animal can jump, twice as high! Swim fast and tap Jump (or J). Out on Redondo Reef, something shines on top of Eagle Rock...', 12); }
+    say('Spring Fins', 'Now every animal can jump, twice as high! Swim fast and tap Jump (or J). Out by Redondo Canyon, something shines on top of Eagle Rock...', 12); }
   else if (id === 'eaglerock'){ save.legend = Math.max(legendTiers(), 1);
     banner('Secret place found!', 'Eagle Rock · LEGEND LEVELS unlocked');
     say('Legend levels', 'The Rocket Fin, Sonar, Pearl Magnet and Chest Magnet can now go one level past the top. Look for the gold dots in the Dive Shop!', 12); }
@@ -6813,12 +6814,12 @@ function buildPier(){
 function buildLandmarks(){
   const at = (L, obj) => { obj.position.x += L.x*U; obj.position.z += L.y*U; oceanWorld.add(obj); return obj; };
   const byKind = k => LANDMARKS.find(L => L.kind === k);
-  // The Palos Verdes Kelp Tower: a rock pinnacle wrapped in kelp
+  // Point Vicente Pinnacles: a rock pinnacle wrapped in kelp
   { const g = new THREE.Group(); const sp = new THREE.Mesh(new THREE.DodecahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0x55605a, roughness: 1, flatShading: true }));
     sp.scale.set(3, 15, 3); sp.position.y = -6; sp.castShadow = true; g.add(sp);
     for (let i=0;i<30;i++){ const a = i/30*TAU, r = 4 + Math.random()*3; const k = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 6).scale(1.6, .06, .6), std(0x6b7a24, .7)); k.position.set(Math.cos(a)*r, -.05, Math.sin(a)*r); k.rotation.y = -a; g.add(k); }
     at(byKind('kelptower'), g); }
-  // The Sea Lion Buoy: a big red bell buoy way out on the Whale Highway, with California sea lions piled on to nap
+  // King Harbor Buoy: a big red bell buoy off the harbor entrance at Redondo, with California sea lions piled on to nap
   { const g = new THREE.Group(), red = std(0xb3261e, .5), dk = std(0x2b2b2e, .6), tower = new THREE.Group();
     const base = new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.5, 1.3, 28), red); base.position.y = -.15; base.castShadow = base.receiveShadow = true; g.add(base);
     const keel = new THREE.Mesh(new THREE.CylinderGeometry(.9, 1.5, 2.6, 16), dk); keel.position.y = -2.1; g.add(keel);
@@ -6852,7 +6853,7 @@ function buildLandmarks(){
     for (const [x, z, a] of [[3.3, 1.1, .4], [4.3, 1.8, 2.2], [4.6, .9, -.6]]){ const hs = buildSeal(); hs.scale.setScalar(.62); hs.position.set(x, .34, z); hs.rotation.y = a; g.add(hs); }   // (spotted grey: harbor seals)
     waterizeTree(g); at(byKind('turtletown'), g); }
   buildPier();
-  // The Glowing Canyon: deep in Dume Canyon, a giant deep-sea jellyfish making its own light
+  // Dume Submarine Canyon: deep down, a giant deep-sea jellyfish making its own light
   { const g = new THREE.Group(); const m = new THREE.MeshBasicMaterial({ color: 0xff7ae0, transparent: true, opacity: .75, blending: THREE.AdditiveBlending, depthWrite: false });
     const bell = new THREE.Mesh(new THREE.SphereGeometry(4, 32, 16, 0, TAU, 0, Math.PI*.55), m); bell.position.y = -2.2; g.add(bell);
     for (let i=0;i<14;i++){ const a = i/14*TAU; const t = new THREE.Mesh(new THREE.CylinderGeometry(.06, .02, 7, 5), m); t.position.set(Math.cos(a)*2.8, -6, Math.sin(a)*2.8); g.add(t); }

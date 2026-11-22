@@ -2789,7 +2789,7 @@ let LAND_BOXES = [];   // other solid things on land, [s0, t0, s1, t1, top]: lif
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)) h = Math.max(h, pierDeckH(s));
-  if (s > PROM.s0 - 11 && s < PROM.s1 + 11 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? r.floor + roomTop(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
+  if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
   if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
@@ -4529,7 +4529,7 @@ let placeNow = null, bells = null;
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   if (o.workout) return { label: o.workout.k === 'stage' ? '⏹ Get off the stage' : o.workout.k === 'dj' ? '⏹ Stop the music' : '⏹ Stop', go: stopWorkout };
-  const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 11 || s > PROM.s1 + 11) return null;
+  const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
   const r = roomAt(s, t, true); if (!r) return null; const d = (s - r.fs)*r.inw;
   let best = null, bd = 9; for (const sp of r.spots || []){ const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
   if (best) return { label: SPOT[best.k][0], go: () => best.k === 'phone' ? tryPhone() : startWorkout(r, best) };
@@ -4586,12 +4586,13 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
   if (k === 'stage'){ if (time - (w.bowT || -9) < 1.4){ m.rotation.z -= Math.sin(clamp((time - w.bowT)/1.4, 0, 1)*Math.PI)*.7; drawHearts(px, gy + 2, pz, 0); return; }
     const a = Math.sin(time*6.5); m.position.y += Math.abs(a)*.08; m.rotation.y += Math.sin(time*2)*.6; if (!human) return;
     u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
-let treat = null, treatObj = null, storeAt = null, cone = [];
+let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
+const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Board game', 25, 'play', { say: 'You won the game!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
 const storeMenu = r => (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
 function atCounter(o){   // the shop whose counter you're standing at (or null)
-  if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 11 || s > PROM.s1 + 11) return null;
+  if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
   const r = roomAt(s, t, true); return r && (s - r.fs)*r.inw > r.D - 3.9 ? r : null; }
-function openStoreHere(){ const o = ocean; if (!o || paused) return; const r = roomAt(...landST(o.x, o.y), true); if (!r) return; initAudio(); storeAt = r; cone = []; paused = true; ptr.down = false; renderStore(); $('storePanel').hidden = false; pick = Math.max(0, menuBtns().indexOf($('storeClose'))); showPick(); }
+function openStoreHere(){ const o = ocean; if (!o || paused) return; const r = roomAt(...landST(o.x, o.y), true); if (!r) return; initAudio(); storeAt = r; storeDown = !!downIn(o); cone = []; paused = true; ptr.down = false; renderStore(); $('storePanel').hidden = false; pick = Math.max(0, menuBtns().indexOf($('storeClose'))); showPick(); }
 function closeStore(){ $('storePanel').hidden = true; paused = false; graceAfterPause(); showPick(); }
 function payFor(price, what){ if ((save.coins || 0) < price){ sfx(200, .2, 'square', .04); $('storeNote').textContent = `You need ${price - (save.coins || 0)} more coins for ${what}. Pearls, races and treasure chests get you coins!`; return false; }
   save.coins -= price; persist(); flushCloud(); $('coinVal').textContent = save.coins; [784, 988, 1319].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.07)); return true; }
@@ -4613,15 +4614,15 @@ function renderStore(){
     for (const id of BOOK_LIST){ const B = BOOKS[id], mine = treat?.book === id, d = card(`<div class="em">${B.e}</div><h3>${htmlText(B.title)}</h3><p>${htmlText(B.kind)}</p>`, '📖 Read it', () => openBook(id, 'store'));
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn secondary'; b.textContent = mine ? "It's yours" : 'Buy · 15 coins'; b.disabled = mine;
       b.onclick = () => { if (!payFor(15, 'that book')) return; treat = { e: B.e, n: B.title, act: 'read', book: id, page: 0 }; closeStore(); banner(`${B.title} is yours!`, 'Tap Read to read it anywhere'); }; d.appendChild(b); }
-    return; }
-  const worn = save.wear || {};
-  for (const it of menu){ const on = it.act === 'wear' && worn[it.slot] === it.col;
+    if (!storeDown) return; $('storeNote').textContent += " Downstairs there are toys, games and records too."; }
+  const worn = save.wear || {}, list = menu === 'books' ? DOWN_MENU : menu;
+  for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === it.col;
     card(`<div class="em">${it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
       if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
       treat = { ...it, bites: it.act === 'drink' ? 4 : 3 }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
-  const slots = [...new Set(menu.filter(it => it.act === 'wear').map(it => it.slot))].filter(k => worn[k]);   // take off what you're wearing (for free)
+  const slots = [...new Set(list.filter(it => it.act === 'wear').map(it => it.slot))].filter(k => worn[k]);   // take off what you're wearing (for free)
   for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
     const w = { ...save.wear }; delete w[k]; save.wear = w; persist(); flushCloud(); sfx(520, .08, 'triangle', .05); renderStore(); }, false, 'secondary');
 }
@@ -4660,6 +4661,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
 $('bookPrev').onclick = () => turnBook(-1); $('bookNext').onclick = () => turnBook(1); $('bookClose').onclick = closeBook;
 $('buyBtn').onclick = () => doPlace(); $('treatBtn').onclick = () => useTreat(); $('storeClose').onclick = closeStore;
+const BIG_SHOP = { 'Barnes & Noble': { w: 2, half: 6, deep: 18, down: true } };   // (the real one is 21,000 square feet over two floors: a staircase in the middle goes down to the kids' books, toys, games and records)
 function promRooms(){   // (worked out once: where each shop's sign, door and room go)
   if (PROM_ROOMS) return PROM_ROOMS; bldIndex(); PROM_ROOMS = [];
   const L = PROM_STORES.map(([side, t, name, kind], i) => ({ i, side, t, name, kind, cat: STORE_KIND[name] || (kind === 1 ? 'food' : kind === 2 ? 'movies' : 'clothes') }));
@@ -4668,17 +4670,20 @@ function promRooms(){   // (worked out once: where each shop's sign, door and ro
   const blocks = [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]];
   const room = (q, side, own, t0, t1) => {   // a shop room in this building, from t0 to t1, if the building is deep enough
     const fs = side < 0 ? PROM.s0 : PROM.s1, inw = side; let door = clamp(q.t, t0 + 1.2, t1 - 1.2); if (t1 - t0 < 3.2) return null;
-    let d0 = null, D = 0;
+    let d0 = null, D = 0; const big = BIG_SHOP[q.name], deep = big?.deep || 9;
     for (let shrink = 0; shrink < 4 && D - .4 < 4; shrink++){ if (shrink){ t0 += .5; t1 -= .5; if (t1 - t0 < 3.2) return null; } d0 = null; D = 0;   // (an odd-shaped building: try a little narrower)
-      for (let d = .5; d <= 12; d += .5){ if ([door, t0 + .3, t1 - .3].every(tt => bldAt(fs + inw*d, tt) === own)){ if (d0 == null) d0 = d; D = d; } else if (d0 != null || d > 3.5) break; } }   // from its front wall (some stand back from the sidewalk) to as deep as it goes
-    D = Math.min(9, D - .4); if (d0 == null || D < 4) return null;
-    door = clamp(door, t0 + 1.2, t1 - 1.2); const r = { ...q, side, door, fs, inw, t0, t1, D, floor: landH(fs, door), s0: Math.min(fs + inw*.3, fs + inw*D), s1: Math.max(fs + inw*.3, fs + inw*D) }; PROM_ROOMS.push(r); return r; };
+      for (let d = .5; d <= deep + 3; d += .5){ if ([door, t0 + .3, t1 - .3].every(tt => bldAt(fs + inw*d, tt) === own)){ if (d0 == null) d0 = d; D = d; } else if (d0 != null || d > 3.5) break; } }   // from its front wall (some stand back from the sidewalk) to as deep as it goes
+    D = Math.min(deep, D - .4); if (d0 == null || D < 4) return null;
+    door = clamp(door, t0 + 1.2, t1 - 1.2); const r = { ...q, side, door, fs, inw, t0, t1, D, floor: landH(fs, door), s0: Math.min(fs + inw*.3, fs + inw*D), s1: Math.max(fs + inw*.3, fs + inw*D) }; PROM_ROOMS.push(r);
+    if (big){ let hi = r.floor; for (let d = .3; d <= D; d += 1) for (let k = 0; k <= 8; k++) hi = Math.max(hi, landH(fs + inw*d, t0 + (t1 - t0)*k/8)); if (hi > r.floor){ r.door0 = r.floor; r.floor = hi + .02; } }   // (a wide shop on a sloping street: level with its highest corner, so the street doesn't poke through)
+    if (big?.down && D > 12){ const yB = r.floor - 4.5; r.down = { yB, d0: D/2 - 3.3, d1: D/2 + 3.3, tm: (t0 + t1)/2, hw: .85 }; }   // the staircase down, in the middle of the store
+    return r; };
   const ownAt = (side, t) => { const fs = side < 0 ? PROM.s0 : PROM.s1; for (const dt of [0, -1.5, 1.5, -3, 3]) for (const d of [1, 2, 3, .5]){ const b = bldAt(fs + side*d, t + dt); if (b) return b; } return null; };
   for (const side of [-1, 1]){ const S = L.filter(q => q.side === side).sort((a, b) => a.t - b.t);
     const byBld = new Map(); for (const q of S){ const blk = blocks.find(([a, b]) => q.t > a + 1 && q.t < b - 1), own = blk && ownAt(side, q.t); if (own) (byBld.get(own) || byBld.set(own, { blk, qs: [] }).get(own)).qs.push(q); }   // (a shop stays inside its own building: next door's wall would show up inside)
-    for (const [own, { blk, qs }] of byBld){ const a = Math.max(own.box[1] + .3, blk[0] + .5), b = Math.min(own.box[3] - .3, blk[1] - .5), W = (b - a)/qs.length;   // the building's shopfront, shared out among its shops
-      qs.forEach((q, j) => { const half = q.kind === 2 ? 4.5 : 3.2, lo = a + j*W, hi = lo + W, c = hi - lo < 2*half ? (lo + hi)/2 : clamp(q.t, lo + half, hi - half);
-        room(q, side, own, Math.max(lo, c - half), Math.min(hi, c + half)); }); }
+    for (const [own, { blk, qs }] of byBld){ const a = Math.max(own.box[1] + .3, blk[0] + .5), b = Math.min(own.box[3] - .3, blk[1] - .5), wt = q => BIG_SHOP[q.name]?.w || 1, sum = qs.reduce((n, q) => n + wt(q), 0); let lo = a;   // the building's shopfront, shared out among its shops (a big one gets more)
+      qs.forEach(q => { const half = q.kind === 2 ? 4.5 : BIG_SHOP[q.name]?.half || 3.2, hi = lo + (b - a)*wt(q)/sum, c = hi - lo < 2*half ? (lo + hi)/2 : clamp(q.t, lo + half, hi - half);
+        room(q, side, own, Math.max(lo, c - half), Math.min(hi, c + half)); lo = hi; }); }
     // every other shopfront gets a shop too (OpenStreetMap doesn't say what's there, so it's a plain one: a café, a gift shop, a surf shop...)
     for (const [ba, bb] of blocks){ const taken = PROM_ROOMS.filter(r => r.side === side).map(r => [r.t0 - .2, r.t1 + .2]);
       const fronts = CITY.bldgs.filter(b => b.box && b.box[3] > ba && b.box[1] < bb && (side < 0 ? b.box[2] > PROM.s0 - 3.5 && b.box[2] < PROM.s0 + 1.5 : b.box[0] > PROM.s1 - 1.5 && b.box[0] < PROM.s1 + 3.5));
@@ -4688,13 +4693,35 @@ function promRooms(){   // (worked out once: where each shop's sign, door and ro
           for (let k = 0; k < n; k++){ const ta = a + k*w, tb = ta + w, h = Math.abs(Math.round(ta*7 + side*13)) % GENERIC_SHOPS.length, [name, cat] = GENERIC_SHOPS[h];
             room({ i: 1000 + PROM_ROOMS.length, t: (ta + tb)/2, name, kind: cat === 'food' ? 1 : 0, cat, generic: true }, side, own, ta, tb); } } } } }
   return PROM_ROOMS; }
-function roomTop(r, s, t){ const G = r.grid; if (!G) return 0; const i = Math.floor((s - r.fs)*r.inw/.2), j = Math.floor((t - r.t0)/.2); return i < 0 || j < 0 || i >= G.n || j >= G.m ? 0 : G.top[i*G.m + j]; }   // (the counter, a table, a shelf...)
+function roomTop(r, s, t, G = r.grid){ if (!G) return 0; const i = Math.floor((s - r.fs)*r.inw/.2), j = Math.floor((t - r.t0)/.2); return i < 0 || j < 0 || i >= G.n || j >= G.m ? 0 : G.top[i*G.m + j]; }   // (the counter, a table, a shelf...)
+function roomH(r, s, t){   // the floor you're standing on in a shop (a shop with a downstairs: the floor you're on, see walkRef)
+  if (!r.down) return mainH(r, s, t); const L = roomLayers(r, s, t);
+  if (L.length === 1) return L[0]; const below = L.filter(v => v <= walkRef + .6); return below.length ? Math.max(...below) : Math.min(...L); }
+function roomLayers(r, s, t){ const d = (s - r.fs)*r.inw, St = r.down;
+  if (d >= St.d0 && d <= St.d1 && Math.abs(t - St.tm) <= St.hw) return [r.floor - (r.floor - St.yB)*(d - St.d0)/(St.d1 - St.d0)];   // on the stairs
+  return [St.yB + roomTop(r, s, t, r.gridB), mainH(r, s, t)]; }
+function mainH(r, s, t){ const d = (s - r.fs)*r.inw; return (r.door0 != null && d < 1 ? lerp(r.door0, r.floor, clamp(d, 0, 1)) : r.floor) + roomTop(r, s, t); }   // (up the little ramp in from the door)
+const downIn = o => { if (!o?.onLand || o.car) return null; const [s, t] = landST(o.x, o.y), r = s > PROM.s0 - 25 && s < PROM.s1 + 25 ? roomAt(s, t, true) : null; return r?.down && (o.gh ?? 1e9) < r.floor - 2 ? r : null; };   // downstairs in a shop
 function roomAt(s, t, inside){   // the shop you're in (or in the doorway of)
-  if (s < PROM.s0 - 11 || s > PROM.s1 + 11 || t < PROM.t0 || t > PROM.t1) return null;
+  if (s < PROM.s0 - 25 || s > PROM.s1 + 25 || t < PROM.t0 || t > PROM.t1) return null;
   for (const r of promRooms()){ if (t < r.t0 || t > r.t1) continue;
     if (s >= r.s0 && s <= r.s1 && t > r.t0 + .2 && t < r.t1 - .2) return r;
     if (!inside && Math.abs(t - r.door) < 1.05 && (r.inw < 0 ? s > r.fs - .5 && s < r.fs + 2.5 : s < r.fs + .5 && s > r.fs - 2.5)) return r; }
   return null; }
+function shopTex(key){   // wood floor, brick, a shelf of books, a reading rug (drawn once)
+  return canvasTex(key === 'spines' ? 512 : 256, key === 'spines' ? 160 : key === 'brick' ? 128 : 256, (x, w, h) => { const R = mulberry(key.length*97 + 3), c = (hex, a, b, cw, ch) => { x.fillStyle = hex; x.fillRect(a, b, cw, ch); };
+    if (key === 'oak'){ for (let y = 0; y < h; y += 32){ let xx = -((y*37) % 200); while (xx < w){ const L = 120 + R()*140, v = 190 + (R()*30|0); c(`rgb(${v + 10},${v - 30},${v - 95})`, xx, y, L, 32); c('rgba(60,35,10,.35)', xx, y, 2, 32); xx += L; } c('rgba(60,35,10,.3)', 0, y, w, 2); } }
+    else if (key === 'brick'){ c('#d9cfc2', 0, 0, w, h); for (let row = 0; row*14 < h; row++) for (let k = -1; k < 7; k++){ const v = R(); c(`rgb(${150 + v*45|0},${70 + v*25|0},${50 + v*20|0})`, k*42.7 + (row % 2)*21 + 2, row*14 + 2, 39, 11); } }
+    else if (key === 'spines'){ c('#3a2a1c', 0, 0, w, h); const P = ['#1d3557', '#e63946', '#f1faee', '#2a9d8f', '#e9c46a', '#264653', '#f4a261', '#6d597a', '#b5838d', '#111111', '#e76f51', '#457b9d', '#ffb703', '#8ecae6', '#3d5a80'];
+      for (let xx = 2; xx < w - 4;){ const bw = 10 + R()*16|0, bh = 108 + R()*44|0; if (R() < .18){ c(P[R()*P.length|0], xx, h - 6 - bw, Math.min(bh, w - xx - 4), bw); xx += 4; continue; }
+        const col = P[R()*P.length|0]; c(col, xx, h - 6 - bh, bw, bh); c('rgba(255,255,255,.55)', xx + 2, h - 6 - bh + 12, bw - 4, 3); c('rgba(0,0,0,.25)', xx + 2, h - 30, bw - 4, 6); xx += bw + 1; } c('#5a4128', 0, h - 6, w, 6); }
+    else if (key === 'rug'){ c('#c8a274', 0, 0, w, h); ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(w/2, h/2, 124 - i*20, 0, Math.PI*2); x.fill(); }); } }); }
+function shopSignTex(spec){ const [text, asp] = spec.split('|'), H = 128, W = Math.min(2048, H*(+asp || 8));   // a shop's section signs
+  const green = /NEW|DOWNSTAIRS/.test(text);
+  return canvasTex(W, H, (x, w, h) => { x.fillStyle = green ? '#2a5934' : text === 'KIDS' ? '#1e88e5' : '#b08a5c'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.textBaseline = 'middle';
+    let fs = 78; x.font = `800 ${fs}px Nunito, sans-serif`; while (x.measureText(text).width > w*.9 && fs > 20){ fs -= 2; x.font = `800 ${fs}px Nunito, sans-serif`; }
+    if (text === 'KIDS'){ const cols = ['#ffd23f', '#ff6b9a', '#7ee081', '#ffffff']; const tw = x.measureText(text).width; let xx = w/2 - tw/2; x.textAlign = 'left'; [...text].forEach((ch, i) => { x.fillStyle = cols[i % 4]; x.fillText(ch, xx, h/2 + 4); xx += x.measureText(ch).width; }); return; }
+    x.fillStyle = '#ffffff'; x.fillText(text, w/2, h/2 + 4); }, false); }
 function buildRooms(g, P3){
   const rooms = promRooms(), shell = { pos: [], col: [] }, props = { pos: [], col: [] }, glow = { pos: [], col: [] }, lit = [], cc = new THREE.Color();
   const quad = (o, a, b, c, d, hex) => { o.pos.push(...a, ...b, ...c, ...a, ...c, ...d); cc.set(hex); for (let k = 0; k < 6; k++) o.col.push(cc.r, cc.g, cc.b); };
@@ -4704,13 +4731,14 @@ function buildRooms(g, P3){
     quad(o, p(S0, T0, ya), p(S0, T0, yb), p(S0, T1, yb), p(S0, T1, ya), hex); quad(o, p(S1, T0, ya), p(S1, T1, ya), p(S1, T1, yb), p(S1, T0, yb), hex);
     quad(o, p(S0, T0, ya), p(S1, T0, ya), p(S1, T0, yb), p(S0, T0, yb), hex); quad(o, p(S0, T1, ya), p(S0, T1, yb), p(S1, T1, yb), p(S1, T1, ya), hex); };
   const BRIGHT = [0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0x8e24aa, 0xfb8c00, 0x00acc1, 0xd81b60, 0xf4f4f0, 0x222222];
+  const TQ = {}, tq = (key, a, b, c, d, u, v, flip) => { const o = TQ[key] || (TQ[key] = { pos: [], uv: [] }); o.pos.push(...a, ...b, ...c, ...a, ...c, ...d); const u0 = flip ? u : 0, u1 = flip ? 0 : u; o.uv.push(u0, 0, u1, 0, u1, v, u0, 0, u1, v, u0, v); };   // (textured: wood floors, brick, rows of books, signs)
   const FLOOR = { clothes: 0xc9b79c, shoes: 0x9c7f5c, food: 0x8a5a3c, bakery: 0xe8dcc8, icecream: 0xf4c6d6, books: 0x7a5a3c, tech: 0xe8e6e1, toys: 0x6fb7e0, candy: 0xff9ec8, beauty: 0x2a2a2a, shades: 0xd8d4cc, movies: 0x5a1020, gym: 0x3a3a3a, theatre: 0x6b2a2a, gift: 0xc9b79c };
   const WALL = { tech: 0xf7f7f5, books: 0xe8dcc4, movies: 0x2a1a1e, gym: 0x9aa0a6, beauty: 0xf4f0ee, candy: 0xfff0f6, toys: 0xfff5d6, theatre: 0x3a1a1a };
   for (const r of rooms){ const R = mulberry(r.i*31 + 7), y0 = r.floor, y1 = y0 + 3.5, inw = r.inw, T0 = r.t0 + .2, T1 = r.t1 - .2, back = r.fs + inw*r.D, front = r.fs + inw*.3, W = T1 - T0;
     const S = d => r.fs + inw*d;   // (meters in from the shopfront)
     const wall = WALL[r.cat] ?? [0xf4efe6, 0xeae4d8, 0xf1ece2][r.i % 3];
     // the room: floor, ceiling, back and side walls, and the wall over the shopfront
-    quad(shell, P3(front, T0, y0), P3(back, T0, y0), P3(back, T1, y0), P3(front, T1, y0), FLOOR[r.cat] ?? 0xc9b79c);
+    if (!r.down) quad(shell, P3(front, T0, y0), P3(back, T0, y0), P3(back, T1, y0), P3(front, T1, y0), FLOOR[r.cat] ?? 0xc9b79c);
     quad(shell, P3(front, T0, y1), P3(front, T1, y1), P3(back, T1, y1), P3(back, T0, y1), 0xf4f2ee);
     quad(shell, P3(back, T0, y0), P3(back, T0, y1), P3(back, T1, y1), P3(back, T1, y0), wall);
     for (const tt of [T0, T1]) quad(shell, P3(front, tt, y0), P3(back, tt, y0), P3(back, tt, y1), P3(front, tt, y1), wall);
@@ -4741,9 +4769,57 @@ function buildRooms(g, P3){
         B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
         for (let d = 1.4; d + 1.65 < r.D - 3.3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
           for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); } break; }
-      case 'books': for (const [ta, tb] of [[T0, T0 + .45], [T1 - .45, T1]]) for (let k = 0; k < 6; k++){ const h = .1 + k*.42; B(.6, r.D - .3, ta, tb, h, h + .04, 0x6b4a32);
+      case 'books': if (r.down){   // Barnes & Noble (from photos of the real store): light oak floors and bookcases with wood headers, an exposed brick wall, black track lights on a white ceiling,
+        const St = r.down, yB = St.yB, tm = St.tm, D = r.D, OAK = 0xc8a274, OAK2 = 0xb08a5c, H = St.hw;   //   New & Noteworthy up front, and the stairs down in the middle to the kids' books, toys, games and records
+        const G2 = r.gridB = { n: G.n, m: G.m, top: new Float32Array(G.n*G.m) };
+        const B2 = (da, db, ta, tb, ha, hb, hex) => { box(props, S(da), S(db), ta, tb, yB + ha, yB + hb, hex); if (ha < 1.9 && hb - ha > .02){ const P = .16, i0 = Math.max(0, Math.floor((Math.min(da, db) - P)/.2)), i1 = Math.min(G2.n - 1, Math.floor((Math.max(da, db) + P)/.2)), j0 = Math.max(0, Math.floor((ta - P - r.t0)/.2)), j1 = Math.min(G2.m - 1, Math.floor((tb + P - r.t0)/.2));
+          for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) G2.top[i*G2.m + j] = Math.max(G2.top[i*G2.m + j], hb); } };
+        const flat = (key, da, db, ta, tb, y, u, v) => tq(key, P3(S(da), ta, y), P3(S(db), ta, y), P3(S(db), tb, y), P3(S(da), tb, y), u, v);
+        const side = (key, tt, da, db, ya, yb, u, v, flip) => tq(key, P3(S(da), tt, ya), P3(S(db), tt, ya), P3(S(db), tt, yb), P3(S(da), tt, yb), u, v, flip);
+        const across = (key, dd, ta, tb, ya, yb, u, v, flip) => tq(key, P3(S(dd), ta, ya), P3(S(dd), tb, ya), P3(S(dd), tb, yb), P3(S(dd), ta, yb), u, v, flip);
+        const holeRects = [[.3, St.d0, T0, T1], [St.d1, D, T0, T1], [St.d0, St.d1, T0, tm - H], [St.d0, St.d1, tm + H, T1]];
+        for (const [da, db, ta, tb] of holeRects){ flat('oak', da, db, ta, tb, y0, (db - da)/2, (tb - ta)/2); quad(shell, P3(S(da), ta, y0 - .25), P3(S(db), ta, y0 - .25), P3(S(db), tb, y0 - .25), P3(S(da), tb, y0 - .25), 0xf4f2ee); }   // the floor (with the stairwell cut out) and the ceiling downstairs
+        // the walls: the brick one on the left, and the walls downstairs (the front one too: it's underground)
+        side('brick', T0 + .01, .3, D, y0, y1, D/1.2, 3.5/.6);
+        for (const tt of [T0, T1]) quad(shell, P3(front, tt, yB), P3(back, tt, yB), P3(back, tt, y0 - .25), P3(front, tt, y0 - .25), 0xe3f1f8);
+        quad(shell, P3(front, T0, yB), P3(front, T1, yB), P3(front, T1, y0 - .25), P3(front, T0, y0 - .25), 0xe3f1f8); quad(shell, P3(back, T0, yB), P3(back, T1, yB), P3(back, T1, y0 - .25), P3(back, T0, y0 - .25), 0xfff3d6);
+        flat('oak', .3, D, T0, T1, yB, (D - .3)/2, W/2);
+        for (let d = 2; d < D - .5; d += 3.2){ box(props, S(d), S(d + .05), T0 + .6, T1 - .6, y1 - .1, y1 - .05, 0x1d1d1f); for (let t = T0 + 1; t < T1 - .8; t += 1.4) box(props, S(d - .05), S(d + .1), t, t + .12, y1 - .28, y1 - .1, 0x1d1d1f);   // black track lights
+          lit.push(...P3(S(d), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm + 1.5, y0 - .27), ...P3(S(d), tm - 1.5, y0 - .27), ...P3(S(d + .8), tm + 1.5, y0 - .27), ...P3(S(d), tm + 1.5, y0 - .27)); }   //   (and lights downstairs)
+        // bookcases along the walls, light oak with a header on top and a sign on it; books face out in rows
+        const wallCase = (tt, inn, da, db, h, sign, y = y0, BB = B) => { const ti = tt + inn*.42, a = Math.min(tt, ti), b = Math.max(tt, ti); BB(da, db, a, b, 0, h, OAK);
+          side('spines', ti + inn*.005, da + .05, db - .05, y + .12, y + h - .08, (db - da - .1)/1.1, Math.round((h - .2)/.42), inn > 0);
+          for (let k = 1; k*.42 < h - .2; k++) box(props, S(da), S(db), Math.min(ti, ti + inn*.04), Math.max(ti, ti + inn*.04), y + .1 + k*.42, y + .13 + k*.42, OAK2);
+          if (sign){ box(props, S(da), S(db), Math.min(tt, ti + inn*.1), Math.max(tt, ti + inn*.1), y + h, y + h + .32, OAK); side('sign:' + sign + '|' + Math.round((db - da - .2)/.26), ti + inn*.105, da + .1, db - .1, y + h + .03, y + h + .29, 1, 1, inn > 0); } };
+        const casesAt = (tt, inn, list) => list.forEach(([da, db, sign]) => wallCase(tt, inn, da, db, 2.3, sign));
+        casesAt(T0, 1, [[1.2, 5, 'SANTA MONICA'], [5.2, 10.5, 'FICTION A–Z'], [10.7, D - 2.8, 'ROMANCE']]);
+        casesAt(T1, -1, [[3.2, 7, 'MYSTERIES & THRILLERS'], [7.2, 11, 'SCI-FI & FANTASY'], [11.2, 14, 'YOUNG ADULT'], [14.2, D - 2.8, 'POETRY']]);
+        // freestanding bookcases on both sides of the stairs (with a gap to walk through)
+        for (const c of [tm - 2.4, tm + 2.4]) for (const [da, db] of [[3, D/2 - .6], [D/2 + .6, D - 3.4]]){ B(da, db, c - .3, c + .3, 0, 1.75, OAK); B(da - .05, db + .05, c - .34, c + .34, 1.75, 1.85, OAK2);
+          for (const inn of [-1, 1]) side('spines', c + inn*.305, da + .05, db - .05, y0 + .1, y0 + 1.7, (db - da)/1.1, 4, inn > 0); }
+        // New & Noteworthy: display tables up front piled with books, under their sign
+        for (const c of [tm - 1.2, tm + 1.2]){ B(1.6, 2.5, c - .45, c + .45, 0, .78, OAK2); for (let k = 0; k < 4; k++) B(1.7 + (k % 2)*.4, 2 + (k % 2)*.4, c - .4 + (k >> 1)*.42, c - .08 + (k >> 1)*.42, .78, .82 + R()*.12, pick()); }
+        for (const c of [tm - 1.2, tm + 1.2]) across('sign:NEW & NOTEWORTHY|6', 1.58, c - .45, c + .45, y0 + .6, y0 + .76, 1, 1, inw < 0);   // (a sign on the front of each table)
+        // the stairs: steps all the way down, black railings round the opening, and a sign
+        const N = 24; for (let k = 0; k < N; k++){ const da = St.d0 + (St.d1 - St.d0)*k/N, h = (y0 - yB)*(1 - (k + .5)/N); box(props, S(da), S(da + (St.d1 - St.d0)/N + .01), tm - H, tm + H, yB, yB + h, k % 2 ? 0xb08a5c : 0xa67d50); }
+        for (const tt of [tm - H - .06, tm + H]) B(St.d0, St.d1 + .06, tt, tt + .06, 0, 1, 0x1d1d1f); B(St.d1, St.d1 + .06, tm - H - .06, tm + H + .06, 0, 1, 0x1d1d1f);
+        across('sign:DOWNSTAIRS: KIDS · TOYS & GAMES · VINYL|9', St.d0 - .1, tm - 1.6, tm + 1.6, y0 + 3, y0 + 3.35, 1, 1, inw < 0);
+        for (const [tt, fl] of [[tm - H - .065, false], [tm + H + .065, true]]) side('sign:STAIRS DOWN TO KIDS · TOYS · VINYL|11', tt, St.d0 + .4, St.d1 - .4, y0 + .5, y0 + .85, 1, 1, fl);
+        counter(OAK);
+        // DOWNSTAIRS: kids' books in low cases, toys and games, records, and a reading rug
+        const low = (tt, inn, da, db, sign) => wallCase(tt, inn, da, db, 1.3, sign, yB, B2);
+        low(T0, 1, 1, 5.5, 'TOYS & GAMES'); low(T0, 1, 5.8, D - .6, "KIDS' BOOKS"); low(T1, -1, D/2 + 1, D - .6, "KIDS' BOOKS");
+        for (let d = 1.1; d < 5.3; d += .38) for (let k = 0; k < 3; k++) B2(d, d + .3, T0 + .45, T0 + .62, .12 + k*.42 + .02, .12 + k*.42 + .3, pick());   // board games and toys on the shelves
+        for (const d0 of [1.3, 3.1]){ B2(d0, d0 + 1.4, T1 - 1.5, T1 - .7, 0, .8, 0x2d2d2d); for (let d = d0 + .08; d < d0 + 1.35; d += .07) B2(d, d + .015, T1 - 1.42, T1 - .78, .8, 1.08, [0x111111, 0xd81b60, 0x1e88e5, 0xfdd835, 0x222222][((d*29)|0) % 5]); }   // record bins
+        across('sign:VINYL & DVDS|6', .32, T1 - 2.4, T1 - .3, yB + 2.3, yB + 2.65, 1, 1, inw > 0);
+        flat('rug', D - 4.6, D - 1.2, tm - 1.7, tm + 1.7, yB + .012, 1, 1);   // the reading rug, a little table, and big soft toys
+        B2(D - 3.3, D - 2.5, tm + .9, tm + 1.7, 0, .5, 0xfdd835); for (const [dd, tt] of [[D - 3.6, tm + 1.3], [D - 2.2, tm + 1.3]]) B2(dd - .15, dd + .15, tt - .15, tt + .15, 0, .3, 0x1e88e5);
+        for (const [dd, tt, hex] of [[D - 1, tm - 1.4, 0xf8bbd0], [D - 1, tm - .7, 0xb3e5fc], [D - 1, tm, 0xfff59d], [D - 1, tm + .7, 0xc5e1a5]]){ B2(dd - .28, dd + .28, tt - .28, tt + .28, 0, .5, hex); B2(dd - .18, dd + .18, tt - .18, tt + .18, .5, .62, hex); }
+        across("sign:KIDS|4", D - .02, tm - 1.5, tm + 1.5, yB + 2.4, yB + 3.1, 1, 1, inw < 0);
+        break; }
+        else { for (const [ta, tb] of [[T0, T0 + .45], [T1 - .45, T1]]) for (let k = 0; k < 6; k++){ const h = .1 + k*.42; B(.6, r.D - .3, ta, tb, h, h + .04, 0x6b4a32);
           for (let d = .65; d < r.D - .4;){ const w = .04 + R()*.05; B(d, d + w, ta + .04, tb - .04, h + .04, h + .3 + R()*.06, pick()); d += w + .005; } }   // book after book after book
-        for (let d = 1.6; d + 1.2 < r.D - 3.3; d += 2.2) B(d, d + 1.2, T0 + W/2 - .5, T0 + W/2 + .5, 0, .8, 0x8a6a48); counter(0x6b4a32); break;
+        for (let d = 1.6; d + 1.2 < r.D - 3.3; d += 2.2) B(d, d + 1.2, T0 + W/2 - .5, T0 + W/2 + .5, 0, .8, 0x8a6a48); counter(0x6b4a32); } break;
       case 'tech': r.spots = []; for (let d = 1.4; d < r.D - 1.5; d += 2.3) for (const tm of [T0 + W*.3, T0 + W*.7]){ B(d, d + 1.6, tm - .45, tm + .45, 0, .85, 0xd9c7a2);   // long wooden tables with phones and laptops on them (try them out!)
           for (let k = 0; k < 3; k++) B(d + .2 + k*.5, d + .5 + k*.5, tm - .15, tm + .15, .85, .87, 0x1d1d1f); r.spots.push({ k: 'phone', d: d + .8, t: tm, rad: 1.3 }); }
         B(r.D - .1, r.D - .05, T0 + 1, T1 - 1, 1, 2.8, 0x1d1d1f); break;   // a big screen on the back wall
@@ -4784,11 +4860,14 @@ function buildRooms(g, P3){
   const mk = (o, mat) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(o.col, 3)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); };
   mk(shell, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .85, side: THREE.DoubleSide })); mk(props, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .7, side: THREE.DoubleSide }));
   { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(lit, 3)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xfff6dc, side: THREE.DoubleSide }))); }
+  for (const [key, o] of Object.entries(TQ)){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(o.pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(o.uv, 2)); geo.computeVertexNormals();
+    const mat = key.startsWith('sign:') ? new THREE.MeshBasicMaterial({ map: shopSignTex(key.slice(5)), side: THREE.DoubleSide }) : new THREE.MeshStandardMaterial({ map: shopTex(key), roughness: .85, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+    const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); }
   if (glow.pos.length){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(glow.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(glow.col, 3)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }))); }   // (lights that glow in color)
 }
 function buildPromenade(g, P3, at, instanceOf){
   // the real shops and restaurants (OpenStreetMap), each with its sign where it really is: glass shopfronts all along, awnings where they serve food, marquees at the two movie theaters
-  const BRAND = { 'Apple Store': ['#f5f5f7', '#1d1d1f', 'Apple'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#2a5934', '#f4efe2'],
+  const BRAND = { 'Apple Store': ['#f5f5f7', '#1d1d1f', 'Apple'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'],
     'Starbucks': ['#00704a', '#ffffff'], 'Lululemon': ['#d22030', '#ffffff', 'lululemon'], "Levi's": ['#ffffff', '#c41230'], 'Johnny Rockets': ['#d0021b', '#ffffff'], 'Puzzle Zoo': ['#5b2c83', '#ffd23f'],
     "Raising Cane's": ['#c8102e', '#ffffff'], "Wetzel's Pretzels": ['#ffd23f', '#c8102e'], 'AMC Santa Monica 7': ['#a0101e', '#ffe9a8'], 'AMC Broadway 4': ['#a0101e', '#ffe9a8'], 'Google Store': ['#ffffff', '#4285f4'],
     'Chipotle': ['#451400', '#f4efe2'], 'Patagonia': ['#1d2b44', '#ffffff'], 'Adidas': ['#111111', '#ffffff'], 'Foot Locker': ['#111111', '#ffffff'], 'Sunglass Hut': ['#c8102e', '#ffffff'], "IT'SUGAR": ['#ff3e8a', '#ffffff'],
@@ -5062,7 +5141,8 @@ function updCoast(o){
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
-  { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (r) banner(r.name, STORE_HELLO[r.cat] || ''); } }   // walking into a shop
+  { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
+    const dn = !!(r?.down && downIn(o)); if (dn !== !!updCoast.down){ updCoast.down = dn; if (dn) banner('Downstairs', "Kids' books, toys, games and records"); else if (r?.down) banner('Upstairs', 'Fiction, mysteries, sci-fi and New & Noteworthy'); } }   //   (and going downstairs)
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
@@ -6642,7 +6722,9 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
       const ex = _tp.x - px, ey = _tp.y - py, ez = _tp.z - pz; let f = 1;
       for (let k = 2; k <= 14; k++){ const q = k/14; if (walkH((px + ex*q)/U, (pz + ez*q)/U) > py + ey*q - .25){ f = Math.max(.12, (k - 1.5)/14); break; } }
       if (f < 1) _tp.set(px + ex*f, py + ey*f, pz + ez*f); }
-    const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh; }   // (never inside the bluff)
+    const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
+    const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
+    if (rr){ const cy = downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + 3.25; if (_tp.y > cy) _tp.y = cy; } }
   const k = camInit ? 1 - Math.exp(-dt*(kind === 'ocean' && camAir > .5 ? 14 : 5)) : 1; camPos.lerp(_tp, k); camLook.lerp(_tl, k); camInit = true;   // follow fast during a big leap
   camera.position.copy(camPos); camera.lookAt(camLook);
   if (camShake > .001){ camera.position.x += (Math.random() - .5)*camShake; camera.position.y += (Math.random() - .5)*camShake; camShake = Math.max(0, camShake - dt*1.6); }   // (a crash shakes the camera)

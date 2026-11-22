@@ -390,8 +390,23 @@
   .newbest{display:inline-block;background:var(--coral);color:#fff;border-radius:999px;padding:4px 12px;font-weight:900;
     font-size:13px;letter-spacing:.08em;text-transform:uppercase}
   @media (prefers-reduced-motion:reduce){.banner.show,.bump{animation-duration:.01s}}
+  /* the loading screen: up first, gone once the sky, textures and 3D models are in and the world has drawn */
+  .loading{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(180deg,#0b4f7c 0%,#0a3a5e 55%,#082b45 100%);color:#fff;transition:opacity .4s ease}
+  .loading.gone{opacity:0;pointer-events:none}
+  .loading .ld-in{width:min(420px,100%);text-align:center}
+  .loading .kicker{color:#ff8a70}
+  .loading h1{color:#fff} .loading h1 em{color:#ff8a70}
+  .ld-bar{height:14px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;margin:26px 0 12px}
+  .ld-bar i{display:block;height:100%;width:8%;border-radius:999px;background:linear-gradient(90deg,#3fd0e6,#9af0ff);transition:width .3s ease}
+  .ld-note{font-weight:800;font-size:15px;opacity:.85;margin:0}
+  .loading .btn{margin-top:18px}
 </style>
 
+<div id="loading" class="loading" role="status" aria-live="polite"><div class="ld-in">
+  <p class="kicker">Swim · skate · explore</p><h1 class="name">Santa Monica <em>World</em></h1>
+  <div class="ld-bar"><i id="ldFill"></i></div><p class="ld-note" id="ldNote">Getting the beach ready…</p>
+  <button id="ldSkip" class="btn secondary" type="button" hidden>Start anyway</button>
+</div></div>
 <canvas id="game" aria-label="Santa Monica World game"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -7454,7 +7469,19 @@ function waterizeTree(root){ root.traverse(o => { if (o.material) for (const m o
 const HORIZON = new THREE.Color(0xa9cfe6);
 const TEX = {}, MODELS = {};
 let assetsDone = 0, assetsTotal = 0, buoys = [];
-function assetNote(){ const n = $('loadNote'); if (n) n.textContent = assetsDone < assetsTotal ? `Loading the real sky and 3D models… ${Math.round(assetsDone/assetsTotal*100)}%` : ''; }
+function assetNote(){ const n = $('loadNote'); if (n) n.textContent = assetsDone < assetsTotal ? `Loading the real sky and 3D models… ${Math.round(assetsDone/assetsTotal*100)}%` : ''; loadingStep(); }
+// The loading screen stays up until everything's in: the sky, the textures and the 3D models, the fonts, and a few frames of the world drawn behind it.
+// (On a slow connection a Start anyway button shows up after a while, and after 45 seconds it goes away by itself.)
+let framesDrawn = 0, loadGone = false, fontsOK = false; const loadT0 = performance.now();
+document.fonts?.ready.then(() => { fontsOK = true; loadingStep(); }).catch(() => { fontsOK = true; });
+const LOAD_SAY = ['Getting the beach ready…', 'Filling up the ocean…', 'Building the Promenade…', 'Turning on the Ferris wheel…', 'Freezing the ice rink…', 'Waking up the dolphins…'];
+function loadingStep(){ if (loadGone) return; const p = assetsTotal ? assetsDone/assetsTotal : 0, secs = (performance.now() - loadT0)/1000;
+  $('ldFill').style.width = Math.round(8 + p*88 + (framesDrawn > 3 ? 4 : 0)) + '%';
+  const say = LOAD_SAY[Math.min(LOAD_SAY.length - 1, Math.floor(p*LOAD_SAY.length))]; if ($('ldNote').textContent !== say) $('ldNote').textContent = say;
+  if (secs > 12 && $('ldSkip').hidden) $('ldSkip').hidden = false;
+  if ((assetsTotal && assetsDone >= assetsTotal && framesDrawn > 3 && fontsOK) || secs > 45) hideLoading(); }
+function hideLoading(){ if (loadGone) return; loadGone = true; $('ldFill').style.width = '100%'; const el = $('loading'); setTimeout(() => el.classList.add('gone'), 150); setTimeout(() => { el.hidden = true; }, 600); }
+$('ldSkip').onclick = hideLoading;
 function loadAssets(){
   const hdr = new RGBELoader(), gl = new GLTFLoader(), tl = new THREE.TextureLoader();
   // (binary files carry a .wasm name only so the host serves them byte-for-byte; they're ordinary .glb / .hdr files)
@@ -7857,6 +7884,7 @@ function showPick(){ const bs = menuBtns(); bs.forEach((b,i) => b.classList.togg
 function resetPick(){ pick = 0; showPick(); }
 document.querySelectorAll('.btn').forEach(b => b.addEventListener('pointerenter', () => { const i = menuBtns().indexOf(b); if (i >= 0){ pick = i; showPick(); } }));
 addEventListener('keydown', e => {
+  if (!loadGone) return;   // (nothing to press while it's loading)
   if (e.target && e.target.tagName === 'INPUT'){ if (e.key === 'Enter' && e.target.closest('#loginPanel')){ e.preventDefault(); $('loginGo').click(); } return; }
   const bs = menuBtns(); if (!bs.length) return;
   const k = e.key;
@@ -8387,6 +8415,7 @@ addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-
 /* ---------- Main loop ---------- */
 let last = performance.now(), chipT = 0;
 function frame(now){
+  if (!loadGone){ framesDrawn++; if (framesDrawn % 10 === 4) loadingStep(); }
   const dt = clamp((now - last)/1000, 0, .05); last = Math.max(last, now); time += dt;   // never let time run backwards
   if (!paused){
     if (mode === 'race') updRace(dt);
@@ -8419,7 +8448,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 function initTitleNotes(){
-if (STANDALONE) $('titleNote').textContent = fbAuth ? `Continue logs in as ${fbAuth.name}.` : 'Continue logs you in so you can play on any device.';
+if (STANDALONE) $('titleNote').textContent = fbAuth ? `Log in to keep playing as ${fbAuth.name}.` : 'Log in to save your game and play on any device.';
 { const m = location.hash.match(/^#save=([\w-]+)/);   // arrived with a swimmer in the link: keep it on this device
   if (m){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
     const d = readSaveCode(m[1]);

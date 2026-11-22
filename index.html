@@ -955,7 +955,7 @@ let parts = [];
 /* ---------- Banner queue ---------- */
 const banQ = []; let banBusy = false;
 let bannerQuietUntil = 0;   // (no banners for a moment after an update brings you back)
-function banner(title, sub=''){ if (performance.now() < bannerQuietUntil) return; banQ.push([title,sub]); if (!banBusy) nextBanner(); }
+function banner(title, sub=''){ attnNote(title); if (performance.now() < bannerQuietUntil) return; banQ.push([title,sub]); if (!banBusy) nextBanner(); }
 function nextBanner(){
   const b = $('banner'); const n = banQ.shift();
   if (!n) { banBusy = false; b.hidden = true; return; }
@@ -5235,6 +5235,19 @@ function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] 
     b.position.y = .95; hd.position.y = 1.6; lg.position.y = .25; hat.position.y = 1.64; arms.position.y = 1.25; p.add(b, hd, lg, hat, arms); g.add(p); const kid = k >= 7; if (kid) p.scale.setScalar(.65);
     sk.push({ m: p, R: I.rinks[kid ? 1 : 0], ph: k/7*TAU + Math.random()*.4, v: kid ? .35 + Math.random()*.1 : .16 + Math.random()*.08, lane: kid ? Math.random()*.6 : Math.random()*2.5, dir: k % 3 ? 1 : -1, edge: kid ? 1.2 : 2.6 }); }
   oceanScene.add(g); return iceVis = { g, L, sk, sg, flames }; }
+/* Attention: where you spend your time and what you look at, kept small inside your own save (so it syncs with the
+   swimmer). Time per 25 m square of land (c), per square you're looking at (l), per named place (p), and the last
+   things that happened (e). It's how the world gets built out where people actually play. */
+let attnT = 0, attnSaveT = 0; const _camDir = new THREE.Vector3();
+function attnBox(){ const A = save.attn && typeof save.attn === 'object' ? save.attn : (save.attn = {}); A.c ||= {}; A.l ||= {}; A.p ||= {}; A.e ||= []; A.since ||= Date.now(); return A; }
+function attnNote(txt){ try { if (mode !== 'ocean' || !txt) return; const A = attnBox(), m = Math.round((Date.now() - A.since)/6e4); A.e.push([m, String(txt).replace(/[^\p{L}\p{N} '!:.,&-]/gu, '').trim().slice(0, 40)]); if (A.e.length > 60) A.e.splice(0, A.e.length - 60); } catch(e){} }
+function attnTrim(o, n){ const k = Object.keys(o); if (k.length <= n) return; k.sort((a, b) => o[b] - o[a]); for (const x of k.slice(n)) delete o[x]; }
+function attnStep(dt, o){ if (paused || document.hidden || o.x < coastX(o.y) - 4000) return; attnT += dt; if (attnT < 2) return; const k = Math.min(attnT, 4); attnT = 0;
+  const A = attnBox(), sq = (x, y) => { const [s, t] = landST(x, y); return Math.round(s/25) + ',' + Math.round(t/25); }, add = (m, key, v) => m[key] = Math.round(((m[key] || 0) + v)*10)/10;
+  add(A.c, sq(o.x, o.y), k);
+  camera.getWorldDirection(_camDir); const h = Math.hypot(_camDir.x, _camDir.z) || 1; add(A.l, sq(o.x + _camDir.x/h*25*METERS, o.y + _camDir.z/h*25*METERS), k);   // (what's 25 m ahead of the camera)
+  const pl = ($('hudVal')?.textContent || '').slice(0, 32); if (pl && !/^\d/.test(pl)) add(A.p, pl, k);
+  if ((attnSaveT += k) >= 30){ attnSaveT = 0; attnTrim(A.c, 220); attnTrim(A.l, 160); attnTrim(A.p, 90); while (JSON.stringify(A).length > 6000){ attnTrim(A.c, Object.keys(A.c).length*.8|0); attnTrim(A.l, Object.keys(A.l).length*.8|0); A.e.splice(0, 5); } persist(); } }
 function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), [S0, S1, T0, T1] = ICE.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, near = Math.abs(s - sc) < 220 && Math.abs(t - tc) < 260; if (!near && !iceVis) return; const V = iceBuild(); V.g.visible = near; if (!near) return;
   for (const k of V.sk){ const R = k.R, a = (R.s1 - R.s0)/2 - k.edge - k.lane, b = (R.t1 - R.t0)/2 - k.edge - k.lane, cs = (R.s0 + R.s1)/2, ct = (R.t0 + R.t1)/2; k.ph += k.dir*k.v*dt;
     const ss = cs + Math.cos(k.ph)*a, tt = ct + Math.sin(k.ph)*b, ds = -Math.sin(k.ph)*a*k.dir, dtt = Math.cos(k.ph)*b*k.dir;
@@ -6258,7 +6271,7 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o);
+    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
@@ -8318,7 +8331,7 @@ const blockRefund = build => { let c = 0; for (const [, t] of parseBuild(build |
 async function shareCode(){
   if (!account || !save.sid) return; $('panel').hidden = true; $('codeShow').textContent = 'Making a code…'; $('codeExplain').textContent = ''; $('codePanel').hidden = false; paused = true; resetPick();
   persist(); await flushCloud();
-  const snap = JSON.parse(JSON.stringify(save)); for (const k of ['build', 'sid', 'label', 'near', 'houseItems', 'lampOff', 'updatedAt', 'house', 'houseFound', 'homeRuns', 'homeBest']) delete snap[k];
+  const snap = JSON.parse(JSON.stringify(save)); for (const k of ['build', 'sid', 'label', 'near', 'houseItems', 'lampOff', 'updatedAt', 'house', 'houseFound', 'homeRuns', 'homeBest', 'attn']) delete snap[k];
   snap.coins = (save.coins || 0) + blockRefund(save.build);   // the blocks stay behind, as coins
   const body = { snap, from: islandId(save), fromHouse: save.house, owner: fbAuth.name, label: save.label || fbAuth.name, exp: Date.now() + 864e5 };
   for (let tries = 0; tries < 5; tries++){ const code = CODE_WORDS[(Math.random()*CODE_WORDS.length)|0] + '-' + (1000 + ((Math.random()*9000)|0));

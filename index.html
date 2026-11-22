@@ -259,10 +259,15 @@
   .item .lvl i.legend.on{background:var(--gold)}
   .item .lvl span{margin-left:4px}
   .item p.next{color:var(--deep)}
-  #sunoBar{position:fixed;left:12px;bottom:8px;z-index:60;width:230px;background:#1c2333;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);overflow:hidden;color:#fff}
-  #sunoBar .sunohead{display:flex;gap:8px;align-items:center;padding:6px 10px;font:700 13px Nunito,sans-serif}#sunoBar .sunohead b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#sunoBar a{color:#9fd3ff}#sunoBar button{border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer}
+  #sunoBar{position:fixed;left:12px;bottom:8px;z-index:60;width:240px;background:linear-gradient(#3a3f4b,#23262e);border:2px solid #5b6170;border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.45);overflow:hidden;color:#fff}
+  #sunoBar .sunotop{display:flex;justify-content:space-between;padding:2px 8px;background:linear-gradient(90deg,#1b3a8a,#3a6fd8);font:800 10px/1.4 Nunito,sans-serif;letter-spacing:.12em}
+  #sunoBar .sunolcd{margin:5px 6px 0;padding:4px 7px;background:#050805;border:1px solid #111;border-radius:3px;overflow:hidden;white-space:nowrap}
+  #sunoBar .sunolcd b{display:inline-block;color:#3cff5a;font:700 13px/1.3 'Courier New',monospace;text-shadow:0 0 6px rgba(60,255,90,.6);padding-left:100%;animation:sunoScroll 11s linear infinite}
+  @keyframes sunoScroll{to{transform:translateX(-100%)}}
+  #sunoBar .sunohead .sp{flex:1}
+  #sunoBar .sunohead{display:flex;gap:6px;align-items:center;padding:5px 6px;font:700 13px Nunito,sans-serif}#sunoBar a{color:#9fd3ff}#sunoBar button{border:1px solid #11131a;background:linear-gradient(#5d6473,#363b47);color:#e8ecf4;border-radius:3px;width:30px;height:26px;cursor:pointer;font-size:13px}#sunoBar button:active{background:#2a2e38}
   #sunoFrame{display:block;width:100%;height:86px;border:0}
-  #sunoBar.mini #sunoFrame{height:0}#sunoBar.mini{width:180px}
+  #sunoBar.mini #sunoFrame{height:0}#sunoBar.mini{width:200px}
   body.touch #sunoBar{left:50%;transform:translateX(-50%);bottom:auto;top:6px}
   .paintcols{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:8px 0}.paintcols button{width:30px;height:30px;border-radius:50%;border:2px solid rgba(0,0,0,.2);cursor:pointer}.paintcols button.on{outline:3px solid #082b45;outline-offset:2px}
   .booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
@@ -631,7 +636,7 @@
   </div>
 </div>
 
-<div id="sunoBar" hidden><div class="sunohead"><b id="sunoTitle"></b><a id="sunoLink" target="_blank" rel="noopener">↗</a><button id="sunoMin" type="button" aria-label="Make the player small">–</button><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
+<div id="sunoBar" hidden><div class="sunotop"><span>SUNO AMP</span><span id="sunoNum"></span></div><div class="sunolcd"><b id="sunoTitle"></b></div><div class="sunohead"><button id="sunoPrev" type="button" aria-label="Previous song">⏮</button><button id="sunoNext" type="button" aria-label="Next song">⏭</button><span class="sp"></span><a id="sunoLink" target="_blank" rel="noopener">↗</a><button id="sunoMin" type="button" aria-label="Make the player small">–</button><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
 <div id="tripPanel" class="overlay" hidden><div class="panel small"><h2>📋 Trip report</h2><p class="explain">Copy this and paste it to Claude.</p><textarea id="tripText" readonly style="width:100%;height:46vh;font:13px ui-monospace,monospace;border-radius:10px;padding:8px"></textarea><div class="row2"><button id="tripClose" class="btn primary" type="button">Done</button></div></div></div>
 <div id="paintPanel" class="overlay" hidden><div class="panel small"><p class="kicker">Santa Monica Art Museum · Studio</p><h2>🎨 Paint a picture</h2>
     <canvas id="paintCanvas" width="400" height="300" style="width:100%;max-width:400px;border-radius:10px;background:#fffdf7;touch-action:none;box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)"></canvas>
@@ -3359,7 +3364,7 @@ const MOVIE = [[0, 4, null, 'OCEAN WONDERS'], [4, 11, '🐠', 'A school of fish 
 let movieT = -1, movieLast = 0, movieBy = 'an Avalon Casino picture';
 function playMovie(by = 'an Avalon Casino picture'){ movieBy = by; paused = true; ptr.down = false; $('moviePanel').hidden = false; movieT = 0; movieLast = performance.now(); resetPick(); requestAnimationFrame(movieLoop); }
 function movieLoop(now){
-  if (movieT < 0 || $('moviePanel').hidden) return; const dt = clamp((now - movieLast)/1000, 0, .05); movieLast = Math.max(movieLast, now); const before = movieT;   // (the first frame can come in a hair early) movieT += dt;
+  if (movieT < 0 || $('moviePanel').hidden) return; const dt = clamp((now - movieLast)/1000, 0, .05); movieLast = Math.max(movieLast, now); const before = movieT; movieT += dt;   // (the first frame can come in a hair early)
   if (Math.floor(movieT*1.5) !== Math.floor(before*1.5) && movieT < 44) sfx([392, 440, 523, 587, 523, 440][Math.floor(movieT*1.5) % 6], .5, 'sine', .03);   // soft music
   const c = $('movieCanvas').getContext('2d'), sc = MOVIE.find(m => movieT >= m[0] && movieT < m[1]) || MOVIE[MOVIE.length - 1], k = (movieT - sc[0])/(sc[1] - sc[0]);
   const gr = c.createLinearGradient(0, 0, 0, 360); gr.addColorStop(0, '#1b6f9a'); gr.addColorStop(1, '#041a2c'); c.fillStyle = gr; c.fillRect(0, 0, 640, 360);
@@ -5215,9 +5220,9 @@ const SUNO_TOP = [
   { id: 'bfb216d7-fde6-4105-b760-f96be8c99102', title: 'who do you love?', by: 'PXTN' },
   { id: 'a948155c-4714-4c08-b1f0-1039252b8a85', title: 'It’s Always U', by: 'Fleur' } ];
 let sunoNow = null;
-function playSuno(S){ if (song) stopSong(); sunoNow = S; $('sunoTitle').textContent = `🎵 ${S.title} · ${S.by}`; $('sunoLink').href = `https://suno.com/song/${S.id}`; $('sunoFrame').src = `https://suno.com/embed/${S.id}`; $('sunoBar').hidden = false; $('sunoBar').classList.remove('mini'); $('sunoMin').textContent = '–'; if (!$('musicPanel').hidden) renderMusic(); }
+function playSuno(S){ if (song) stopSong(); sunoNow = S; const ix = SUNO_TOP.indexOf(S); $('sunoTitle').textContent = `${ix + 1}. ${S.title} - ${S.by} *** `; $('sunoNum').textContent = `${ix + 1}/${SUNO_TOP.length}`; $('sunoLink').href = `https://suno.com/song/${S.id}`; $('sunoFrame').src = `https://suno.com/embed/${S.id}`; $('sunoBar').hidden = false; $('sunoBar').classList.remove('mini'); $('sunoMin').textContent = '–'; if (!$('musicPanel').hidden) renderMusic(); }
 function stopSuno(){ sunoNow = null; $('sunoFrame').src = 'about:blank'; $('sunoBar').hidden = true; if (!$('musicPanel').hidden) renderMusic(); }
-$('sunoStop').onclick = stopSuno; $('sunoMin').onclick = () => { const b = $('sunoBar'), m = b.classList.toggle('mini'); $('sunoMin').textContent = m ? '▢' : '–'; };
+$('sunoStop').onclick = stopSuno; for (const [id, d] of [['sunoPrev', -1], ['sunoNext', 1]]) $(id).onclick = () => { const i = Math.max(0, SUNO_TOP.indexOf(sunoNow)); playSuno(SUNO_TOP[(i + d + SUNO_TOP.length) % SUNO_TOP.length]); sfx(880, .05, 'square', .02); };   $('sunoMin').onclick = () => { const b = $('sunoBar'), m = b.classList.toggle('mini'); $('sunoMin').textContent = m ? '▢' : '–'; };   // (skip back and forth, like Winamp)
 function renderMusic(){ const box = $('musicItems'); box.innerHTML = '';
   { const sb = $('sunoItems'); sb.innerHTML = ''; SUNO_TOP.forEach((S, i) => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = `<div class="em">${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i]}</div><h3>${htmlText(S.title)}</h3><p>by ${htmlText(S.by)}</p>`;
     const b = document.createElement('button'); b.type = 'button'; const on = sunoNow?.id === S.id; b.className = 'btn ' + (on ? 'secondary' : 'primary'); b.textContent = on ? '⏹ Stop' : '▶ Open the player'; b.onclick = () => on ? stopSuno() : playSuno(S); d.appendChild(b); sb.appendChild(d); }); } const now = song && ac && ac.currentTime < song.end ? SONGS[song.i] : null;
@@ -8615,7 +8620,7 @@ function updOceanWorld(o){
   { const list = chestsNear(o).sort((a, b) => Math.hypot(a.x - o.x, a.y - o.y) - Math.hypot(b.x - o.x, b.y - o.y)).slice(0, 10);
     list.forEach((ch, i) => { let m = chestPool[i]; if (!m){ m = buildChest(); chestPool.push(m); oceanWorld.add(m); }
       const open = (save.chests || []).includes(ch.id); m.visible = true;
-      m.position.set(ch.x*U, ch.d ? -ch.d : lerp(floorY(ch.x, ch.y) + .02, -(o.depth || 0) - .3, open ? 0 : ch.pull || 0), ch.y*U);   // a magnet lifts chests up to you (opened ones sink back) m.rotation.y = ch.rot; m.userData.lid.rotation.x = open ? -1.9 : 0; m.userData.glow.visible = !open;
+      m.position.set(ch.x*U, ch.d ? -ch.d : lerp(floorY(ch.x, ch.y) + .02, -(o.depth || 0) - .3, open ? 0 : ch.pull || 0), ch.y*U);   m.rotation.y = ch.rot; m.userData.lid.rotation.x = open ? -1.9 : 0; m.userData.glow.visible = !open;   // a magnet lifts chests up to you (opened ones sink back)
       m.userData.glow.material.opacity = .35 + .2*Math.sin(time*3 + i); });
     for (let i = list.length; i < chestPool.length; i++) chestPool[i].visible = false; }
   { const bts = []; for (const c of visibleChunks) for (const bt of c.boats) if (Math.hypot(bt.x*U - px, bt.y*U - pz) < 90) bts.push(bt);

@@ -259,6 +259,9 @@
   .item .lvl i.legend.on{background:var(--gold)}
   .item .lvl span{margin-left:4px}
   .item p.next{color:var(--deep)}
+  #sunoBar{position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:60;width:min(320px,calc(100vw - 340px));min-width:240px;background:#1c2333;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);overflow:hidden;color:#fff}
+  #sunoBar .sunohead{display:flex;gap:8px;align-items:center;padding:6px 10px;font:700 13px Nunito,sans-serif}#sunoBar .sunohead b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#sunoBar a{color:#9fd3ff}#sunoBar button{border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer}
+  #sunoFrame{display:block;width:100%;height:104px;border:0}
   .booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
   #zap{position:fixed;inset:0;z-index:9000;pointer-events:none;background:radial-gradient(circle,#fff 0,#fff 30%,#ffe082 60%,rgba(255,224,130,0) 100%);opacity:0;transition:opacity .35s}
   .panel.mappanel{max-width:940px;width:calc(100vw - 24px);padding:12px 14px}
@@ -625,6 +628,7 @@
   </div>
 </div>
 
+<div id="sunoBar" hidden><div class="sunohead"><b id="sunoTitle"></b><a id="sunoLink" target="_blank" rel="noopener">on Suno ↗</a><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
 <div id="boothPanel" class="overlay" hidden>
   <div class="panel small"><p class="kicker">☎️ Phone booth</p><h2>Where do you want to go?</h2>
     <p class="explain">Pick up the phone and dial another phone booth. Zap! You come out of that one.</p>
@@ -643,9 +647,11 @@
 
 <div id="musicPanel" class="overlay" hidden>
   <div class="panel">
-    <div><p class="kicker">Barnes &amp; Noble · Vinyl</p><h2>Listening station</h2></div>
+    <div><p class="kicker" id="musicKicker">Barnes &amp; Noble · Vinyl</p><h2>Listening station</h2></div>
     <div class="discrow"><div id="musicDisc" class="disc"></div><p class="savechip" id="musicNow"></p></div>
     <div class="shop" id="musicItems"></div>
+    <h3 class="sect">🔥 Suno Top 5 <small style="font-weight:700;opacity:.7">· real songs made with Suno AI, playing from Suno</small></h3>
+    <div class="shop" id="sunoItems"></div>
     <div class="row2"><button id="musicClose" class="btn secondary" type="button">Back to the store</button></div>
   </div>
 </div>
@@ -5088,7 +5094,7 @@ const SONGS = [
     ch: 'C C C G7 C C D7 G7', cb: 8, cs: 2 } ];
 const chordNotes = c => { const m = /^([A-G][#b]?)(m(?!aj))?(7)?$/.exec(c); if (!m) return null; const r = noteHz(m[1] + '3'), k = [0, m[2] ? 3 : 4, 7, ...(m[3] ? [10] : [])]; return k.map(x => r*Math.pow(2, x/12)); };
 let song = null;   // { g, i, end, from }
-function playSong(i, from = 'store'){ initAudio(); if (!ac) return; stopSong(); if (ac.state === 'suspended') ac.resume();
+function playSong(i, from = 'store'){ initAudio(); if (!ac) return; stopSong(); if (sunoNow) stopSuno(); if (ac.state === 'suspended') ac.resume();
   const S = SONGS[i], g = ac.createGain(); g.gain.value = 1; g.connect(ac.destination); const t0 = ac.currentTime + .15;
   const tone = (f, at, dur, type, vol) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.value = f; e.gain.setValueAtTime(.0001, at); e.gain.linearRampToValueAtTime(vol, at + .012);
     e.gain.exponentialRampToValueAtTime(.0005, at + Math.max(.1, dur)); o.connect(e).connect(g); o.start(at); o.stop(at + dur + .05); };
@@ -5101,9 +5107,23 @@ function playSong(i, from = 'store'){ initAudio(); if (!ac) return; stopSong(); 
     at = base + beat*sec + .25; }
   song = { g, i, end: at, from }; }
 function stopSong(){ if (!song) return; const g = song.g; song = null; try { g.gain.setTargetAtTime(0, ac.currentTime, .04); setTimeout(() => g.disconnect(), 400); } catch(e){} }
-function openMusic(){ if (paused) return; initAudio(); paused = true; ptr.down = false; renderMusic(); $('musicPanel').hidden = false; pick = 0; showPick(); }
+function openMusic(kicker){ if (paused) return; $('musicKicker').textContent = kicker || 'Barnes & Noble · Vinyl'; $('musicClose').textContent = kicker ? 'Close' : 'Back to the store'; initAudio(); paused = true; ptr.down = false; renderMusic(); $('musicPanel').hidden = false; pick = 0; showPick(); }
 function closeMusic(){ $('musicPanel').hidden = true; paused = false; graceAfterPause(); showPick(); }
-function renderMusic(){ const box = $('musicItems'); box.innerHTML = ''; const now = song && ac && ac.currentTime < song.end ? SONGS[song.i] : null;
+/* Suno's Top 5: the five most-played songs on Suno's own "Best of Pop" chart whose lyrics are fine for kids (checked Nov 22, 2026).
+   They play in Suno's own player (streamed from Suno, credited to the people who made them), not copied into the game. */
+const SUNO_TOP = [
+  { id: '12ff82e8-88f7-407a-969d-dd1023df26a3', title: 'Night to Night', by: 'changing_ colors' },
+  { id: 'a0e5e8f7-2b1e-41f3-9268-62286968d42c', title: 'I decide', by: 'blu27' },
+  { id: '6d142abd-d29c-457f-b8e8-c06e8315e7c2', title: 'lover! (duet ver.)', by: 'mnikai' },
+  { id: 'bfb216d7-fde6-4105-b760-f96be8c99102', title: 'who do you love?', by: 'PXTN' },
+  { id: 'a948155c-4714-4c08-b1f0-1039252b8a85', title: 'It’s Always U', by: 'Fleur' } ];
+let sunoNow = null;
+function playSuno(S){ if (song) stopSong(); sunoNow = S; $('sunoTitle').textContent = `🎵 ${S.title} · ${S.by}`; $('sunoLink').href = `https://suno.com/song/${S.id}`; $('sunoFrame').src = `https://suno.com/embed/${S.id}`; $('sunoBar').hidden = false; if (!$('musicPanel').hidden) renderMusic(); }
+function stopSuno(){ sunoNow = null; $('sunoFrame').src = 'about:blank'; $('sunoBar').hidden = true; if (!$('musicPanel').hidden) renderMusic(); }
+$('sunoStop').onclick = stopSuno;
+function renderMusic(){ const box = $('musicItems'); box.innerHTML = '';
+  { const sb = $('sunoItems'); sb.innerHTML = ''; SUNO_TOP.forEach((S, i) => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = `<div class="em">${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i]}</div><h3>${htmlText(S.title)}</h3><p>by ${htmlText(S.by)}</p>`;
+    const b = document.createElement('button'); b.type = 'button'; const on = sunoNow?.id === S.id; b.className = 'btn ' + (on ? 'secondary' : 'primary'); b.textContent = on ? '⏹ Stop' : '▶ Open the player'; b.onclick = () => on ? stopSuno() : playSuno(S); d.appendChild(b); sb.appendChild(d); }); } const now = song && ac && ac.currentTime < song.end ? SONGS[song.i] : null;
   $('musicNow').textContent = now ? `Now playing: ${now.title}` : 'Pick a record to play'; $('musicDisc').classList.toggle('spin', !!now); $('musicDisc').style.setProperty('--c', now ? now.c : '#555');
   SONGS.forEach((S, i) => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = `<div class="em">${S.e}</div><h3>${htmlText(S.title)}</h3><p>${htmlText(S.by)}</p>`;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (song?.i === i ? 'secondary' : 'primary'); b.textContent = song?.i === i ? '⏹ Stop' : '▶ Play'; b.onclick = () => { if (song?.i === i) stopSong(); else playSong(i, 'store'); renderMusic(); }; d.appendChild(b); box.appendChild(d); }); }
@@ -8898,7 +8918,7 @@ $('phoneScreen').addEventListener('click', async e => {
   const app = e.target.closest('[data-app]')?.dataset.app, act = e.target.closest('[data-act]')?.dataset.act, ph = e.target.closest('[data-photo]');
   if (app === 'map'){ closePhone(); openMap(); return; }
   if (app === 'boat'){ closePhone(); boatsButton(); return; }
-  if (app === 'music'){ toggleMusic(); showPhone('home'); return; }
+  if (app === 'music'){ closePhone(); setTimeout(() => openMusic('📱 Music'), 0); return; }
   if (app){ showPhone(app); return; }
   if (ph){ showPhone('photo', +ph.dataset.photo); return; }
   if (act === 'snap'){ takePhoto(); return; }

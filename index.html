@@ -3465,10 +3465,17 @@ const islandPlants = () => plantsCache || (plantsCache = (() => { const R = mulb
   return out; })());
 // On the mainland, ground steeper than this can't be walked up or down: the bluff, the cliffs, buildings and lifeguard towers.
 // Slide along it if you can; otherwise stay put. (Jumping, the jetpack and the glider still get you anywhere.)
+// The 10 Freeway east of the McClure Tunnel: no walking on it (cars only). Main St, 4th St and Lincoln cross on bridges, so those stay open.
+const FREEWAY = (() => { const segs = []; for (const r of CITY.roads) if (r.name === 'Santa Monica Freeway' && r.p.every(q => q[0] > 400)) for (let k = 0; k < r.p.length - 1; k++) segs.push([r.p[k], r.p[k + 1]]);
+  return { segs, bridges: [[591, 61], [773, 194], [1255, 302], [1186, 293]] }; })();
+function segDist(s, t, [a, b]){ const dx = b[0] - a[0], dy = b[1] - a[1], u = clamp(((s - a[0])*dx + (t - a[1])*dy)/(dx*dx + dy*dy || 1), 0, 1); return Math.hypot(s - a[0] - u*dx, t - a[1] - u*dy); }
+function fwDist(s, t){ let d = 1e9; if (s < 400 || s > 1400 || t < -10 || t > 350) return d; for (const g of FREEWAY.segs) d = Math.min(d, segDist(s, t, g)); return d; }
+function onFreeway(x, y){ const [s, t] = landST(x, y); if (fwDist(s, t) > 8.5) return false; return !FREEWAY.bridges.some(([bs, bt]) => Math.hypot(s - bs, t - bt) < 9); }
 function steepStop(o, x0, y0){
   const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
   const shop = x0 > coastX(y0) && roomAt(...landST(x0, y0), true);   // (in a shop you can hop down off a table or the counter)
-  const ok = (x, y) => { const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  const fw0 = !o.car && onFreeway(x0, y0);
+  const ok = (x, y) => { if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
   if (ok(o.x, o.y)) return;
   const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
   for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you
@@ -4410,6 +4417,16 @@ function landColor(s, t, h, c){
 }
 const c2 = new THREE.Color(), c3 = new THREE.Color();
 const PROM_SHOPS = ['TOYS', 'ICE CREAM', 'BOOKS', 'SHOES', 'SURF SHOP', 'PIZZA', 'TACOS', 'CANDY', 'BAKERY', 'FROZEN YOGURT', 'PRETZELS', 'SUNGLASSES', 'GAMES', 'MUSIC', 'ART', 'MOVIES'];
+function buildFreewayFence(g, P3){ const tex = canvasTex(64, 64, (x, w, h) => { x.clearRect(0, 0, w, h); x.strokeStyle = 'rgba(170,176,180,1)'; x.lineWidth = 3; for (let i = -64; i < 128; i += 16){ x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 64, 64); x.stroke(); x.beginPath(); x.moveTo(i + 64, 0); x.lineTo(i, 64); x.stroke(); } });
+  const mesh = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .3, side: THREE.DoubleSide, roughness: .5, metalness: .5 }), posts = [], geos = [], H = 2.1;
+  const ok = (s, t) => { if (fwDist(s, t) < 8.6) return false; return !FREEWAY.bridges.some(([bs, bt]) => Math.hypot(s - bs, t - bt) < 11) && !onRoadway(s, t); };
+  for (const [a, b] of FREEWAY.segs){ const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ns = -(b[1] - a[1])/L, nt = (b[0] - a[0])/L;
+    for (const sd of [-9.2, 9.2]) for (let d = 0; d < L - .1; d += 3){ const d1 = Math.min(L, d + 3), p0 = [a[0] + (b[0] - a[0])*d/L + ns*sd, a[1] + (b[1] - a[1])*d/L + nt*sd], p1 = [a[0] + (b[0] - a[0])*d1/L + ns*sd, a[1] + (b[1] - a[1])*d1/L + nt*sd];
+      if (!ok(...p0) || !ok(...p1)) continue; const v0 = new THREE.Vector3(...P3(p0[0], p0[1], landH(...p0))), v1 = new THREE.Vector3(...P3(p1[0], p1[1], landH(...p1))), len = v0.distanceTo(v1);
+      const q = new THREE.PlaneGeometry(len, H); q.translate(0, H/2, 0); const m4 = new THREE.Matrix4().makeRotationY(-Math.atan2(v1.z - v0.z, v1.x - v0.x)).setPosition(v0.clone().add(v1).multiplyScalar(.5)); q.applyMatrix4(m4);
+      const uv = q.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)*len/.6, uv.getY(i)*H/.6); geos.push(q); posts.push(v0); } }
+  if (!geos.length) return; g.add(new THREE.Mesh(mergeGeometries(geos), mesh));
+  const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(.04, .04, H + .1, 6), std(0x9aa0a6, .4, .6), posts.length), m4 = new THREE.Matrix4(); posts.forEach((v, i) => { m4.makeTranslation(v.x, v.y + H/2, v.z); pm.setMatrixAt(i, m4); }); g.add(pm); }
 function buildCoast(){
   const g = new THREE.Group(); coastGroup = g; bldIndex();
   const at = (obj, s, t, lift = 0, h) => { const [x, y] = landXY(s, t); obj.position.set(x*U, (h ?? landH(s, t)) + lift, y*U); g.add(obj); return obj; };
@@ -4725,7 +4742,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;

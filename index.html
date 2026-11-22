@@ -190,7 +190,7 @@
   .bk.prose .r p{margin:0 0 12px}
   .sampleend{text-align:center;margin-top:8px}.sampleend p{font-weight:800}
   .shop .sect{grid-column:1/-1;margin:6px 0 -4px;font-size:18px}
-  .item .bcov{height:110px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .item .bcov{height:170px;width:auto;max-width:100%;object-fit:contain;align-self:center;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.25)}   /* (a book's own shape: not stretched across the card) */
   #puzzlePanel .panel{max-width:560px;width:calc(100% - 32px)}
   #illPanel .panel{max-width:560px;width:calc(100% - 32px)}
   #illPic svg{width:100%;max-width:460px;display:block;margin:0 auto;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
@@ -885,7 +885,7 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
   if (k === 'q' && !e.repeat && mode === 'ocean'){ if ($('questPanel').hidden) openQuests(); else closeQuests(); }
   if (k === 'l' && !e.repeat && mode === 'ocean'){ if ($('leaguePanel').hidden) openLeague(); else closeLeague(); }
   if (k === 'c' && playing() && !paused) nextView();
-  if (k === 'j' && !e.repeat) dolphinJump();
+  if (k === 'j' && !e.repeat){ if (ocean?.skating) iceJump(ocean); else dolphinJump(); }
   if (k === 'b' && !e.repeat && !paused) toggleSurf();
   if (/^[1-3]$/.test(k) && !e.repeat && mode === 'ocean' && !paused){ const id = ownedGadgets()[+k - 1]; if (id) holdGadget(id); }
   if (k === 'f' && heldGadget){ gadgetHeld = true; $('gadgetUse').classList.add('on'); }
@@ -1858,7 +1858,7 @@ function jumpStep(o, dt){
     for (let i=0;i<18;i++) bubble(o.x + fx*20 + (Math.random()-.5)*40, o.y + fy*20 + (Math.random()-.5)*40, (Math.random()-.5)*60, (Math.random()-.5)*60); }
   return true;
 }
-$('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); dolphinJump(); });
+$('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); if (ocean?.skating) iceJump(ocean); else dolphinJump(); });
 $('hornBtn').addEventListener('pointerdown', e => { e.preventDefault(); horn(); });
 $('carBtn').onclick = () => { initAudio(); carKey(); };
 $('sonarBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); sonarPing(); });
@@ -2892,7 +2892,8 @@ function roadIndex(){
         const k = bldKey(i, j), L = roadCells.get(k) || roadCells.set(k, []).get(k); L.push([n, q]); } } }); }
 function footLift(o){   // (streets, sidewalks and the Promenade's pavers are drawn a few cm above the ground: stand on top of them, not in them)
   if (!o.onLand || o.onShip || o.onBoat || o.car || o.x < coastX(o.y)) return 0; const [s, t] = landST(o.x, o.y);
-  if (s > ICE.site[0] && s < ICE.site[1] && t > ICE.site[2] && t < ICE.site[3]) return inRink(s, t) ? .07 : .04;   // (the rink's deck and ice)
+  if (s > ICE.site[0] && s < ICE.site[1] && t > ICE.site[2] && t < ICE.site[3]) return iceDeckY() - landH(s, t) + (inRink(s, t) ? .07 : .04);   // (on the rink's level deck, and the ice)
+  if (s >= ICE.site[1] && s < ICE.site[1] + ICE_RAMP && t > ICE.ent[0] - .3 && t < ICE.ent[1] + .3){ const top = iceDeckY() + .04, f = (s - ICE.site[1])/ICE_RAMP; return Math.max(0, lerp(top, landH(ICE.site[1] + ICE_RAMP, t), f) - landH(s, t)); }   // (up the ramp)
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)) return 0;   // (inside a shop)
   return (s > PROM.s0 - 1 && s < PROM.s1 + 1 && t > PROM.t0 && t < PROM.t1) || roadAt(s, t) ? .06 : 0; }
 function roadAt(s, t){   // the named street (or path) you're on, if any
@@ -3333,9 +3334,11 @@ function walkStep(o, dt){
   const w = wantHeading(), walking = !!w;
   if (w) o.ang += clamp(angDiff(w.ang, o.ang), -6*dt, 6*dt);
   const sk = o.skating = !!o.skates && onIce(o);   // (on skates, on the ice: you glide, and it takes a while to stop or turn)
-  const run = o.x > coastX(o.y) && diveHeld(), sp = walking ? (sk ? 230 : o.x > coastX(o.y) ? run ? 270 : 110 : 62)*w.m : 0;   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
+  const run = o.x > coastX(o.y) && diveHeld(), sp = walking ? (sk ? ownTop(230)*speedPct()*(run ? 1.5 : 1) : o.x > coastX(o.y) ? run ? 270 : 110 : 62)*w.m : 0;   // (skating: as fast as your swimming gear and XP make you, times the Top speed slider; hold Run for a burst)   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
   if (walking && (o.stepSfx = (o.stepSfx || 0) - dt) <= 0){ o.stepSfx = sk ? .55 : run ? .24 : .38; if (sk) sfx(2600, .3, 'sawtooth', .004, 0, -1800); else sfx(150 + Math.random()*40, .06, 'triangle', .03); }
-  const acc = sk ? (walking ? 1.3 : .3) : 8; o.vx += (Math.cos(o.ang)*sp - o.vx)*Math.min(1, dt*acc); o.vy += (Math.sin(o.ang)*sp - o.vy)*Math.min(1, dt*acc);
+  const air = sk && o.iceJ; if (air && iceAir(o) <= 0 && time - o.iceJ.t0 > .1){ const n = o.iceJ.spun; o.iceJ = null; sfx(140, .15, 'square', .03); if (n){ heartsAt = time; banner(n >= 3 ? 'Triple axel! 🌟🌟🌟' : n === 2 ? 'Double axel! 🌟🌟' : 'Axel jump! 🌟', n >= 3 ? 'Olympic gold!' : 'Tap Spin in the air to spin more'); } }   // landed
+  if (!sk && o.iceJ) o.iceJ = null;
+  const acc = air && o.iceJ ? 0 : sk ? (walking ? 1.3 : .3) : 8; o.vx += (Math.cos(o.ang)*sp - o.vx)*Math.min(1, dt*acc); o.vy += (Math.sin(o.ang)*sp - o.vy)*Math.min(1, dt*acc);   // (in the air you just keep going)
   walkRef = o.gh ?? Infinity; const wx0 = o.x, wy0 = o.y; o.x += o.vx*dt; o.y += o.vy*dt;
   if (o.x > coastX(o.y) - 200) steepStop(o, wx0, wy0);
   if (o.x > coastX(o.y)) iceCollide(o, wx0, wy0);
@@ -3502,7 +3505,7 @@ function updOcean(dt){
   o.rideTarget = o.ride || o.onLand || o.vehicle ? null : findDolphin(o);
   { const px = o.mphX ?? o.x, py = o.mphY ?? o.y, v = Math.hypot(o.x - px, o.y - py)/Math.max(dt, 1e-3)/METERS*2.23694;   // how fast you're really going, in miles per hour
     o.mphX = o.x; o.mphY = o.y; o.mph = v > 20000 ? o.mph || 0 : lerp(o.mph || 0, v, Math.min(1, dt*4));   // (ignore teleports)
-    if ((o.mphT = (o.mphT || 0) - dt) <= 0){ o.mphT = .2; showSpeedBar(); const foot = o.onLand && !o.car; $('mphChip').hidden = foot; if (mode === 'ocean' && $('speedBar').hidden !== foot) $('speedBar').hidden = foot;   // (on foot the speed and the top-speed slider just get in the way)
+    if ((o.mphT = (o.mphT || 0) - dt) <= 0){ o.mphT = .2; showSpeedBar(); const foot = o.onLand && !o.car && !o.skating; $('mphChip').hidden = foot; if (mode === 'ocean' && $('speedBar').hidden !== foot) $('speedBar').hidden = foot;   // (on foot the speed and the top-speed slider just get in the way)
       const gm = gameMph(o.mph); $('mphVal').textContent = gm < 10 ? gm.toFixed(1) : Math.round(gm).toLocaleString(); } }
   { const k = superK(), fx = $('speedFx'), op = k ? (.25 + .5*k).toFixed(2) : '0'; if (fx.style.opacity !== op){ fx.style.opacity = op; fx.style.transform = `rotate(${(time*40)%9}deg)`; } }
   { const cb = $('climbBtn'), showC = ropeNear(o) >= 0; if (cb.hidden === showC) cb.hidden = !showC; }
@@ -3517,7 +3520,7 @@ function updOcean(dt){
   { const bb = $('boatBtn'), showBt = !!o.vehicle || (canBoard(o) && ownedBoats().length > 0); if (bb.hidden === showBt) bb.hidden = !showBt;
     const bt = o.vehicle ? 'Get out' : 'Boats'; if (bb.textContent !== bt) bb.textContent = bt;
     const ub = $('upBtn'), showU = !!VEH[o.vehicle]?.sub; if (ub.hidden === showU) ub.hidden = !showU; }
-  { const jb = $('jumpBtn'), showJ = canJump() && !o.onLand && !o.ride && !o.vehicle; if (jb.hidden === showJ) jb.hidden = !showJ;
+  { const jb = $('jumpBtn'), showJ = (canJump() && !o.onLand && !o.ride && !o.vehicle) || !!o.skating; if (jb.hidden === showJ) jb.hidden = !showJ;
     const sb = $('sonarBtn'), showS = !o.onLand && !o.ride && !o.vehicle && hasGear('sonar'); if (sb.hidden === showS) sb.hidden = !showS; }
   const rb = $('rideBtn'), ladder = !o.vehicle && shipLadderNear(o), boat = !ladder && !o.vehicle && boatNear(o), bis = !o.bison && bisonNear(o), showRide = !!(o.ride || o.rideTarget || ladder || boat || o.onShip || o.onBoat || o.bison || bis);
   if (rb.hidden === showRide) rb.hidden = !showRide;
@@ -5019,8 +5022,10 @@ const ICE = { site: [845, 883, -612, -570], ent: [-588.8, -585.8],   // (the dec
   pits: [[851.5, -584.6], [856.8, -584.6], [851.5, -578.4]], tents: [846.5, 862, -575, -571] };
 const inBoxST = (b, s, t) => s > b[0] && s < b[1] && t > b[2] && t < b[3], inR = (R, s, t) => s > R.s0 && s < R.s1 && t > R.t0 && t < R.t1;
 const inRink = (s, t) => ICE.rinks.some(R => inR(R, s, t));
+function iceDeckY(){ if (ICE.deckY == null){ let hi = -1e9; for (let s = ICE.site[0]; s <= ICE.site[1]; s += 2) for (let t = ICE.site[2]; t <= ICE.site[3]; t += 2) hi = Math.max(hi, landH(s, t)); ICE.deckY = hi + .02; } return ICE.deckY; }   // (level with the lot's highest corner, like the real one on its frame)
+const ICE_RAMP = 3;   // (the ramp in from the 5th Street sidewalk, this long)
 let iceVis = null;
-function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] = I.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, h0 = landH(sc, tc), [cx, cy] = landXY(sc, tc), [ax, ay] = landXY(sc + 1, tc), [bx, by] = landXY(sc, tc + 1);
+function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] = I.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, h0 = iceDeckY(), [cx, cy] = landXY(sc, tc), [ax, ay] = landXY(sc + 1, tc), [bx, by] = landXY(sc, tc + 1);
   const g = new THREE.Group(), yaw = -Math.atan2(ay - cy, ax - cx); g.position.set(cx*U, h0, cy*U); g.rotation.y = yaw;
   const zt = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw), sg = zt.x*(bx - cx) + zt.z*(by - cy) > 0 ? 1 : -1;   // (local x runs along s; local z along t, or against it)
   const L = (s, t, y = 0) => new THREE.Vector3(s - sc, y, sg*(t - tc)), add = (geo, mat, s, t, y) => { const m = new THREE.Mesh(geo, mat); m.position.copy(L(s, t, y)); g.add(m); return m; };
@@ -5030,6 +5035,10 @@ function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] 
   const wood = std(0x9a7550, .8), white = std(0xf7f9fb, .5), glass = new THREE.MeshStandardMaterial({ color: 0xdff3ff, transparent: true, opacity: .25, roughness: .05, depthWrite: false }), dark = std(0x30363a, .6);
   // the deck over the parking lot, with teal turf by the tents and in the Chill Zone
   bx3(S0, S1, T0, T1, 0, .04, wood);
+  { let lo = 1e9; for (let s = S0; s <= S1 + ICE_RAMP; s += 2) for (let t = T0; t <= T1; t += 2) lo = Math.min(lo, landH(s, t)); const y0 = lo - h0 - .1, sk = std(0x6d5038, .9);   // wood skirting down to the lot all round
+    bx3(S0, S1, T0 - .02, T0, y0, .04, sk); bx3(S0, S1, T1, T1 + .02, y0, .04, sk); bx3(S0 - .02, S0, T0, T1, y0, .04, sk); bx3(S1, S1 + .02, T0, T1, y0, .04, sk);
+    const e0 = I.ent[0], e1 = I.ent[1], gh = landH(S1 + ICE_RAMP, (e0 + e1)/2) - h0, ramp = add(new THREE.BoxGeometry(Math.hypot(ICE_RAMP, .04 - gh), .06, e1 - e0 + .6), wood, S1 + ICE_RAMP/2, (e0 + e1)/2, (.04 + gh)/2);   // the ramp
+    ramp.rotation.z = Math.atan2(.04 - gh, ICE_RAMP); }
   for (const [a, b, c, d] of [[I.tents[0], I.tents[1], I.tents[2] - 1, T1], [S0, I.rinks[0].s0 - .3, I.rinks[0].t0, I.rinks[0].t1]]){ const q = add(new THREE.PlaneGeometry(b - a, d - c), std(0x2bb5a0, .95), (a + b)/2, (c + d)/2, .045); q.rotation.x = -Math.PI/2; }
   // glass railings round the deck (open to 5th Street at the entrance)
   const rail = (s0, s1, t0, t1) => { bx3(s0, s1, t0, t1, .04, 1.05, glass); bx3(s0 - .03, s1 + .03, t0 - .03, t1 + .03, 1.05, 1.11, wood); const n = Math.max(1, Math.round(Math.max(s1 - s0, t1 - t0)/2));
@@ -5100,10 +5109,18 @@ function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), [S0, S1, T0, T1] = ICE
   V.flames.forEach((f, k) => { f.scale.set(1 + Math.sin(time*7 + k)*.08, 1 + Math.sin(time*11 + k*2)*.22, 1 + Math.cos(time*8 + k)*.08); });
   if (o.skates && (Math.abs(s - sc) > 60 || Math.abs(t - tc) > 60)) o.skates = false; }   // (you took them off when you went off somewhere)
 const onIce = o => o?.onLand && !o.car && mode === 'ocean' && inRink(...landST(o.x, o.y));
+const nearPit = o => { if (!o?.onLand) return false; const [s, t] = landST(o.x, o.y); return ICE.pits.some(([ps, pt]) => Math.hypot(s - ps, t - pt) < 2.6); };
+function icePay(price, what){ if ((save.coins || 0) < price){ sfx(200, .2, 'square', .04); banner('Not enough coins', `${what} is ${price} coins. Pearls, races and treasure chests get you coins!`); return false; }
+  save.coins -= price; persist(); flushCloud(); $('coinVal').textContent = save.coins; [784, 988].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.07)); return true; }
+function roastTap(o, it){   // roasting a marshmallow over the fire pit: tap, tap, golden brown... don't let it catch fire!
+  if (nearPit(o) && !it.done){ it.roast++; for (let k = 0; k < 6; k++) sfx(1500 + Math.random()*2500, .03, 'square', .008, Math.random()*.4);   // (crackle)
+    if (it.roast >= 5){ it.done = it.burnt = true; it.e = '⚫'; sfx(200, .5, 'sawtooth', .04, 0, -100); banner('Oh no, it caught fire! 🔥', 'Blow it out! Walk away from the fire and eat it anyway'); return; }
+    coach(['', 'Warming up...', 'Getting toasty...', 'Golden brown! Perfect! Walk away from the fire to eat it', 'Darker... careful!'][it.roast], 2); if (it.roast === 3){ heartsAt = time; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.07)); } return; }
+  treat = null; sfx(180, .07, 'square', .03); banner(it.burnt ? 'Crunchy and burnt! 😝' : it.roast >= 3 ? "Mmm, gooey and golden! 🤤" : it.roast ? 'Warm and squishy' : 'A plain marshmallow', it.burnt ? 'Next time, not so long!' : it.roast >= 3 ? 'The perfect marshmallow' : 'Next time, roast it longer over the fire'); }
 function iceAction(o){ const [s, t] = landST(o.x, o.y);
+  if (nearPit(o) && treat?.act !== 'roast') return { label: '🍡 Marshmallow · 3 coins', go: () => { initAudio(); if (!icePay(3, 'A marshmallow')) return; treat = { e: '🍡', n: 'Marshmallow on a stick', act: 'roast', roast: 0 }; banner('🍡 A marshmallow on a stick!', 'Hold it over the fire: tap Roast till it\'s golden brown. Not too long!'); } };
   if (!o.skates && Math.hypot(s - ICE.spot[0], t - ICE.spot[1]) < 2.4) return { label: '⛸️ Get skates', go: () => { o.skates = true; initAudio(); [660, 880].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); banner('⛸️ Skates on!', "Go through the gate onto the ice. It's slippery! Tap Spin for a twirl"); } };
-  if (Math.hypot(s - ICE.cocoaSpot[0], t - ICE.cocoaSpot[1]) < 1.8) return { label: '☕ Hot cocoa · 4 coins', go: () => { initAudio(); if ((save.coins || 0) < 4){ sfx(200, .2, 'square', .04); banner('Not enough coins', 'Hot cocoa is 4 coins. Pearls, races and treasure chests get you coins!'); return; }
-    save.coins -= 4; persist(); flushCloud(); $('coinVal').textContent = save.coins; [784, 988].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.07)); treat = { e: '☕', n: 'Hot cocoa', act: 'drink', bites: 4 }; banner('☕ Hot cocoa!', 'With marshmallows. Tap Drink to drink it'); } };
+  if (Math.hypot(s - ICE.cocoaSpot[0], t - ICE.cocoaSpot[1]) < 1.8) return { label: '☕ Hot cocoa · 4 coins', go: () => { initAudio(); if (!icePay(4, 'Hot cocoa')) return; treat = { e: '☕', n: 'Hot cocoa', act: 'drink', bites: 4 }; banner('☕ Hot cocoa!', 'With marshmallows. Tap Drink to drink it'); } };
   return null; }
 function iceCollide(o, x0, y0){ const I = ICE, [s0, t0] = landST(x0, y0), [s1, t1] = landST(o.x, o.y), S = I.site; if (s1 < S[0] - 6 || s1 > S[1] + 6 || t1 < S[2] - 6 || t1 > S[3] + 6) return;
   const back = () => { o.x = x0; o.y = y0; o.vx = o.vy = 0; };
@@ -5116,7 +5133,10 @@ function iceCollide(o, x0, y0){ const I = ICE, [s0, t0] = landST(x0, y0), [s1, t
     if (atG && (!rb || o.skates)) continue; if (atG) coach('Get skates at the skate building first ⛸️', 2);
     const crossS = (s0 > R.s0 && s0 < R.s1) !== (s1 > R.s0 && s1 < R.s1), [ax, ay] = landXY(s1, t1), [bx, by] = crossS ? landXY(s1 + 1, t1) : landXY(s1, t1 + 1), nx = (bx - ax)/METERS, ny = (by - ay)/METERS, vn = o.vx*nx + o.vy*ny;
     o.x = x0; o.y = y0; o.vx -= 1.7*vn*nx; o.vy -= 1.7*vn*ny; if (Math.abs(vn) > 40) sfx(120, .12, 'square', .03); return; } }   // bonk off the boards
-function iceSpin(o){ if (time - (o.spinT || -9) < 1.2) return; o.spinT = time; o.spins = (o.spins || 0) + 1; sfx(1200, .9, 'sine', .02, 0, 900);
+function iceJump(o){ if (!o.skating || o.iceJ) return; initAudio(); const v = Math.hypot(o.vx, o.vy)/METERS; o.iceJ = { t0: time, v0: 3.2 + Math.min(1.6, v*.15), spun: 0 }; sfx(300, .25, 'sine', .05, 0, 300); }   // (faster: a bit higher)
+const iceAir = o => { const J = o.iceJ; if (!J) return 0; const k = time - J.t0; return Math.max(0, J.v0*k - 4.9*k*k); };
+function iceSpin(o){ if (o.iceJ){ if (time - (o.spinT || -9) < .55) return; o.spinT = time; o.spinDur = .5; o.iceJ.spun++; sfx(1500, .5, 'sine', .02, 0, 900); return; }   // (in the air: a quick twirl)
+  o.spinDur = 1.2; if (time - (o.spinT || -9) < 1.2) return; o.spinT = time; o.spins = (o.spins || 0) + 1; sfx(1200, .9, 'sine', .02, 0, 900);
   if (o.spins % 5 === 0){ heartsAt = time; banner(`${o.spins} spins! 🌀`, 'You could be in the ice show'); } else coach(['Twirl!', 'Wheee!', 'Spin, spin, spin!', 'Graceful!'][o.spins % 4], 1.2); }
 // ---- new on the Promenade (thirdstreetoccupancy.com, November 2026): the Museum of Illusions (1232), PicklePop (1231), Yogurtland (1321) and TMNT Pizzeria (1444) ----
 // The Museum of Illusions: the illusion gallery (what do you see? then the trick), the Ames room (walk across it and you shrink, or grow),
@@ -5426,6 +5446,7 @@ function renderStore(){
 }
 function useTreat(){ const o = ocean; if (o?.workout) return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
+  if (it.act === 'roast') return roastTap(o, it);
   if (it.act === 'froyo'){ it.licks++; sfx(700 + Math.random()*150, .07, 'sine', .04); if (it.licks % 2 === 0){ it.scoops.pop(); if (!it.scoops.length) return done('All gone! Yum', 'That froyo was delicious'); } return; }
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
@@ -5446,7 +5467,7 @@ function useTreat(){ const o = ocean; if (o?.workout) return workTap(); if (o?.s
 const treatTex = {};
 function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
-  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
+  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
   placeNow = paused ? null : placeAction(o); if (song && ac && ac.currentTime > song.end){ song = null; if (!$('musicPanel').hidden) renderMusic(); } const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
@@ -7746,8 +7767,8 @@ function render3D(dt){
       else if (ocean.hugT > time && (heldItem === 'teddy' || treat?.act === 'hug')){ m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
         if (human){ const u = m.userData; u.arms.la.sh.rotation.set(HUG.sx, HUG.sy, HUG.sz); u.arms.ra.sh.rotation.set(-HUG.sx, -HUG.sy, HUG.sz); u.arms.la.el.rotation.set(HUG.ex, HUG.ey, HUG.ez); u.arms.ra.el.rotation.set(-HUG.ex, -HUG.ey, HUG.ez); }
         drawHearts(px, gy + 2, pz, dt); }
-      else if (ocean.skating){ const v = Math.hypot(ocean.vx, ocean.vy)/METERS, sp = time - (ocean.spinT || -9) < 1.2 ? (time - ocean.spinT)/1.2 : -1;   // skating: gliding along, arms out for balance (and twirling)
-        m.position.set(px, gy + (human ? 1.2 : .12) + .05, pz); m.rotation.set(0, -ocean.ang - (sp >= 0 ? (1 - Math.cos(sp*Math.PI))*TAU : 0), human ? Math.PI/2 : 0);
+      else if (ocean.skating){ const v = Math.hypot(ocean.vx, ocean.vy)/METERS, sd = ocean.spinDur || 1.2, sp = time - (ocean.spinT || -9) < sd ? (time - ocean.spinT)/sd : -1;   // skating: gliding along, arms out for balance (and twirling)
+        m.position.set(px, gy + (human ? 1.2 : .12) + .05 + iceAir(ocean), pz); m.rotation.set(0, -ocean.ang - (sp >= 0 ? (1 - Math.cos(sp*Math.PI))*(ocean.iceJ ? Math.PI : TAU) : 0), human ? Math.PI/2 : 0);
         ocean.skatePh = (ocean.skatePh || 0) + dt*Math.min(4.5, v*1.3); poseWalk(m, ocean.skatePh, v > .4 && sp < 0);
         if (human){ const u = m.userData, up = sp >= 0 ? Math.sin(sp*Math.PI)*.6 : 0; u.arms.la.sh.rotation.set(0, 1.3 - up, up*2); u.arms.ra.sh.rotation.set(0, -1.3 + up, up*2); u.arms.la.el.rotation.set(0, 0, 0); u.arms.ra.el.rotation.set(0, 0, 0); } }
       else if (ocean.dancing && !ocean.walking){ m.position.set(px, gy + (human ? 1.2 : .12) + Math.abs(Math.sin(time*6.5))*.08, pz); m.rotation.set(0, -ocean.ang + Math.sin(time*2)*.6, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // dancing

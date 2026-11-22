@@ -4875,7 +4875,7 @@ function buildCoast(){
     for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
       const cut = promWallCut(a, b);
       if (cut){ for (const [f0, f1, yb] of cut){ const pa = [lerp(a[0], b[0], f0), lerp(a[1], b[1], f0)], pb = [lerp(a[0], b[0], f1), lerp(a[1], b[1], f1)], y0 = yb ?? base, u0 = (along + f0*L)/3.2, u1 = (along + f1*L)/3.2, va = (y0 - base)/3, v1 = H/3;
-          arr.pos.push(...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], top)); arr.uv.push(u0, va, u1, va, u1, v1, u0, va, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); }
+          arr.pos.push(...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], top)); if (plain) arr.uv.push(.02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02); else arr.uv.push(u0, va, u1, va, u1, v1, u0, va, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); }
         along += L; continue; }   // (over a shop, the wall starts above its ceiling: the shopfront below is glass you can see into)
       const A0 = P3(a[0], a[1], base), A1 = P3(a[0], a[1], top), B0 = P3(b[0], b[1], base), B1 = P3(b[0], b[1], top), u0 = along/3.2, u1 = (along + L)/3.2, v1 = H/3;
       arr.pos.push(...A0, ...B0, ...B1, ...A0, ...B1, ...A1); if (plain) arr.uv.push(.02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02); else arr.uv.push(u0, 0, u1, 0, u1, v1, u0, 0, u1, v1, u0, v1); for (const lo of [1, 1, 0, 1, 0, 0]) arr.col.push(cc.r*(lo ? .8 : 1), cc.g*(lo ? .8 : 1), cc.b*(lo ? .8 : 1)); along += L; }   // (a little darker down at the street)
@@ -4905,7 +4905,7 @@ function buildCoast(){
     if (pav){ pavilions.push(b); continue; }
     if (inSMP(sc, tc)) continue;
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = BLOCK1100.find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California: from Street View)
+    { const lk = [...BLOCK1100, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -5100,7 +5100,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); buildSouth(g); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); buildSouth(g); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -5166,8 +5166,8 @@ function buildCoast(){
 }
 // ---- the 3rd Street Promenade: shopfronts with awnings and signs, the dinosaur topiary fountains, benches, lamps, bollards and people ----
 const PROM_STORES = [[-1,-801.0,"JOHN REED Fitness",0],[-1,-777.3,"1212 Santa Monica",1],[-1,-763.1,"Chipotle",1],[-1,-756.4,"For Lease",0],[-1,-749.6,"For Lease",0],[-1,-729.5,"Outlandish",0],[-1,-716.0,"Museum of Illusions",0],[-1,-687.4,"Cabo Cantina",1],[-1,-672.7,"Sephora",0],[-1,-664.6,"The Cube VR",0],[-1,-652.4,"For Lease",0],[-1,-604.8,"Stefano's Pizzeria",1],[-1,-593.0,"AMC Santa Monica 7",2],[-1,-572.0,"The Coffee Bean & Tea Leaf",1],[-1,-557.0,"Barnes & Noble",0],[-1,-524.3,"Dragon Alley Kitchen & Burgers (coming soon)",0],[-1,-521.1,"For Lease",0],[-1,-517.9,"Skechers",0],[-1,-508.8,"Sunglass Hut",0],[-1,-505.6,"Gallini",0],[-1,-480.6,"Zara",0],[-1,-477.4,"Surrender Tattoo",0],[-1,-474.2,"Wonders of the World",0],[-1,-471.0,"Lids",0],[-1,-464.5,"BROT (coming soon)",0],[-1,-461.3,"Oakley",0],[-1,-454.9,"Seasons By",0],[-1,-451.7,"Starbucks",1],[-1,-438.4,"For Lease",0],[-1,-388.0,"For Lease",0],[-1,-382.4,"TurboTax (coming soon)",0],[-1,-365.4,"El Husuba",1],[-1,-352.8,"Bruxie",1],[-1,-345.9,"Vans",0],[-1,-342.4,"MINISO",0],[-1,-332.6,"Alo",0],[-1,-322.3,"Sephora (moving here soon)",0],[-1,-306.8,"JD Sports",0],[-1,-286.1,"Urban Outfitters",0],[-1,-260.3,"TMNT Pizzeria",1],[-1,-247.0,"PacSun",0],[-1,-240.5,"Santa Monica Souvenirs",0],[-1,-237.2,"For Lease",0],[-1,-230.7,"McConnell's",1],[-1,-224.8,"Google Store",0],[0,-653.0,"Odd One Out",1],[0,-395.7,"Ugo",1],[1,-810.2,"For Lease",0],[1,-769.1,"For Lease",0],[1,-757.3,"Santa Monica Art Museum",0],[1,-739.6,"For Lease",0],[1,-733.8,"For Lease",0],[1,-722.0,"PicklePop",0],[1,-701.9,"Ugo Trattoria",1],[1,-695.2,"Temen (coming soon)",0],[1,-688.5,"For Lease",0],[1,-675.1,"For Lease",0],[1,-668.4,"For Lease",0],[1,-655.0,"Casa Martin",1],[1,-638.3,"Foot Locker",0],[1,-602.2,"Victoria's Secret",0],[1,-593.9,"For Lease",0],[1,-554.4,"Holey Moley",0],[1,-539.1,"Silverlake Ramen",1],[1,-533.0,"Yogurtland",1],[1,-526.8,"Cherokee of California",0],[1,-520.5,"Abercrombie & Fitch",0],[1,-515.4,"Sole & Laces",0],[1,-513.7,"For Lease",0],[1,-512.0,"2bella",0],[1,-510.3,"Adidas",0],[1,-484.9,"Dodgers Clubhouse",0],[1,-476.4,"Patagonia",0],[1,-462.0,"Wilson",0],[1,-453.0,"Barney's Beanery",1],[1,-446.0,"Cotti Coffee (coming soon)",0],[1,-439.0,"For Lease",0],[1,-397.5,"Raising Cane's",1],[1,-392.7,"For Lease",0],[1,-387.8,"For Lease",0],[1,-383.0,"Sunsations",0],[1,-375.9,"Beyond Yoga",0],[1,-368.0,"Puzzle Zoo",0],[1,-357.0,"For Lease",0],[1,-353.8,"Aldo",0],[1,-346.0,"Apple Store",0],[1,-315.6,"For Lease",0],[1,-312.4,"The New York Sewing Center (coming soon)",0],[1,-310.6,"For Lease",0],[1,-305.5,"Uniqlo",0],[1,-290.3,"Culto",0],[1,-281.3,"For Lease",0],[1,-258.9,"Gacha & Catch",0],[1,-255.7,"For Lease",0],[1,-234.2,"For Lease",0],[1,-221.9,"Lululemon",0]];   // every shop on the Promenade, from thirdstreetoccupancy.com (Nov 2026): [side (-1 ocean side, the even numbers; 1 inland, the odd; 0 the pavilions down the middle), t, name, 1 food / 2 movies]. Where each one is: in address order between the ones we know from OpenStreetMap
-const PROM_START = [653, -428];   // where every trip starts: the Promenade at Santa Monica Boulevard, facing up the block toward the stegosaurus (Kevin's pick)
-const PROM_DINOS = [[653, -240, 'tri'], [653, -520, 'stego'], [653, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
+const PROM_START = [653, -428];   // where every trip starts: the Promenade at Santa Monica Boulevard, facing up the block toward the two big ivy sauropods (Kevin's pick)
+const PROM_DINOS = [[653, -240, 'tri'], [653, -523, 'sauro', 1], [653, -494, 'sauro', -1], [653, -797, 'tri'], [653, -290, 'stego']];   // (down the middle. The Lalannes' 1989 dinosaurs: the two big ivy sauropods, Apatosaurus and Diplodocus, stand nose to nose on raised lawns in the 1300 block (photos, Sept 2022); the triceratops and stegosaurus fountains are toward Broadway (Waymarking). The exact spots and the Wilshire-end triceratops are guesses)
 // Walk into the shops: each one on the Promenade has a room behind its storefront (as deep as the building lets it, up to 9 m), with a door in
 // the glass front and the inside of that kind of shop. Inside, walkH is the shop floor; the walls between shops are the building itself.
 const STORE_KIND = { 'JOHN REED Fitness': 'gym', 'Sephora': 'beauty', 'MAC Cosmetics': 'beauty', 'Sunglass Hut': 'shades', 'Sunsations': 'shades', 'Skechers': 'shoes', 'Foot Locker': 'shoes', 'Aldo': 'shoes',
@@ -6248,6 +6248,89 @@ function buildBlock1100(g, P3){ const grp = new THREE.Group(), M = {}, mat = hex
     sign(B, (B.t0 + B.t1)/2, 9.6, 7, .7, 'CAL MAR HOTEL SUITES', '#6f7a80', '#ffffff', 90); tree(643.5, B.t1 - 1.5, 0x2f5a2c, 3.2, 5.5); }
   for (let t = -862; t > -1020; t -= 9){ if (t < -906 && t > -922) continue; tree(645.2, t, 0x5b8a3c, 1.4, 4); }   // street trees along the ocean side
   g.add(grp); mergeStatic(grp); }
+/* The middle of the Promenade's 1300 block (Arizona to Santa Monica Blvd), from photos (Wikimedia Commons, Sept 2022 and 2023):
+   inland, the red brick front with its metal barrel roof; Abercrombie & Fitch's dark diagonal wood planks, gold letters and porthole window;
+   a low white paneled front with a gray block set back above it; the gray 3-story building with its glass stair tower. Ocean side:
+   Skechers' building (square windows, a brick-filled bay), the white postmodern building with its big round arch, open balconies with
+   white rails and little diamonds, and the white Art Deco tower rising behind the next one. Which building the tower stands on is a guess. */
+const BLOCK1300 = [
+  { side: 1, s: 665.4, t0: -547.8, t1: -532.6, h: 7.4, ht: 7.4, c: 0x8e4e3c, name: 'brick' },
+  { side: 1, s: 665.4, t0: -532.8, t1: -518.4, h: 7.6, ht: 7.6, c: 0x3b2a1f, name: 'A&F' },
+  { side: 1, s: 665.4, t0: -518.6, t1: -503.2, h: 6.6, c: 0xf2f1ec, name: 'white' },
+  { side: 1, s: 665.2, t0: -503.4, t1: -487.2, h: 14.3, c: 0xd9d9d4, name: 'gray' },
+  { side: -1, s: 640.8, t0: -548.4, t1: -518.0, h: 10, c: 0xf0efea, name: 'Skechers' },
+  { side: -1, s: 640.8, t0: -518.4, t1: -501.4, h: 13.6, c: 0xf3f2ee, name: 'arch' },
+  { side: -1, s: 640.8, t0: -501.6, t1: -488.0, h: 12.5, c: 0xf1f0eb, name: 'tower' } ];
+function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, landH(sc, tc) + (y0 + y1)/2)); grp.add(me); return me; };
+  // f: a slab on a facade (side 1 sticks out toward smaller s, side -1 toward bigger s); out: how far in front of the wall
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => { const a = B.side > 0 ? B.s - out - dep : B.s + out, b2 = a + dep, me = new THREE.Mesh(new THREE.BoxGeometry(dep, y1 - y0, Math.abs(t1 - t0)), mat(hex)); me.position.set(...P3((a + b2)/2, (t0 + t1)/2, gl(B) + (y0 + y1)/2)); grp.add(me); return me; };
+  const sign = (B, tc, y, w, h, text, bg, fg, size, out = .2) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(B.side > 0 ? B.s - out : B.s + out, tc, gl(B) + y)); sg.rotation.y = rot(B); grp.add(sg); return sg; };
+  const win = (B, t0, t1, y0, y1, n, frame = 0xf4f4f0, glass = 0x2f4250) => { const w = (t1 - t0)/n; for (let k = 0; k < n; k++){ const a = t0 + k*w + w*.18, b = t0 + (k + 1)*w - w*.18; f(B, a - .07, b + .07, y0 - .07, y1 + .07, frame, .1); f(B, a, b, y0, y1, glass, .12); } };
+  // (shop signs hang 3.75-4.6 m up, .14 m out: anything lower than 4.7 m stays closer to the wall than that)
+  const plank = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'), C = ['#6b4a33', '#55392a', '#7a5a40', '#4a3324', '#634430', '#6f5039'];   // dark weathered boards laid on the diagonal
+    x.fillStyle = '#3d2a1e'; x.fillRect(0, 0, 256, 256); let k = 0;
+    for (let i = -512; i < 256; i += 32, k++){ x.fillStyle = C[k % C.length]; x.beginPath(); x.moveTo(i, 256); x.lineTo(i + 29, 256); x.lineTo(i + 29 + 256, 0); x.lineTo(i + 256, 0); x.fill(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();
+  const panel = (B, t0, t1, y0, y1, out = .125) => { const tx = plank.clone(); tx.needsUpdate = true; tx.repeat.set((t1 - t0)/2.6, (y1 - y0)/2.6); const me = new THREE.Mesh(new THREE.PlaneGeometry(t1 - t0, y1 - y0), new THREE.MeshStandardMaterial({ map: tx, roughness: .9 })); me.position.set(...P3(B.side > 0 ? B.s - out : B.s + out, (t0 + t1)/2, gl(B) + (y0 + y1)/2)); me.rotation.y = rot(B); grp.add(me); };
+  const diamond = (B, tc, y, out = .14) => { const me = new THREE.Mesh(new THREE.BoxGeometry(.05, .32, .32), mat(0x4a4f55, .6)); me.position.set(...P3(B.side > 0 ? B.s - out : B.s + out, tc, gl(B) + y)); me.rotation.x = Math.PI/4; grp.add(me); };
+  const glassM = new THREE.MeshStandardMaterial({ color: 0x8fbcc4, roughness: .1, metalness: .4, transparent: true, opacity: .8 });
+  // ---- inland side ----
+  { const B = L('brick');   // red brick, a white-framed window upstairs, a dark steel lintel, and a gray standing-seam barrel roof along the front
+    f(B, B.t0, B.t1, 4.7, 4.85, 0x2a2d30, .1); win(B, B.t0 + 1.4, B.t0 + 4.4, 5.3, 6.8, 1, 0xf4f4f0, 0x34434d);
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, B.t1 - B.t0 - .4, 18), mat(0x8d9399, .5, .4)); v.rotation.x = Math.PI/2; const sc = B.s + 1.7, tc = (B.t0 + B.t1)/2; v.position.set(...P3(sc, tc, gl(B) + B.h - .55)); grp.add(v); }
+  { const B = L('A&F');   // Abercrombie & Fitch: dark diagonal wood planks all over, big gold letters, a round porthole window
+    panel(B, B.t0, B.t1, 4.7, B.h); panel(B, B.t0, B.t0 + 1.1, 0, 4.7, .1); panel(B, B.t1 - 1.1, B.t1, 0, 4.7, .1);
+    f(B, B.t0, B.t1, B.h - .05, B.h + .25, 0x1d1d1d, .3); sign(B, B.t0 + 6.2, 6.05, 8, .62, 'ABERCROMBIE & FITCH', '#4a3324', '#d4b06a', 104, .145);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, .13, 8, 28), mat(0x1b1b1b, .4, .3)); ring.position.set(...P3(B.s - .12, B.t0 + 4, gl(B) + 1.75)); ring.rotation.y = rot(B); grp.add(ring); }
+  { const B = L('white');   // a low white front of flat panels, with a plain gray block set back above it
+    for (let t = B.t0 + 1.5; t < B.t1 - .5; t += 1.6) f(B, t, t + .04, 4.7, B.h, 0xcfcfca, .14); f(B, B.t0, B.t1, 5.6, 5.64, 0xcfcfca, .14); f(B, B.t0, B.t1, B.h - .1, B.h + .2, 0xffffff, .2);
+    bx(B.s + 5, B.s + 15, B.t0 + 1, B.t1 - 2.5, 6.4, 10.6, 0xd6d6d1); win({ side: 1, s: B.s + 5, t0: B.t0, t1: B.t1 }, B.t1 - 6.5, B.t1 - 4, 8.4, 9.9, 1, 0x30363b, 0x2a3640); }
+  { const B = L('gray');   // gray-white stucco, two rows of windows, and the glass stair tower at its north end, taller than the roof
+    for (const y of [6.1, 9.7]) win(B, B.t0 + 4, B.t1 - 1, y, y + 2, 6, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .15, B.h + .2, 0xe8e8e4, .2);
+    bx(B.s - .3, B.s + 2.7, B.t0 - .1, B.t0 + 3.1, 5, B.h + 1.6, null, glassM);
+    for (let y = 5.6; y < B.h + 1.6; y += 1.35) bx(B.s - .34, B.s - .28, B.t0 - .1, B.t0 + 3.1, y, y + .07, 0x2a3036); bx(B.s - .34, B.s - .28, B.t0 + 1.47, B.t0 + 1.53, 5, B.h + 1.6, 0x2a3036); }
+  // ---- ocean side ----
+  { const B = L('Skechers');   // white, a row of square windows upstairs, and a gray-framed bay filled with red brick and glass
+    win(B, B.t0 + 2, B.t1 - 9, 5.6, 7.9, 5, 0xf4f4f0, 0x2c3a44);
+    f(B, B.t1 - 8, B.t1 - .6, 4.9, 9.4, 0x8f8a80, .12); f(B, B.t1 - 7.5, B.t1 - 1.1, 5.3, 9, 0xf2f1ec, .16); f(B, B.t1 - 7, B.t1 - 4.3, 5.8, 8.6, 0x2c3a44, .2); f(B, B.t1 - 4.1, B.t1 - 1.6, 5.8, 8.6, 0x9b4a35, .2);
+    f(B, B.t0, B.t1, B.h - .35, B.h + .1, 0xe4e2dc, .25); }
+  { const B = L('arch'), ac = B.t0 + 4.8;   // white postmodern: a big round arch, open balconies with white rails, little dark diamonds
+    for (const t of [B.t0, ac + 2.2, B.t1 - .6]) f(B, t, t + .6, 4.7, B.h, 0xe6e4de, .2);
+    f(B, ac - 2, ac - 1.45, 0, 6.3, 0xf7f6f2, .12); f(B, ac + 1.45, ac + 2, 0, 6.3, 0xf7f6f2, .12);   // (the arch's jambs)
+    { const ar = new THREE.Mesh(new THREE.TorusGeometry(1.72, .28, 8, 24, Math.PI), mat(0xf7f6f2)); ar.position.set(...P3(B.s + .14, ac, gl(B) + 6.3)); ar.rotation.y = rot(B); grp.add(ar);
+      const fan = new THREE.Mesh(new THREE.CircleGeometry(1.45, 20, 0, Math.PI), mat(0x2c3a44, .2, .3)); fan.position.set(...P3(B.s + .1, ac, gl(B) + 6.3)); fan.rotation.y = rot(B); grp.add(fan);
+      f(B, ac - .04, ac + .04, 4.7, 7.7, 0xf4f4f0, .14); f(B, ac - 1.45, ac + 1.45, 6.25, 6.35, 0xf4f4f0, .14); f(B, ac - 1.45, ac + 1.45, 4.7, 6.25, 0x2c3a44, .1); }
+    for (const [a, b2] of [[B.t0 + .7, ac - 2.1], [ac + 2.9, B.t1 - .7]]) for (const y of [5.2, 9.1]){ f(B, a, b2, y, y + 3, 0xb7b4ac, .06);   // the balconies: a shady opening with white rails across
+      for (let k = 0; k < 4; k++) f(B, a, b2, y + .25 + k*.27, y + .3 + k*.27, 0xffffff, .06, .2); }
+    win(B, ac - 1.2, ac + 1.2, 9.4, 11.8, 1, 0xf4f4f0, 0x2c3a44);
+    for (const t of [B.t0 + .3, ac + 2.5, B.t1 - .3]) for (const y of [8.6, 12.4]) diamond(B, t, y, .21); diamond(B, ac - 2.4, 4.95); diamond(B, ac + 2.4, 4.95);
+    f(B, B.t0, B.t1, B.h - .4, B.h + .05, 0xe2e0d9, .3); }
+  { const B = L('tower'), tc = (B.t0 + B.t1)/2, sc = 634, W = 0xf6f5f1, D = 0x2a3138;   // white Art Deco: its tower steps up behind the front, with tall slit windows
+    for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25);
+    bx(sc - 2.1, sc + 2.1, tc - 2.1, tc + 2.1, 8, 21, W); bx(sc - 1.7, sc + 1.7, tc - 1.7, tc + 1.7, 21, 24, W); bx(sc - 1.2, sc + 1.2, tc - 1.2, tc + 1.2, 24, 26.4, W); bx(sc - .6, sc + .6, tc - .6, tc + .6, 26.4, 28, W);
+    for (const [y0, y1] of [[21, 22.2], [24, 24.9]]) for (const [ds, dt] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) bx(sc + ds*2 - .2, sc + ds*2 + .2, tc + dt*2 - .2, tc + dt*2 + .2, y0, y1, W);   // (stepped corners)
+    for (const d of [-.9, 0, .9]){ bx(sc + 2.1, sc + 2.16, tc + d - .13, tc + d + .13, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc - 2.16, tc - 2.1, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc + 2.1, tc + 2.16, 13.5, 20.3, D); }
+    for (const d of [-.5, .5]) bx(sc + 1.7, sc + 1.76, tc + d - .1, tc + d + .1, 21.6, 23.4, D); }
+  g.add(grp); mergeStatic(grp); }
+/* One of the Lalannes' two topiary sauropods (1989): ivy over a steel frame, a bronze head with its mouth open, on a raised lawn with a
+   low black rail round it. About 34 ft long and 12 ft tall. dir: which way along the Promenade its head points (+1: toward Broadway). */
+function buildSauro(d, dir, ivy, ivy2, E){ const curb = std(0xb9b6ae, .85), grass = std(0x5f9a40, .95), rail = std(0x2b2f33, .5), bronze = std(0x4d4238, .45, .55);
+  const lawn = new THREE.Mesh(new THREE.BoxGeometry(4.2, .55, 13.2), curb); lawn.position.y = .275; d.add(lawn);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(3.9, .06, 12.9), grass); top.position.y = .56; d.add(top);
+  for (const x of [-1.85, 1.85]){ for (let z = -6.2; z <= 6.21; z += 1.55){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .8, 6), rail); p.position.set(x, .95, z); d.add(p); }
+    for (const y of [1.33, .95]){ const r = new THREE.Mesh(new THREE.BoxGeometry(.05, .05, 12.4), rail); r.position.set(x, y, 0); d.add(r); } }
+  for (const z of [-6.2, 6.2]){ const r = new THREE.Mesh(new THREE.BoxGeometry(3.7, .05, .05), rail); r.position.set(0, 1.33, z); d.add(r); }
+  for (let k = 0; k < 5; k++){ const ag = new THREE.Mesh(new THREE.ConeGeometry(.28, .7, 5), std(0x7d9a7a, .9)); ag.position.set(-1.3 + k*.65, .93, dir*5.6); d.add(ag); }   // (a row of agaves at the head end)
+  const s = new THREE.Group(); d.add(s); s.position.y = .59; s.scale.setScalar(.9); s.rotation.y = dir > 0 ? -Math.PI/2 : Math.PI/2;   // (its nose along +x, turned to point along the Promenade)
+  s.add(E(2.3, 1.15, 1.05, ivy, 0, 2.25, 0), E(1.2, .9, .85, ivy2, 1.4, 2.35, 0), E(1.3, .85, .8, ivy2, -1.4, 2.15, 0));   // the body
+  for (const [x, z] of [[1.25, .6], [1.25, -.6], [-1.25, .6], [-1.25, -.6]]){ const l = new THREE.Mesh(new THREE.CylinderGeometry(.36, .42, 1.8, 8), ivy2); l.position.set(x, .9, z); s.add(l); }
+  for (let k = 0; k <= 9; k++){ const u = k/9, r = .6 - u*.3; s.add(E(r*1.15, r, r, k % 2 ? ivy : ivy2, 2.1 + u*3.4, 2.6 + Math.sin(u*Math.PI/2)*2.1, 0)); }   // the long neck, curving up and forward
+  for (let k = 0; k <= 14; k++){ const u = k/14, r = .72*(1 - u) + .12; s.add(E(r*1.2, r, r, k % 2 ? ivy : ivy2, -2 - u*4.6, .15 + r*.6 + 1.85*Math.pow(1 - u, 1.4), 0)); }   // the tail, sweeping down to the grass
+  s.add(E(.42, .27, .25, bronze, 5.65, 4.8, 0));   // the bronze head,
+  const up = new THREE.Mesh(new THREE.BoxGeometry(.62, .12, .3), bronze); up.position.set(6.1, 4.85, 0); up.rotation.z = .28; s.add(up);   //   its mouth open
+  const lo = new THREE.Mesh(new THREE.BoxGeometry(.55, .08, .26), bronze); lo.position.set(6.02, 4.57, 0); lo.rotation.z = -.32; s.add(lo);
+  for (const z of [.2, -.2]){ const ey = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 5), std(0x111111, .3)); ey.position.set(5.75, 4.93, z); s.add(ey); } }
 // a table at Michael's: walk up to the porch to eat
 const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 && s < MICHAELS.s + .5 && t > MICHAELS.t0 + .5 && t < MICHAELS.t1 - .5; };
 /* Palisades Park details, from a Street View survey (Jul-Aug 2024) + OpenStreetMap: the Saint Monica statue at the foot of Wilshire,
@@ -7339,7 +7422,8 @@ function buildPromenade(g, P3, at, instanceOf){
   const ivy = std(0x2f6b2a, .95), ivy2 = std(0x3d7d33, .95), stone = std(0xcfc6b4, .8), water = new THREE.MeshStandardMaterial({ color: 0x5fb6d6, roughness: .1, metalness: .2, transparent: true, opacity: .8 });
   const E = (rx, ry, rz, m, x, y, z) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 9), m); e.scale.set(rx, ry, rz); e.position.set(x, y, z); return e; };
   const leg = (m, x, z, h = 1.1) => { const l = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, h, 8), m); l.position.set(x, h/2 + .35, z); return l; };
-  for (const [s, t, kind] of PROM_DINOS){ const d = new THREE.Group(), base = landH(s, t);
+  for (const [s, t, kind, dir] of PROM_DINOS){ const d = new THREE.Group(), base = landH(s, t);
+    if (kind === 'sauro'){ buildSauro(d, dir, ivy, ivy2, E); mergeStatic(d); d.position.set(...P3(s, t, base)); g.add(d); LAND_BOXES.push([s - 2.15, t - 6.65, s + 2.15, t + 6.65, base + 3.4]); continue; }   // (the sauropods are topiary only: no fountain)
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.2, .6, 28, 1, true), stone); basin.position.y = .3; d.add(basin);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(3.05, .14, 8, 28), stone); rim.rotation.x = Math.PI/2; rim.position.y = .6; d.add(rim);
     const pool = new THREE.Mesh(new THREE.CircleGeometry(3, 28), water); pool.rotation.x = -Math.PI/2; pool.position.y = .45; d.add(pool);
@@ -7363,7 +7447,7 @@ function buildPromenade(g, P3, at, instanceOf){
     const bol = new THREE.Group(); { const b = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, .9, 8), std(0x5d6468, .5)); b.position.y = .45; bol.add(b); }
     const bs = [], ls = [], bo = [];
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]){
-      for (let t = t0 + 14; t < t1 - 6; t += 22){ if (PROM_DINOS.some(d => Math.abs(d[1] - t) < 7)) continue; bs.push([PROM.s - 6, t, 1, 0], [PROM.s + 6, t, 1, Math.PI]); }   // (facing in, toward the middle of the street, backs to the shops)
+      for (let t = t0 + 14; t < t1 - 6; t += 22){ if (PROM_DINOS.some(d => Math.abs(d[1] - t) < (d[2] === 'sauro' ? 9 : 7))) continue; bs.push([PROM.s - 6, t, 1, 0], [PROM.s + 6, t, 1, Math.PI]); }   // (facing in, toward the middle of the street, backs to the shops)
       for (let t = t0 + 4; t < t1; t += 18) ls.push([PROM.s - 7.5, t, 1, 0], [PROM.s + 7.5, t, 1, 0]);
       for (const tt of [t0 + .5, t1 - .5]) for (let s = PROM.s0 + 1.5; s < PROM.s1 - 1; s += 2.2) bo.push([s, tt, 1, 0]); }
     instanceOf(bench, bs); instanceOf(lamp, ls); instanceOf(bol, bo); }
@@ -7577,7 +7661,7 @@ function updCoast(o){
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
       if (!near){ p.t += p.dir*p.v*dt; if (p.t > p.t1 || p.t < p.t0){ p.dir *= -1; p.t = clamp(p.t, p.t0, p.t1); p.s = PROM.s + (Math.random() < .5 ? -1 : 1)*(4.5 + Math.random()*4.5); } }
-      for (const d of PROM_DINOS) if (Math.abs(p.t - d[1]) < 3.6 && Math.abs(p.s - d[0]) < 3.6) p.s += (p.s < d[0] ? -1 : 1)*dt*2;   // (round the fountains,
+      for (const d of PROM_DINOS) if (Math.abs(p.t - d[1]) < (d[2] === 'sauro' ? 7 : 3.6) && Math.abs(p.s - d[0]) < (d[2] === 'sauro' ? 2.7 : 3.6)) p.s += (p.s < d[0] ? -1 : 1)*dt*2;   // (round the fountains,
       if (bldAt(p.s, p.t)) p.s += (p.s < PROM.s ? -1 : 1)*dt*3;   //  and the food pavilions)
       const [x, y] = landXY(p.s, p.t), h = landH(p.s, p.t), bob = near ? 0 : Math.abs(Math.sin(time*6*p.v + p.ph))*.06, yaw = p.dir > 0 ? 0 : Math.PI;
       _cq.setFromAxisAngle(_cu, -Math.PI/2 + yaw); _cs.setScalar(1);

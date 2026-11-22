@@ -7622,7 +7622,7 @@ function loadingStep(){ if (loadGone) return; const p = assetsTotal ? assetsDone
   const say = LOAD_SAY[Math.min(LOAD_SAY.length - 1, Math.floor(p*LOAD_SAY.length))]; if ($('ldNote').textContent !== say) $('ldNote').textContent = say;
   if (secs > 12 && $('ldSkip').hidden) $('ldSkip').hidden = false;
   if ((assetsTotal && assetsDone >= assetsTotal && framesDrawn > 3 && fontsOK) || secs > 45) hideLoading(); }
-function hideLoading(){ if (loadGone) return; loadGone = true; $('ldFill').style.width = '100%'; const el = $('loading'); setTimeout(() => el.classList.add('gone'), 150); setTimeout(() => { el.hidden = true; }, 600); }
+function hideLoading(){ if (loadGone) return; loadGone = true; setTimeout(resumeAfterUpdate, 200); $('ldFill').style.width = '100%'; const el = $('loading'); setTimeout(() => el.classList.add('gone'), 150); setTimeout(() => { el.hidden = true; }, 600); }
 $('ldSkip').onclick = hideLoading;
 function loadAssets(){
   const hdr = new RGBELoader(), gl = new GLTFLoader(), tl = new THREE.TextureLoader();
@@ -8557,8 +8557,24 @@ addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && ['+', '=', '-
 /* ---------- Main loop ---------- */
 let last = performance.now(), chipT = 0;
 const SWASH = { time: { value: 0 } };   // (the clock for the waves on the beach)
+// ---- live updates: when a new version of the game goes up, it loads itself (between books and shops) and puts you right back where you were ----
+const UPD_KEY = 'smw.resume'; let updTag = null, updPending = false, updGoing = false;
+async function checkUpdate(){ if (document.hidden || updPending) return;
+  try { const r = await fetch(location.pathname + '?u=' + Date.now(), { method: 'HEAD', cache: 'no-store' }), tag = r.ok && (r.headers.get('etag') || r.headers.get('last-modified')); if (!tag) return;
+    if (updTag == null) updTag = tag; else if (tag !== updTag) updPending = true; } catch(e){} }
+setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 20000);
+function updStep(){ if (!updPending || updGoing || !loadGone) return; if (mode !== 'title' && (paused || menuEl())) return;   // (not while you're reading, shopping or in the menu)
+  updGoing = true; try { persist(); flushCloud(); } catch(e){}
+  if (mode === 'ocean' && ocean){ const o = ocean; try { sessionStorage.setItem(UPD_KEY, JSON.stringify({ at: Date.now(), x: o.x, y: o.y, ang: o.ang, onLand: !!o.onLand, gh: o.gh, depth: o.depth || 0, walkRef, camHead, skates: !!o.skates })); } catch(e){} }
+  banner('✨ New update!', 'Loading the newest version...'); setTimeout(() => location.reload(), 1500); }
+function resumeAfterUpdate(){ let R = null; try { R = JSON.parse(sessionStorage.getItem(UPD_KEY) || 'null'); sessionStorage.removeItem(UPD_KEY); } catch(e){} if (!R || Date.now() - R.at > 5*60*1000) return;
+  if (STANDALONE && !fbAuth) return;   // (not logged in: start from the title as usual)
+  let tries = 0; const go = () => { if (mode !== 'ocean' || !ocean){ if (++tries < 100) setTimeout(go, 200); return; } const o = ocean;
+    Object.assign(o, { x: R.x, y: R.y, ang: R.ang, onLand: R.onLand, gh: R.gh, depth: R.depth, vx: 0, vy: 0, skates: R.skates }); walkRef = R.walkRef; camHead = R.camHead; camInit = false;
+    if (!$('shopPanel').hidden) closeShop(); banner('✨ Updated!', "Here's the newest version"); };
+  $('continueBtn').click(); go(); }
 function frame(now){
-  SWASH.time.value = time;
+  SWASH.time.value = time; updStep();
   if (!loadGone){ framesDrawn++; if (framesDrawn % 10 === 4) loadingStep(); }
   const dt = clamp((now - last)/1000, 0, .05); last = Math.max(last, now); time += dt;   // never let time run backwards
   if (!paused){

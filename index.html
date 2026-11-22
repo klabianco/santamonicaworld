@@ -46,6 +46,11 @@
     .hud .chip.mph b{font-size:18px}
     body .speedbar{top:60%}
   }
+  .chip.food{display:flex;align-items:center;gap:6px;font-size:15px;padding:6px 10px}
+  .chip.food i{display:block;width:54px;height:8px;border-radius:5px;background:rgba(0,0,0,.12);overflow:hidden}
+  .chip.food b{display:block;height:100%;width:70%;background:#43a047;border-radius:5px;transition:width .5s}
+  .chip.food.low b{background:#e53935}
+  .chip.food.low{animation:foodPulse 1s ease-in-out infinite alternate}@keyframes foodPulse{to{transform:scale(1.08)}}
   .chip.mph{display:flex;align-items:baseline;gap:5px;font-family:var(--display)}
   .chip.mph b{font-size:22px;font-weight:400;min-width:1.6em;text-align:right}
   .chip.mph span{font-size:13px;opacity:.7}
@@ -424,6 +429,7 @@
   <div class="hud-col right">
     <div class="chip lvl" id="airChip" hidden><span>Air</span><div class="xpbar"><i id="airFill"></i></div></div>
     <div class="chip rank" id="rankChip"><div class="rk"><b id="rankName">Guppy</b><span id="xpVal">0 XP</span></div><div class="xpbar"><i id="xpFill"></i></div><span id="xpFloat" aria-hidden="true"></span></div>
+    <div class="hudrow"><div class="chip food" id="foodChip" hidden title="How full you are">🍔<i><b id="foodFill"></b></i></div></div>
     <div class="hudrow"><div class="chip mph" id="mphChip" hidden><b id="mphVal">0</b><span>mph</span></div>
     <div class="chip coins" id="coinChip"><span class="coin" aria-hidden="true"></span><b id="coinVal">0</b></div></div>
     <div class="hudrow"><button class="chip phonechip" id="phoneBtn" type="button" aria-label="Phone">📱<b id="phoneBadge" hidden></b></button>
@@ -3365,7 +3371,7 @@ function walkStep(o, dt){
   const w = wantHeading(), walking = !!w;
   if (w) o.ang += clamp(angDiff(w.ang, o.ang), -6*dt, 6*dt);
   const sk = o.skating = !!o.skates && onIce(o);   // (on skates, on the ice: you glide, and it takes a while to stop or turn)
-  const main = o.x > coastX(o.y) || (o.gh ?? 0) > PIER_L.h1 - 1.5, run = main && diveHeld(), sp = walking ? (sk ? ownTop(230)*speedPct()*(run ? 1.5 : 1) : main ? run ? 270 : 110 : 62)*w.m : 0;   // (out on the pier too)   // (skating: as fast as your swimming gear and XP make you, times the Top speed slider; hold Run for a burst)   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
+  const main = o.x > coastX(o.y) || (o.gh ?? 0) > PIER_L.h1 - 1.5, run = main && diveHeld(), sp = walking ? (sk ? ownTop(230)*speedPct()*(run ? 1.5 : 1) : main ? run ? 270 : 110 : 62)*w.m*foodSpeed() : 0;   // (out on the pier too)   // (skating: as fast as your swimming gear and XP make you, times the Top speed slider; hold Run for a burst)   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
   if (walking && (o.stepSfx = (o.stepSfx || 0) - dt) <= 0){ o.stepSfx = sk ? .55 : run ? .24 : .38; if (sk) sfx(2600, .3, 'sawtooth', .004, 0, -1800); else sfx(150 + Math.random()*40, .06, 'triangle', .03); }
   const air = sk && o.iceJ; if (air && iceAir(o) <= 0 && time - o.iceJ.t0 > .1){ const n = o.iceJ.spun; o.iceJ = null; sfx(140, .15, 'square', .03); if (n){ heartsAt = time; banner(n >= 3 ? 'Triple axel! 🌟🌟🌟' : n === 2 ? 'Double axel! 🌟🌟' : 'Axel jump! 🌟', n >= 3 ? 'Olympic gold!' : 'Tap Spin in the air to spin more'); } }   // landed
   if (!sk && o.iceJ) o.iceJ = null;
@@ -5026,15 +5032,31 @@ function endTurn(){ if (!game) return; const who = game.turn;
   if (game.pos[who] === 100){ game.won = who ? 2 : 1; game.busy = false; game.msg = who ? 'Sammy the Seal got to 100 first. Arf! Play again?' : 'You got to 100 first. You win! 🏆'; if (!who){ heartsAt = time; [523, 659, 784, 1046, 1318].forEach((f, i) => sfx(f, .15, 'triangle', .05, i*.1)); } drawGame(); return; }
   game.turn = 1 - who; game.busy = false; drawGame(); if (game.turn === 1){ game.busy = true; drawGame(); setTimeout(() => { if (!game) return; game.busy = false; rollGame(); }, 900); } }
 // ---- getting stronger at the gym: every lift counts (save.lifts), your arms, shoulders and chest grow, and you can flex ----
+/* Food: you get hungry as you play (faster when you run, swim or work out), and eating fills you back up. Eat more
+   than you need, or lots of sweets, and you get chubbier; running, swimming, skating and working out burn it off. */
+const chubNow = () => clamp(save.chub || 0, 0, 1), fullNow = () => clamp(save.full ?? 70, 0, 100);
+let foodT = 0, hungerNagT = 0;
+function feed(kind){ const full = fullNow(), add = kind === 'lick' ? 5 : kind === 'drink' ? 3 : 9, sweet = kind === 'lick' || kind === 'froyo' || kind === 'roast';
+  save.full = Math.min(100, full + add); let gain = (sweet ? .012 : .004) + (full > 85 ? .03 : 0); save.chub = Math.min(1, chubNow() + gain);
+  if (full < 30 && save.full >= 30) banner('😋 That hit the spot!', 'Not hungry any more');
+  else if (full > 85 && Math.random() < .3) banner('🤰 So full!', chubNow() > .5 ? "You're getting chubby! Run and swim to burn it off" : "You're stuffed"); }
+function foodStep(dt, o){ if (paused || o.workout?.k === 'sit') return; foodT += dt; if (foodT < 1) return; const k = foodT; foodT = 0;
+  const busy = o.workout || o.skating || (!o.onLand && !o.car) || (o.walking && diveHeld()) ? 2.2 : o.walking ? 1 : .5;   // (sitting in a car or standing still uses less)
+  save.full = Math.max(0, fullNow() - k*busy/18); if (busy > 2 && chubNow() > 0) save.chub = Math.max(0, chubNow() - k*.0025);   // (about 25 min from full to starving; ~7 min of exercise burns off a lot of chub)
+  const f = fullNow(), chip = $('foodChip'); if (chip){ chip.hidden = false; $('foodFill').style.width = f + '%'; chip.classList.toggle('low', f < 25); }
+  if (f < 25 && time > hungerNagT){ hungerNagT = time + (f < 10 ? 45 : 90); sfx(90, .35, 'sawtooth', .03, 0, -30); sfx(70, .3, 'sawtooth', .03, .3, -20);
+    coach(f < 10 ? "🍔 You're starving! You're slowing down. Go get something to eat" : '🍔 Your tummy is rumbling! Find something to eat on the Promenade', 4); } }
+const foodSpeed = () => (fullNow() < 10 ? .7 : 1)*(1 - .18*chubNow());
 const muscleNow = () => Math.min(1, (save.lifts || 0)/200), strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
 function setTattoo(m, e){   // a temporary tattoo, on the outside of your right forearm
   const u = m.userData; if (u.kind !== 'swimmer' || u.tatE === (e || '')) return; u.tatE = e || ''; if (u.tat){ u.tat.parent.remove(u.tat); u.tat = null; } if (!e) return;
   const tex = canvasTex(96, 96, (x, w, h) => { x.clearRect(0, 0, w, h); emo(x, e, w/2, h/2 + 4, 78); }, false), pl = new THREE.Mesh(new THREE.PlaneGeometry(.085, .085), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 }));
   pl.position.set(.15, .005, .043); u.arms.ra.el.add(pl); u.tat = pl; }
-function setMuscle(m, mu){ const u = m.userData; if (u.kind !== 'swimmer' || u.mu === mu) return; u.mu = mu; const a = 1 + 1.3*mu, f = 1 + .6*mu;
-  for (const id of ['la', 'ra']){ const { sh, el } = u.arms[id]; sh.userData.z0 ??= sh.position.z; sh.position.z = sh.userData.z0*(1 + .22*mu);   // (broader shoulders,
+function setMuscle(m, mu){ const u = m.userData, ch = chubNow(), key = mu.toFixed(3) + '|' + ch.toFixed(2); if (u.kind !== 'swimmer' || u.mu === key) return; u.mu = key; const a = 1 + 1.3*mu + .35*ch, f = 1 + .6*mu + .3*ch;
+  for (const id of ['la', 'ra']){ const { sh, el } = u.arms[id]; sh.userData.z0 ??= sh.position.z; sh.position.z = sh.userData.z0*(1 + .22*mu + .4*ch);   // (broader shoulders,
     for (const c of sh.children) if (c.isMesh) c.scale.set(1, a, a); if (el.children[0]?.isMesh) el.children[0].scale.set(1, f, f); }                   //  big arms)
-  for (const c of [u.torso, u.tee]) if (c) c.scale.set(1, 1 + .25*mu, 1 + .32*mu); }                                                                   //  and a bigger chest)
+  for (const c of [u.torso, u.tee]) if (c) c.scale.set(1 + .04*ch, 1 + .25*mu + .7*ch, 1 + .32*mu + .38*ch);   //  and a bigger chest; a round tummy from eating a lot)
+  for (const id of ['ll', 'rl']){ const th = u.legs[id]?.hp; if (th){ th.userData.z0 ??= th.position.z; th.position.z = th.userData.z0*(1 + .3*ch); for (const c of th.children) if (c.isMesh) c.scale.set(1, 1 + .45*ch, 1 + .45*ch); } } }                                                                   //  and a bigger chest)
 function flex(){ const o = ocean; if (!o) return; o.flexT = time + 2.2; heartsAt = time; [392, 523, 659].forEach((f, i) => sfx(f, .14, 'square', .03, i*.08));
   const n = save.lifts || 0; banner(`💪 Strength ${strengthLv()}`, n ? `${n} lifts so far. ${n < 200 ? 'Keep lifting to get even bigger!' : 'Maximum muscles!'}` : 'Lift weights to grow your muscles!'); }
 function poseFlex(m, px, gy, pz, human){ m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false); if (!human) return;
@@ -5262,7 +5284,7 @@ function roastTap(o, it){   // roasting a marshmallow over the fire pit: tap, ta
   if (nearPit(o) && !it.done){ it.roast++; for (let k = 0; k < 6; k++) sfx(1500 + Math.random()*2500, .03, 'square', .008, Math.random()*.4);   // (crackle)
     if (it.roast >= 5){ it.done = it.burnt = true; it.e = '⚫'; sfx(200, .5, 'sawtooth', .04, 0, -100); banner('Oh no, it caught fire! 🔥', 'Blow it out! Walk away from the fire and eat it anyway'); return; }
     coach(['', 'Warming up...', 'Getting toasty...', 'Golden brown! Perfect! Walk away from the fire to eat it', 'Darker... careful!'][it.roast], 2); if (it.roast === 3){ heartsAt = time; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.07)); } return; }
-  treat = null; sfx(180, .07, 'square', .03); banner(it.burnt ? 'Crunchy and burnt! 😝' : it.roast >= 3 ? "Mmm, gooey and golden! 🤤" : it.roast ? 'Warm and squishy' : 'A plain marshmallow', it.burnt ? 'Next time, not so long!' : it.roast >= 3 ? 'The perfect marshmallow' : 'Next time, roast it longer over the fire'); }
+  treat = null; feed('roast'); sfx(180, .07, 'square', .03); banner(it.burnt ? 'Crunchy and burnt! 😝' : it.roast >= 3 ? "Mmm, gooey and golden! 🤤" : it.roast ? 'Warm and squishy' : 'A plain marshmallow', it.burnt ? 'Next time, not so long!' : it.roast >= 3 ? 'The perfect marshmallow' : 'Next time, roast it longer over the fire'); }
 function iceAction(o){ const [s, t] = landST(o.x, o.y);
   if (nearPit(o) && treat?.act !== 'roast') return { label: '🍡 Marshmallow · 3 coins', go: () => { initAudio(); if (!icePay(3, 'A marshmallow')) return; treat = { e: '🍡', n: 'Marshmallow on a stick', act: 'roast', roast: 0 }; banner('🍡 A marshmallow on a stick!', 'Hold it over the fire: tap Roast till it\'s golden brown. Not too long!'); } };
   if (!o.skates && Math.hypot(s - ICE.spot[0], t - ICE.spot[1]) < 2.4) return { label: '⛸️ Get skates', go: () => { o.skates = true; initAudio(); [660, 880].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); banner('⛸️ Skates on!', "Go through the gate onto the ice. It's slippery! Tap Spin for a twirl"); } };
@@ -5600,6 +5622,7 @@ function renderStore(){
 function useTreat(){ const o = ocean; if (o?.workout) return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
   if (it.act === 'roast') return roastTap(o, it);
+  if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)) feed(it.act);
   if (it.act === 'froyo'){ it.licks++; sfx(700 + Math.random()*150, .07, 'sine', .04); if (it.licks % 2 === 0){ it.scoops.pop(); if (!it.scoops.length) return done('All gone! Yum', 'That froyo was delicious'); } return; }
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
@@ -6271,7 +6294,7 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o);
+    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); foodStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
@@ -8010,7 +8033,7 @@ let mode = 'title', time = 0, paused = false;
 const MODE = () => mode;
 function setMode(m){ if (m !== 'ocean') engineSound(false);
   if (m !== 'ocean' && m !== 'dead' && typeof mpLeave === 'function') mpLeave();
-  mode = m; paused = false; renderGadgetBar(); if (ocean) ocean.workout = null; if (m !== 'ocean'){ $('mphChip').hidden = $('questChip').hidden = $('leagueChip').hidden = $('holdChip').hidden = $('krakenBtn').hidden = $('buyBtn').hidden = $('treatBtn').hidden = $('grabBtn').hidden = $('useBtn').hidden = $('casinoBtn').hidden = true; $('speedFx').style.opacity = '0'; }
+  mode = m; paused = false; renderGadgetBar(); if (ocean) ocean.workout = null; if (m !== 'ocean'){ $('foodChip').hidden = true; $('mphChip').hidden = $('questChip').hidden = $('leagueChip').hidden = $('holdChip').hidden = $('krakenBtn').hidden = $('buyBtn').hidden = $('treatBtn').hidden = $('grabBtn').hidden = $('useBtn').hidden = $('casinoBtn').hidden = true; $('speedFx').style.opacity = '0'; }
   if (m === 'title'){ startArmed = false; arrangeTitle(); hItems = null; heldItem = null; }
   $('title').hidden = m !== 'title'; $('choose').hidden = m !== 'choose'; $('results').hidden = m !== 'results' && m !== 'dead'; $('panel').hidden = true;
   $('hud').hidden = !playing(); $('limbs').hidden = !playing(); $('speedBar').hidden = !(m === 'ocean' || m === 'pool'); if (m === 'ocean' || m === 'pool') showSpeedBar(); $('strokeBtn').hidden = m !== 'race'; $('diveBtn').hidden = m === 'race'; if (m !== 'ocean') $('surfBtn').hidden = $('jumpBtn').hidden = $('sonarBtn').hidden = true; diveBtnHeld = false; if (m !== 'ocean') $('talkBtn').hidden = true; if (m !== 'ocean') $('rideBtn').hidden = true; if (m !== 'ocean') $('carBtn').hidden = $('hornBtn').hidden = true;

@@ -6622,7 +6622,7 @@ function buildRooms(g, P3){
           for (let k = 0; k < n; k++){ M4.makeTranslation(...P3(S(1.7 + R()*(mid - 1.9)), tm + .7 + R()*(T1 - tm - .9), y0 + .4 + R()*2.9)); im.setMatrixAt(k, M4); im.setColorAt(k, C3.setHex(col[k % col.length])); } g.add(im); }
         ill.inf = [1.5, mid, tm + .55, T1];
         // the vortex tunnel, behind the infinity room: a bridge with rails, and the tunnel turning round it
-        B(mid + .12, D - .1, vc - .45, vc + .45, 0, .05, 0x3a3a3a); for (const tt of [vc - .5, vc + .5]) B(mid + .12, D - .1, tt - .03, tt + .03, .05, 1.05, 0xb0b0b0);
+        box(props, S(mid + .12), S(D - .1), vc - .62, vc + .62, y0, y0 + .05, 0x3a3a3a); for (const tt of [vc - .66, vc + .66]) box(props, S(mid + .12), S(D - .1), tt - .03, tt + .03, y0 + .05, y0 + 1.05, 0xb0b0b0);   // (the bridge and its rails: to look at, so you can walk straight in)
         { const a = new THREE.Vector3(...P3(S(mid + .12), vc, y0 + 1.35)), b = new THREE.Vector3(...P3(S(D - .1), vc, y0 + 1.35)), L = a.distanceTo(b), par = new THREE.Group(), tx = spiralTex();
           par.position.copy(a).add(b).multiplyScalar(.5); par.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); tx.repeat.set(3, Math.max(1, Math.round(L/1.5)));
           const cyl = new THREE.Mesh(new THREE.CylinderGeometry(R2*.98, R2*.98, L, 40, 1, true), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); par.add(cyl); g.add(par); PROM_SPIN.push(cyl); }

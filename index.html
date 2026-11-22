@@ -4140,10 +4140,10 @@ function buildSwimmer(){
   hair.scale.setScalar(1.14); hair.rotation.z = -1.02; hair.position.copy(head.position); hair.castShadow = true; body.add(hair); street.push(hair);
   for (const o of street) o.visible = false;
   // things you can buy on the Promenade and wear: a cap, sunglasses, sneakers (and the T-shirt's color)
-  const wearM = { hat: std(0xe53935, .7), shades: std(0x111111, .12, .5), shoes: std(0xf4f4f0, .7), phones: std(0x222222, .4) }, wear = { hat: [], shades: [], shoes: [], phones: [] };
+  const wearM = { hat: std(0xe53935, .7), shades: Object.assign(std(0x111111, .25, .25), { emissiveIntensity: .25 }), shoes: std(0xf4f4f0, .7), phones: std(0x222222, .4) }, wear = { hat: [], shades: [], shoes: [], phones: [] };
   { const h = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 12, 0, TAU, 0, Math.PI*.52), wearM.hat); h.scale.setScalar(1.2); h.rotation.z = -.8; h.position.copy(head.position); h.castShadow = true; body.add(h); wear.hat.push(h);
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .014, 20), wearM.hat); brim.scale.set(1, 1, .95); brim.rotation.z = Math.PI/2 - .15; brim.position.set(.735, -.1, 0); body.add(brim); wear.hat.push(brim); }
-  for (const s of [-1, 1]){ const l = ellip(.034, .8, .55, 1.1, wearM.shades, 14); l.position.set(.7, -.093, s*.045); body.add(l); wear.shades.push(l); }
+  for (const s of [-1, 1]){ const l = ellip(.042, .8, .6, 1.15, wearM.shades, 14); l.position.set(.708, -.093, s*.047); body.add(l); wear.shades.push(l); }   // (big enough to see)
   { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
   for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); legs[id].sh = sh; }
   { const hg = new THREE.Group(); hg.position.copy(head.position); hg.rotation.x = Math.PI/2; body.add(hg);   // headphones: a band over the top of your head and a cup on each ear
@@ -4285,7 +4285,7 @@ function showGear(m, has, dry = false, wear = null){   // (dry: walking around o
   if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry;
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
   if (g.wear){ const w = (dry && wear) || {}; if (g.shirtM.userData.c !== (w.shirt || '#3f9fd2')){ g.shirtM.userData.c = w.shirt || '#3f9fd2'; g.shirtM.color.set(g.shirtM.userData.c); }   // what you bought on the Promenade (on land only)
-    for (const k in g.wear){ const on = !!w[k] || (k === 'shoes' && dry); for (const o of g.wear[k]) o.visible = on; if (on) g.wearM[k].color.set(w[k] || '#f4f4f0'); } }   // (on land you always have sneakers on: white ones, till you buy some)
+    for (const k in g.wear){ const on = !!w[k] || (k === 'shoes' && dry); for (const o of g.wear[k]) o.visible = on; if (on){ g.wearM[k].color.set(w[k] || '#f4f4f0'); if (k === 'shades') g.wearM[k].emissive.set(w[k] || '#111111'); } } }   // (shades glow a little in their own color, so gold looks gold)   // (on land you always have sneakers on: white ones, till you buy some)
 }
 function updateGearLook(m, dry){ showGear(m, hasGear, dry, save.wear); }
 let diveLight = null;
@@ -6604,9 +6604,9 @@ function renderStore(){
     if (!storeDown) return; const h = document.createElement('h3'); h.className = 'sect'; h.textContent = 'Toys, games & records'; box.appendChild(h); }
   const worn = save.wear || {}, list = menu === 'books' ? DOWN_MENU : menu;
   for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === it.col;
-    card(`<div class="em">${it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
+    card(`<div class="em">${it.slot === 'shades' && it.col ? `<svg viewBox="0 0 64 32" width="52" height="26"><path d="M2 8h60M30 10q2-3 4 0" stroke="#333" stroke-width="3" fill="none"/><ellipse cx="16" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><ellipse cx="48" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><path d="M8 12q5-4 10-1M40 12q5-4 10-1" stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"/></svg>` : it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
-      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
+      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, it.slot === 'shades' ? 'Tap View for your eyes: everything looks tinted' : 'Looking good'); return; }
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
       if (it.act === 'tattoo'){ save.tattoo = it.e; persist(); flushCloud(); closeStore(); heartsAt = time; banner(`${it.e} New tattoo!`, 'Look at your arm! (It\'s only temporary)'); return; }
       treat = { ...it, bites: it.bites || (it.act === 'drink' ? 4 : 3) }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
@@ -9758,9 +9758,12 @@ function frame(now){
   if (mode === 'ocean' && ocean && ocean.hurtT > 0){
     const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H)*.25, W/2, H/2, Math.max(W,H)*.7);
     g.addColorStop(0, 'rgba(220,30,40,0)'); g.addColorStop(1, `rgba(220,30,40,${ocean.hurtT*.7})`); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+  if (camMode === 'first' && playing() && mode === 'ocean' && ocean?.onLand && save.wear?.shades){ const c = new THREE.Color(save.wear.shades), dark = c.getHSL({}).l < .2;   // through your sunglasses: the whole view tinted their color
+    ctx.save(); ctx.fillStyle = `rgba(${c.r*255|0},${c.g*255|0},${c.b*255|0},${dark ? .32 : .2})`; ctx.fillRect(0, 0, W, H); if (dark){ ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, 0, W, H); }
+    const g2 = ctx.createRadialGradient(W/2, H/2, Math.min(W, H)*.45, W/2, H/2, Math.max(W, H)*.75); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,.35)'); ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H); ctx.restore(); }
   if (camMode === 'first' && playing() && hasGear('snorkel')){   // looking out through your dive mask
-    ctx.save(); ctx.fillStyle = 'rgba(10,16,24,.92)'; ctx.beginPath(); ctx.rect(0, 0, W, H);
-    const mw = W*.9, mh = H*.8, r = Math.min(W, H)*.18; ctx.roundRect ? ctx.roundRect((W - mw)/2, (H - mh)/2, mw, mh, r) : ctx.rect((W - mw)/2, (H - mh)/2, mw, mh);
+    ctx.save(); ctx.fillStyle = 'rgba(10,16,24,.85)'; ctx.beginPath(); ctx.rect(0, 0, W, H);
+    const mw = W*.97, mh = H*.92, r = Math.min(W, H)*.14; ctx.roundRect ? ctx.roundRect((W - mw)/2, (H - mh)/2, mw, mh, r) : ctx.rect((W - mw)/2, (H - mh)/2, mw, mh);
     ctx.fill('evenodd'); ctx.restore(); }
   if ((mode === 'race' || mode === 'results') && race){ drawRaceOverlay(); drawBeat(); }
   else if (mode === 'ocean' && ocean){ drawMinimap(); drawWhiskers(); drawSharkWarn(); drawLeagueHud(); }

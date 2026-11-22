@@ -259,9 +259,12 @@
   .item .lvl i.legend.on{background:var(--gold)}
   .item .lvl span{margin-left:4px}
   .item p.next{color:var(--deep)}
-  #sunoBar{position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:60;width:min(320px,calc(100vw - 340px));min-width:240px;background:#1c2333;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);overflow:hidden;color:#fff}
+  #sunoBar{position:fixed;left:12px;bottom:8px;z-index:60;width:230px;background:#1c2333;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);overflow:hidden;color:#fff}
   #sunoBar .sunohead{display:flex;gap:8px;align-items:center;padding:6px 10px;font:700 13px Nunito,sans-serif}#sunoBar .sunohead b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#sunoBar a{color:#9fd3ff}#sunoBar button{border:0;background:rgba(255,255,255,.15);color:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer}
-  #sunoFrame{display:block;width:100%;height:104px;border:0}
+  #sunoFrame{display:block;width:100%;height:86px;border:0}
+  #sunoBar.mini #sunoFrame{height:0}#sunoBar.mini{width:180px}
+  body.touch #sunoBar{left:50%;transform:translateX(-50%);bottom:auto;top:6px}
+  .paintcols{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:8px 0}.paintcols button{width:30px;height:30px;border-radius:50%;border:2px solid rgba(0,0,0,.2);cursor:pointer}.paintcols button.on{outline:3px solid #082b45;outline-offset:2px}
   .booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
   #zap{position:fixed;inset:0;z-index:9000;pointer-events:none;background:radial-gradient(circle,#fff 0,#fff 30%,#ffe082 60%,rgba(255,224,130,0) 100%);opacity:0;transition:opacity .35s}
   .panel.mappanel{max-width:940px;width:calc(100vw - 24px);padding:12px 14px}
@@ -628,8 +631,13 @@
   </div>
 </div>
 
-<div id="sunoBar" hidden><div class="sunohead"><b id="sunoTitle"></b><a id="sunoLink" target="_blank" rel="noopener">on Suno ↗</a><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
+<div id="sunoBar" hidden><div class="sunohead"><b id="sunoTitle"></b><a id="sunoLink" target="_blank" rel="noopener">↗</a><button id="sunoMin" type="button" aria-label="Make the player small">–</button><button id="sunoStop" type="button" aria-label="Stop">✕</button></div><iframe id="sunoFrame" title="Suno player" allow="autoplay; encrypted-media" loading="lazy"></iframe></div>
 <div id="tripPanel" class="overlay" hidden><div class="panel small"><h2>📋 Trip report</h2><p class="explain">Copy this and paste it to Claude.</p><textarea id="tripText" readonly style="width:100%;height:46vh;font:13px ui-monospace,monospace;border-radius:10px;padding:8px"></textarea><div class="row2"><button id="tripClose" class="btn primary" type="button">Done</button></div></div></div>
+<div id="paintPanel" class="overlay" hidden><div class="panel small"><p class="kicker">Santa Monica Art Museum · Studio</p><h2>🎨 Paint a picture</h2>
+    <canvas id="paintCanvas" width="400" height="300" style="width:100%;max-width:400px;border-radius:10px;background:#fffdf7;touch-action:none;box-shadow:inset 0 0 0 2px rgba(0,0,0,.12)"></canvas>
+    <div id="paintColors" class="paintcols"></div>
+    <div class="row2"><button id="paintS" class="btn secondary" type="button">Thin</button><button id="paintM" class="btn secondary" type="button">Medium</button><button id="paintL" class="btn secondary" type="button">Thick</button><button id="paintClear" class="btn secondary" type="button">Start over</button></div>
+    <div class="row2"><button id="paintHang" class="btn primary" type="button">🖼️ Hang it in the museum</button><button id="paintClose" class="btn secondary" type="button">Close</button></div></div></div>
 <div id="boothPanel" class="overlay" hidden>
   <div class="panel small"><p class="kicker">☎️ Phone booth</p><h2>Where do you want to go?</h2>
     <p class="explain">Pick up the phone and dial another phone booth. Zap! You come out of that one.</p>
@@ -4779,7 +4787,7 @@ const STORE_KIND = { 'JOHN REED Fitness': 'gym', 'Sephora': 'beauty', 'MAC Cosme
   'See Sea': 'gift', 'Dodgers Clubhouse': 'clothes', 'Trastevere': 'food', "Carlo's Bake Shop": 'bakery', 'HOLEY MOLLY': 'bakery' };
 const STORE_HELLO = { clothes: 'Racks and racks of clothes', shoes: 'Shoes all the way up the walls', food: 'Something smells good!', bakery: 'Fresh out of the oven', icecream: 'So many flavors!', books: 'Shelves full of books. Tap Read a book!',
   tech: 'Phones and computers to try out', toys: 'Puzzles, games and stuffed animals', candy: 'Bins and bins of candy', beauty: 'Makeup and perfume', shades: 'Sunglasses to try on', movies: 'Popcorn! Movies are showing',
-  gym: 'Walk up to a treadmill, a bike, the weights or the DJ booth', vacant: 'This shop is empty right now. For lease!', gacha: 'Capsule toys and claw machines!', golf: 'Mini golf! Walk up to a tee to play', illusions: 'Things are not what they seem! Try every room', pickle: 'Pickleball! Walk onto the court to play', froyo: 'Fill your own cup at the machines, add toppings, then weigh it', soon: 'Opening soon! Come back and see', gallery: 'Art by Santa Monica artists. Take a look around', vr: 'Virtual reality! Walk up to a headset', tattoo: 'Real tattoos are for grown-ups. Temporary ones are for everybody!', theatre: 'A little stage: climb up and perform!', gift: 'Little treasures on every shelf' };
+  gym: 'Walk up to a treadmill, a bike, the weights or the DJ booth', vacant: 'This shop is empty right now. For lease!', gacha: 'Capsule toys and claw machines!', golf: 'Mini golf! Walk up to a tee to play', illusions: 'Things are not what they seem! Try every room', pickle: 'Pickleball! Walk onto the court to play', froyo: 'Fill your own cup at the machines, add toppings, then weigh it', soon: 'Opening soon! Come back and see', gallery: 'Contemporary art and art made with technology. Walk up to an artwork to read about it, or paint your own at the easel', vr: 'Virtual reality! Walk up to a headset', tattoo: 'Real tattoos are for grown-ups. Temporary ones are for everybody!', theatre: 'A little stage: climb up and perform!', gift: 'Little treasures on every shelf' };
 let PROM_ROOMS = null;
 const GENERIC_SHOPS = [];   // (no made-up shops any more: every shop is a real one, and a front with no shop is just a window)
 const OLD_GENERIC_SHOPS = [['Gift Shop', 'gift'], ['Café', 'food'], ['Surf Shop', 'clothes'], ['Shoe Store', 'shoes'], ['Bookstore', 'books'], ['Toy Store', 'toys'], ['Clothing', 'clothes'], ['Sunglasses', 'shades'], ['Candy Shop', 'candy'], ['Bakery', 'bakery'], ['Ice Cream', 'icecream']];   // (for shopfronts whose real shop isn't in OpenStreetMap)
@@ -5127,9 +5135,9 @@ const SUNO_TOP = [
   { id: 'bfb216d7-fde6-4105-b760-f96be8c99102', title: 'who do you love?', by: 'PXTN' },
   { id: 'a948155c-4714-4c08-b1f0-1039252b8a85', title: 'It’s Always U', by: 'Fleur' } ];
 let sunoNow = null;
-function playSuno(S){ if (song) stopSong(); sunoNow = S; $('sunoTitle').textContent = `🎵 ${S.title} · ${S.by}`; $('sunoLink').href = `https://suno.com/song/${S.id}`; $('sunoFrame').src = `https://suno.com/embed/${S.id}`; $('sunoBar').hidden = false; if (!$('musicPanel').hidden) renderMusic(); }
+function playSuno(S){ if (song) stopSong(); sunoNow = S; $('sunoTitle').textContent = `🎵 ${S.title} · ${S.by}`; $('sunoLink').href = `https://suno.com/song/${S.id}`; $('sunoFrame').src = `https://suno.com/embed/${S.id}`; $('sunoBar').hidden = false; $('sunoBar').classList.remove('mini'); $('sunoMin').textContent = '–'; if (!$('musicPanel').hidden) renderMusic(); }
 function stopSuno(){ sunoNow = null; $('sunoFrame').src = 'about:blank'; $('sunoBar').hidden = true; if (!$('musicPanel').hidden) renderMusic(); }
-$('sunoStop').onclick = stopSuno;
+$('sunoStop').onclick = stopSuno; $('sunoMin').onclick = () => { const b = $('sunoBar'), m = b.classList.toggle('mini'); $('sunoMin').textContent = m ? '▢' : '–'; };
 function renderMusic(){ const box = $('musicItems'); box.innerHTML = '';
   { const sb = $('sunoItems'); sb.innerHTML = ''; SUNO_TOP.forEach((S, i) => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = `<div class="em">${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i]}</div><h3>${htmlText(S.title)}</h3><p>by ${htmlText(S.by)}</p>`;
     const b = document.createElement('button'); b.type = 'button'; const on = sunoNow?.id === S.id; b.className = 'btn ' + (on ? 'secondary' : 'primary'); b.textContent = on ? '⏹ Stop' : '▶ Open the player'; b.onclick = () => on ? stopSuno() : playSuno(S); d.appendChild(b); sb.appendChild(d); }); } const now = song && ac && ac.currentTime < song.end ? SONGS[song.i] : null;
@@ -5626,7 +5634,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
-const SPOT = { rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
+const SPOT = { art: ['🖼️ Look closer', ''], paint: ['🎨 Paint a picture', ''], rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''], gallery: ['🖼️ Test your eyes', ''], vr: ['🥽 Try VR', ''], froyo: ['🍨 Fill a cup', ''], pickle: ['🏓 Play pickleball', '🏓 Hit!'] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
@@ -5986,6 +5994,45 @@ function buildParkRides(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   for (const [A, off, r, c] of [[376, -72, 6, 0x1e88e5], [388, -66, 4, 0xfdd835]]){ const sp = new THREE.Group(), base = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .5, 20), mat(0xeeeeee)); base.position.y = .25; sp.add(base); const hub = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 4, 8), mat(c)); hub.position.y = 2; sp.add(hub);
     for (let k = 0; k < 6; k++){ const a = k/6*TAU, cr = new THREE.Mesh(new THREE.SphereGeometry(.8, 10, 8), mat(c)); cr.position.set(Math.cos(a)*(r - 1.2), 1.4, Math.sin(a)*(r - 1.2)); sp.add(cr); } put(sp, A, off); }
   g.add(grp); mergeStatic(grp); }
+/* The Santa Monica Art Museum (SMAM, 1219 3rd St Promenade): contemporary art and art made with new technology (digital, AI,
+   VR), plus photography. White walls and track lights. The real shows change all the time, so these artworks are made up for
+   the game and labeled that way. The thing to DO: paint your own picture in the studio and hang it on the museum wall. */
+const SMAM_ART = [
+  { k: 'sea', title: 'Golden Hour, Santa Monica Bay', kind: 'Photograph', about: 'The sun sinking into the bay, shot from the end of the pier. Photographers wait all day for this ten minutes of gold light.' },
+  { k: 'blocks', title: 'Three Blues', kind: 'Painting, acrylic on canvas', about: 'Big soft blocks of color. Stand close and let the colors fill up your eyes: that is the whole idea.' },
+  { k: 'pixel', title: 'Pixel Pelican', kind: 'Digital art', about: 'A pelican made of tiny squares, the way old video games drew pictures. Every square was placed by hand.' },
+  { k: 'swirl', title: 'Dream Machine #4', kind: 'AI-assisted art', about: 'The artist wrote words, a computer turned them into swirls of color, and then the artist painted over it. Which parts did the computer do?' },
+  { k: 'pier', title: 'Pier, 1950', kind: 'Black-and-white photograph', about: 'The Santa Monica Pier over seventy years ago. Look for what is the same today: the carousel building is still there!' },
+  { k: 'neon', title: 'Glow', kind: 'Neon light sculpture', about: 'Glass tubes filled with gas that glows when electricity runs through it. The pier sign at Ocean Avenue is neon too.' },
+  { k: 'dots', title: 'Confetti Brain', kind: 'Painting, oil on canvas', about: 'Thousands of little dots. Step back far and they turn into one big picture. Step close and they are just dots.' },
+  { k: 'kelp', title: 'Under the Kelp', kind: 'Photograph, underwater', about: 'Taken with a waterproof camera in the kelp forest off Malibu. The light comes down through the water in long beams.' } ];
+const smamTex = {}; function smamArt(k){ if (smamTex[k]) return smamTex[k]; return smamTex[k] = canvasTex(256, 192, (x, w, h) => { const R = mulberry(k.length*31 + k.charCodeAt(0));
+  if (k === 'sea'){ const g = x.createLinearGradient(0, 0, 0, h*.6); g.addColorStop(0, '#ff9e5e'); g.addColorStop(1, '#ffd27a'); x.fillStyle = g; x.fillRect(0, 0, w, h*.6); x.fillStyle = '#ffef9a'; x.beginPath(); x.arc(w*.55, h*.58, 26, 0, TAU); x.fill(); const s = x.createLinearGradient(0, h*.6, 0, h); s.addColorStop(0, '#e07a4a'); s.addColorStop(1, '#2b4a6b'); x.fillStyle = s; x.fillRect(0, h*.6, w, h*.4); x.fillStyle = 'rgba(255,230,150,.6)'; for (let i = 0; i < 9; i++) x.fillRect(w*.55 - 30 + R()*60, h*.62 + i*7, 20 + R()*20, 2); }
+  else if (k === 'blocks'){ x.fillStyle = '#1b2a5a'; x.fillRect(0, 0, w, h); for (const [y, c] of [[14, '#3d6fd1'], [74, '#6fa8ff'], [134, '#2a4aa0']]){ x.fillStyle = c; x.fillRect(18, y, w - 36, 48); } }
+  else if (k === 'pixel'){ x.fillStyle = '#7ec8f0'; x.fillRect(0, 0, w, h); const P = ['..........', '...ww.....', '..wwwk....', '..wwwwwyy.', '..wwww.yy.', '.wwwww....', 'wwwwwww...', '.wwwwww...', '..ww.ww...', '..o...o...']; const c = { w: '#e8e2d6', k: '#111', y: '#f4a81d', o: '#f4a81d' }; P.forEach((row, j) => [...row].forEach((ch, i) => { if (c[ch]){ x.fillStyle = c[ch]; x.fillRect(48 + i*16, 16 + j*16, 16, 16); } })); }
+  else if (k === 'swirl'){ for (let i = 0; i < 60; i++){ x.strokeStyle = `hsl(${(i*13 + 200) % 360},80%,${50 + (i % 3)*10}%)`; x.lineWidth = 6; x.beginPath(); x.arc(w/2 + Math.sin(i)*30, h/2 + Math.cos(i*.7)*20, 10 + i*1.6, i*.3, i*.3 + 2.4); x.stroke(); } }
+  else if (k === 'pier'){ const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#d8d8d8'); g.addColorStop(1, '#7a7a7a'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.fillStyle = '#2b2b2b'; x.fillRect(0, h*.55, w, 8); for (let i = 0; i < 14; i++) x.fillRect(8 + i*18, h*.55, 3, h*.45); x.fillRect(30, h*.38, 46, h*.17); x.beginPath(); x.moveTo(30, h*.38); x.lineTo(53, h*.26); x.lineTo(76, h*.38); x.fill(); x.fillStyle = 'rgba(255,255,255,.08)'; for (let i = 0; i < 400; i++) x.fillRect(R()*w, R()*h, 1, 1); }
+  else if (k === 'neon'){ x.fillStyle = '#0d0d1a'; x.fillRect(0, 0, w, h); x.shadowColor = '#ff3fa4'; x.shadowBlur = 18; x.strokeStyle = '#ff6fc0'; x.lineWidth = 7; x.beginPath(); x.arc(w/2, h/2, 52, 0, TAU); x.stroke(); x.shadowColor = '#3fe0ff'; x.strokeStyle = '#7ff0ff'; x.beginPath(); x.moveTo(60, 140); x.bezierCurveTo(100, 40, 160, 160, 200, 60); x.stroke(); }
+  else if (k === 'dots'){ x.fillStyle = '#fdf6e3'; x.fillRect(0, 0, w, h); for (let i = 0; i < 700; i++){ const px = R()*w, py = R()*h, d = Math.hypot(px - w/2, py - h/2); x.fillStyle = d < 60 ? ['#e53935', '#fb8c00', '#fdd835'][i % 3] : ['#1e88e5', '#43a047', '#8e24aa', '#90a4ae'][i % 4]; x.beginPath(); x.arc(px, py, 3, 0, TAU); x.fill(); } }
+  else { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#5fb3c9'); g.addColorStop(1, '#0d3b4a'); x.fillStyle = g; x.fillRect(0, 0, w, h); x.fillStyle = 'rgba(255,255,255,.15)'; for (let i = 0; i < 6; i++){ x.beginPath(); x.moveTo(30 + i*40, 0); x.lineTo(50 + i*40, 0); x.lineTo(20 + i*44, h); x.lineTo(5 + i*44, h); x.fill(); } x.strokeStyle = '#6b8e23'; x.lineWidth = 5; for (let i = 0; i < 7; i++){ x.beginPath(); x.moveTo(20 + i*36, h); x.bezierCurveTo(30 + i*36, h*.6, 5 + i*36, h*.3, 25 + i*36, 0); x.stroke(); } x.fillStyle = '#f39c12'; x.beginPath(); x.ellipse(150, 100, 12, 6, 0, 0, TAU); x.fill(); }
+  }, false); }
+// your own painting, hanging in the museum (saved small with you)
+let paintCtx = null, paintCol = '#e53935', paintSize = 8, smamMine = null;
+function myArtTex(){ if (!save.myArt) return null; const img = new Image(); img.src = save.myArt; const t = new THREE.Texture(img); t.colorSpace = THREE.SRGBColorSpace; img.onload = () => { t.needsUpdate = true; }; return t; }
+function openPaint(){ const o = ocean; if (!o || paused) return; initAudio(); paused = true; const cv = $('paintCanvas'); paintCtx = cv.getContext('2d'); paintCtx.fillStyle = '#fffdf7'; paintCtx.fillRect(0, 0, cv.width, cv.height);
+  if (save.myArt){ const img = new Image(); img.onload = () => paintCtx.drawImage(img, 0, 0, cv.width, cv.height); img.src = save.myArt; }
+  $('paintPanel').hidden = false; resetPick(); }
+function closePaint(){ $('paintPanel').hidden = true; paused = false; graceAfterPause(); }
+function hangPaint(){ const small = document.createElement('canvas'); small.width = 160; small.height = 120; small.getContext('2d').drawImage($('paintCanvas'), 0, 0, 160, 120); save.myArt = small.toDataURL('image/jpeg', .6); persist(); flushCloud();
+  if (smamMine){ smamMine.material.map = myArtTex(); smamMine.material.needsUpdate = true; } closePaint(); [523, 659, 784, 1046].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.1)); heartsAt = time; banner('🖼️ Your painting is in the museum!', 'Look for it on the back wall, in the gold frame'); }
+{ const cv = $('paintCanvas'); let down = false, last = null; const at = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left)/r.width*cv.width, (e.clientY - r.top)/r.height*cv.height]; };
+  cv.addEventListener('pointerdown', e => { down = true; cv.setPointerCapture(e.pointerId); last = at(e); paintCtx.fillStyle = paintCol; paintCtx.beginPath(); paintCtx.arc(...last, paintSize/2, 0, TAU); paintCtx.fill(); });
+  cv.addEventListener('pointermove', e => { if (!down || !paintCtx) return; const p = at(e); paintCtx.strokeStyle = paintCol; paintCtx.lineWidth = paintSize; paintCtx.lineCap = 'round'; paintCtx.beginPath(); paintCtx.moveTo(...last); paintCtx.lineTo(...p); paintCtx.stroke(); last = p; });
+  const up = () => { down = false; }; cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  const pal = $('paintColors'); for (const c of ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#f06292', '#795548', '#000000', '#ffffff']){ const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'color'); b.onclick = () => { paintCol = c; [...pal.children].forEach(x => x.classList.toggle('on', x === b)); }; pal.appendChild(b); } pal.children[0].classList.add('on');
+  for (const [id, sz] of [['paintS', 4], ['paintM', 10], ['paintL', 24]]) $(id).onclick = () => { paintSize = sz; };
+  $('paintClear').onclick = () => { paintCtx.fillStyle = '#fffdf7'; paintCtx.fillRect(0, 0, cv.width, cv.height); }; $('paintHang').onclick = hangPaint; $('paintClose').onclick = closePaint; }
+function showArt(sp){ const A = SMAM_ART[sp.art]; if (!A) return; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about}`); }
 function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPHONE', '#111111', '#ffffff', 512, 96, 60) });
   for (const b of PHONE_BOOTHS){ if (b.soon) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));
     { const [x1, y1] = landXY(b.s + 1, b.t), [x0, y0] = landXY(b.s, b.t); bg.rotation.y = -Math.atan2(y1 - y0, x1 - x0) + b.face*Math.PI/2; }
@@ -6013,7 +6060,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
   if (best?.k === 'golf') return { label: `⛳ Hole ${best.hole + 1}: ${r.golf[best.hole].name}`, go: () => startGolf(r, best) };
   if (best?.k === 'elevator') return { label: dn ? '🛗 Elevator up' : '🛗 Elevator down', go: () => rideElevator(r, !dn) };
-  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'vr' ? playMovie('The Cube VR: swimming with whales in virtual reality') : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
+  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'art' ? showArt(best) : best.k === 'paint' ? openPaint() : best.k === 'vr' ? playMovie('The Cube VR: swimming with whales in virtual reality') : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
   if (r.cat === 'gym' || r.cat === 'vacant' || r.cat === 'soon' || r.cat === 'gallery' || r.cat === 'illusions' || r.cat === 'pickle') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
@@ -6568,7 +6615,20 @@ function buildRooms(g, P3){
         break; }
       case 'soon': for (const tt of [T0 + .5, T1 - .5]) B(1.5, 1.62, tt - .3, tt + .3, 0, 1.8, 0x9e9e9e); B(2.2, 3, T0 + W/2 - .4, T0 + W/2 + .4, 0, .6, 0xd7b98e); B(2.4, 2.9, T0 + W/2 - .25, T0 + W/2 + .25, .6, 1, 0xd7b98e);   // (ladders and boxes: they're getting it ready)
         quad(shell, P3(S(.32), T0 + .3, y0 + .4), P3(S(.32), T1 - .3, y0 + .4), P3(S(.32), T1 - .3, y0 + 2.9), P3(S(.32), T0 + .3, y0 + 2.9), 0xe9dcc0); break;   // paper over the windows
-      case 'gallery': for (const tt of [T0 + .02, T1 - .06]) for (let d = 1.2; d + 1.3 < r.D - .6; d += 2){ B(d, d + 1.3, tt, tt + .04, 1, 2.2, 0x111111); B(d + .1, d + 1.2, tt - .005, tt + .045, 1.1, 2.1, pick()); }   // paintings on the walls,
+      case 'gallery': if (r.name === 'Santa Monica Art Museum'){ const D = r.D, tm = T0 + W/2; r.spots = [];   // SMAM: framed art with plaques on white walls, a digital screen, a sculpture, and the painting studio
+          let i = 0; for (const [tt, ry, n] of [[T0 + .03, 0, 1], [T1 - .03, Math.PI, -1]]) for (let d = 1.6; d + 1.6 < D - 1.2 && i < SMAM_ART.length; d += 2.3, i++){ const A = SMAM_ART[i];
+            B(d - .08, d + 1.48, tt, tt + n*.04, 1.02, 2.28, 0x1b1b1b); const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.05), new THREE.MeshBasicMaterial({ map: smamArt(A.k) })); pl.position.set(...P3(S(d + .7), tt + n*.05, y0 + 1.65)); pl.rotation.y = ry; g.add(pl);
+            const cap = new THREE.Mesh(new THREE.PlaneGeometry(.34, .2), new THREE.MeshBasicMaterial({ map: labelTex(A.title, '#ffffff', '#333333', 512, 300, 36) })); cap.position.set(...P3(S(d + 1.75), tt + n*.03, y0 + 1.35)); cap.rotation.y = ry; g.add(cap);
+            r.spots.push({ k: 'art', art: i, d: d + .7, t: tt + n*1.1, rad: 1 }); }
+          { const sc = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.4), new THREE.MeshBasicMaterial({ map: smamArt('swirl') })); sc.position.set(...P3(S(D - .04), tm - 1.5, y0 + 1.9)); sc.rotation.y = inw > 0 ? -Math.PI/2 : Math.PI/2; g.add(sc); }   // the digital art screen
+          { const fr = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.2), new THREE.MeshBasicMaterial({ map: myArtTex() || labelTex('Your painting goes here!', '#fffdf7', '#9e9e9e', 512, 384, 46) })); fr.position.set(...P3(S(D - .04), tm + 1.5, y0 + 1.8)); fr.rotation.y = inw > 0 ? -Math.PI/2 : Math.PI/2; g.add(fr); smamMine = fr;
+            B(D - .1, D - .02, tm + .62, tm + 2.38, 1.12, 2.48, 0xb08d57); const cap = new THREE.Mesh(new THREE.PlaneGeometry(.9, .2), new THREE.MeshBasicMaterial({ map: labelTex('Painted by a visitor', '#ffffff', '#333333', 512, 114, 44) })); cap.position.set(...P3(S(D - .05), tm + 1.5, y0 + .98)); cap.rotation.y = fr.rotation.y; g.add(cap); }
+          B(D/2 - .35, D/2 + .35, tm - .35, tm + .35, 0, .9, 0xf4f4f0); { const sc2 = new THREE.Mesh(new THREE.TorusKnotGeometry(.28, .09, 64, 8), std(0xc0c0c0, .15, .9)); sc2.position.set(...P3(S(D/2), tm, y0 + 1.3)); g.add(sc2); PROM_SPIN.push(sc2); }   // a shiny sculpture on a plinth
+          { const d = 2.2, t = tm; for (const [dx, dz] of [[-.25, -.25], [.25, -.25], [0, .3]]) B(d + dx - .02, d + dx + .02, t + dz - .02, t + dz + .02, 0, 1.6, 0x8d6e63); B(d - .05, d + .05, t - .45, t + .45, 1.05, 1.75, 0xfffdf7); B(d + .1, d + .2, t - .5, t + .5, .95, 1.02, 0x8d6e63);   // the easel
+            r.spots.push({ k: 'paint', d, t: t + .9, rad: 1.2 }); }
+          for (let d = 1.5; d < D - .5; d += 2) for (const tt of [T0 + .6, T1 - .6]){ const sp = new THREE.Mesh(new THREE.CylinderGeometry(.06, .09, .2, 8), std(0x222222, .4)); sp.position.set(...P3(S(d), tt, y1 - .2)); g.add(sp); }   // track lights
+          break; }
+        for (const tt of [T0 + .02, T1 - .06]) for (let d = 1.2; d + 1.3 < r.D - .6; d += 2){ B(d, d + 1.3, tt, tt + .04, 1, 2.2, 0x111111); B(d + .1, d + 1.2, tt - .005, tt + .045, 1.1, 2.1, pick()); }   // paintings on the walls,
         B(r.D/2 - .8, r.D/2 + .8, T0 + W/2 - .3, T0 + W/2 + .3, 0, .45, 0x6b4a32); B(r.D - 1.6, r.D - 1, T0 + W/2 - .3, T0 + W/2 + .3, 0, 1, 0xf4f4f0); B(r.D - 1.5, r.D - 1.1, T0 + W/2 - .2, T0 + W/2 + .2, 1, 1.7, 0xd4a020); break;   // a bench, and a gold sculpture
       case 'vr': r.spots = []; for (let d = 1.6; d + 1.4 < r.D - 3; d += 2.4) for (const tm of [T0 + W*.3, T0 + W*.72]){ quad(glow, P3(S(d), tm - .7, y0 + .02), P3(S(d + 1.4), tm - .7, y0 + .02), P3(S(d + 1.4), tm + .7, y0 + .02), P3(S(d), tm + .7, y0 + .02), 0x26c6da);   // glowing VR pads
           B(d + .65, d + .75, tm - .05, tm + .05, 0, 2.6, 0x333333); r.spots.push({ k: 'vr', d: d + .7, t: tm, rad: 1 }); }
@@ -6636,20 +6696,32 @@ function buildPromenade(g, P3, at, instanceOf){
   const glassTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); const gr = x.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#7a8a94'); gr.addColorStop(1, '#3a4650'); x.fillStyle = gr; x.fillRect(0, 0, 128, 64);
     x.fillStyle = 'rgba(255,226,170,.45)'; x.fillRect(10, 30, 50, 30); x.fillRect(70, 26, 44, 34); x.fillStyle = '#20262b'; x.fillRect(0, 0, 6, 64); x.fillRect(0, 0, 128, 5); x.fillRect(122, 0, 6, 64);
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; })();
-  const glass = [], glassUV = [], clear = [];
+  const glass = [], glassUV = [], clear = [], fr = new THREE.Group(), frM = std(0x23282c, .45, .4), matM = std(0x3b3f44, .95), doorGlassM = new THREE.MeshStandardMaterial({ color: 0xa9d4e6, transparent: true, opacity: .45, roughness: .05, metalness: .4, depthWrite: false }), openTex = labelTex('OPEN', '#c62828', '#ffffff', 256, 96, 70);
+  const fbox = (s0, s1, t0, t1, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02, Math.abs(s1 - s0)), y1 - y0, Math.max(.02, Math.abs(t1 - t0))), m); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, (y0 + y1)/2)); fr.add(me); return me; };   // (window frames, door frames, doormats)
   for (const side of [-1, 1]){ const fs = (side < 0 ? PROM.s0 : PROM.s1) - side*.06, R = promRooms().filter(r => r.side === side);
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]){
       const cuts = [t0, t1]; for (let t = t0 + 3; t < t1; t += 3) cuts.push(t); for (const r of R) if (r.t0 < t1 && r.t1 > t0) cuts.push(r.t0, r.t1, r.door - 1.05, r.door + 1.05);
       const cs = [...new Set(cuts.filter(t => t >= t0 && t <= t1))].sort((a, b) => a - b);
       for (let i = 0; i < cs.length - 1; i++){ const ta = cs[i], tb = cs[i + 1]; if (tb - ta < .01) continue; const tm = (ta + tb)/2, room = R.find(r => tm > r.t0 && tm < r.t1), h0 = landH(fs - side*2, tm), apple = side > 0 && tm > -359 && tm < -333 && !room, top = h0 + (apple ? 13.5 : 3.45);
-        if (room && Math.abs(tm - room.door) < 1.05) continue;   // the doorway: open
-        if (room){ quad(clear, P3(fs, ta, room.floor + 3.5), P3(fs, tb, room.floor + 3.5), P3(fs, tb, room.floor), P3(fs, ta, room.floor)); continue; }   // see right in
+        if (room && Math.abs(tm - room.door) < 1.05){ const y = room.floor, d0 = room.door - 1.05, d1 = room.door + 1.05;   // the doorway: a dark frame and header, an open glass door, a doormat and an OPEN sign, so you can see where to go in
+          quad(clear, P3(fs, ta, y + 3.5), P3(fs, tb, y + 3.5), P3(fs, tb, y + 2.65), P3(fs, ta, y + 2.65));   // (glass above the door)
+          for (const t of [d0, d1]) fbox(fs - .07, fs + .07, t - .07, t + .07, y, y + 2.65, frM); fbox(fs - .08, fs + .08, d0, d1, y + 2.5, y + 2.66, frM);
+          { const leaf = new THREE.Group(), pane = new THREE.Mesh(new THREE.BoxGeometry(.04, 2.35, 1), doorGlassM), rim = new THREE.Mesh(new THREE.BoxGeometry(.05, 2.4, .06), frM), handle = new THREE.Mesh(new THREE.BoxGeometry(.06, .6, .04), std(0xc0c0c0, .2, .8));
+            pane.position.set(0, 1.2, .5); rim.position.set(0, 1.2, .97); handle.position.set(-side*.06, 1.1, .9); leaf.add(pane, rim, handle); leaf.position.set(...P3(fs, d0 + .05, y)); leaf.rotation.y = -side*1.25; fr.add(leaf); }
+          fbox(fs - side*.15, fs - side*1.35, room.door - .85, room.door + .85, landH(fs - side*.75, room.door) + .01, landH(fs - side*.75, room.door) + .035, matM);
+          const op = new THREE.Mesh(new THREE.PlaneGeometry(.55, .21), new THREE.MeshBasicMaterial({ map: openTex })); op.position.set(...P3(fs - side*.02, d1 + .45, y + 1.6)); op.rotation.y = side < 0 ? Math.PI/2 : -Math.PI/2; fr.add(op);
+          continue; }
+        if (room){ quad(clear, P3(fs, ta, room.floor + 3.5), P3(fs, tb, room.floor + 3.5), P3(fs, tb, room.floor), P3(fs, ta, room.floor));   // see right in, through framed glass:
+          for (const t of [ta, tb]) fbox(fs - .05, fs + .05, t - .05, t + .05, room.floor, room.floor + 3.5, frM);   //   a mullion at each pane's edge,
+          fbox(fs - .06, fs + .06, ta, tb, room.floor, room.floor + .32, frM); fbox(fs - .05, fs + .05, ta, tb, room.floor + 2.6, room.floor + 2.68, frM); fbox(fs - .05, fs + .05, ta, tb, room.floor + 3.42, room.floor + 3.5, frM);   //   a kick plate, a transom bar and a top rail
+          continue; }
         quad(glass, P3(fs, ta, top), P3(fs, tb, top), P3(fs, tb, h0 + .05), P3(fs, ta, h0 + .05)); glassUV.push(0, 1, (tb - ta)/3, 1, (tb - ta)/3, 0, 0, 1, (tb - ta)/3, 0, 0, 0); } } }
   const shops = new THREE.Group(), mk = (arr, mat, extra) => { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); if (extra) for (const [k, v, n] of extra) geo.setAttribute(k, new THREE.Float32BufferAttribute(v, n)); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); shops.add(m); return m; };
   mk(signPos, new THREE.MeshBasicMaterial({ map: atlas, side: THREE.DoubleSide }), [['uv', signUV, 2]]);
   mk(awn, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .8, side: THREE.DoubleSide }), [['color', awnCol, 3]]);
   mk(glass, new THREE.MeshStandardMaterial({ map: glassTex, emissive: 0xffffff, emissiveMap: glassTex, emissiveIntensity: .25, roughness: .15, metalness: .3, side: THREE.DoubleSide }), [['uv', glassUV, 2]]);
-  mk(clear, new THREE.MeshStandardMaterial({ color: 0xbfd8e2, transparent: true, opacity: .22, roughness: .05, metalness: .5, depthWrite: false, side: THREE.DoubleSide }));
+  mk(clear, new THREE.MeshStandardMaterial({ color: 0xa9cfdf, transparent: true, opacity: .34, roughness: .05, metalness: .5, depthWrite: false, side: THREE.DoubleSide }));
+  g.add(fr); mergeStatic(fr);
   g.add(shops); buildRooms(g, P3);
   // the dinosaur topiaries: ivy over a frame, standing in round fountains that spout water
   const ivy = std(0x2f6b2a, .95), ivy2 = std(0x3d7d33, .95), stone = std(0xcfc6b4, .8), water = new THREE.MeshStandardMaterial({ color: 0x5fb6d6, roughness: .1, metalness: .2, transparent: true, opacity: .8 });

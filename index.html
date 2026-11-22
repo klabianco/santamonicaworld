@@ -3014,7 +3014,7 @@ function bldIndex(){
   if (bldIndex.done) return; bldIndex.done = true;
   CITY.bldgs.forEach((b, n) => { let s0 = 1e9, s1 = -1e9, t0 = 1e9, t1 = -1e9, lo = 1e9;
     for (const [s, t] of b.p){ s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t); lo = Math.min(lo, landH(s, t)); }
-    const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); if (onPier && s0 > 195 && s1 < 242 && t0 > 5 && t1 < 50){ b.base = pierDeckH((s0 + s1)/2); b.top = b.base + 12; b.box = [s0, t0, s1, t1]; return; }   b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];   // (the Hippodrome: you can walk in; its walls are solid by themselves, see buildPierTown)
+    const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); if (onPier && ((s0 > 195 && s1 < 242 && t0 > 5 && t1 < 50) || ((s0 + s1)/2 > -222 && (s0 + s1)/2 < -190 && (t0 + t1)/2 < -1 && (t0 + t1)/2 > -26))){ b.base = pierDeckH((s0 + s1)/2); b.top = b.base + 12; b.box = [s0, t0, s1, t1]; return; }   b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];   // (the Hippodrome: you can walk in; its walls are solid by themselves, see buildPierTown)
     if (s1 < 70 && s0 > 0 && (s1 - s0)*(t1 - t0) < 45) return;   // (lifeguard towers on the sand: built as towers, not solid boxes)
     if (inSMP((s0 + s1)/2, (t0 + t1)/2)) return;   // (Santa Monica Place is built by hand)
     for (let i = Math.floor(s0/BLD_CELL); i <= Math.floor(s1/BLD_CELL); i++) for (let j = Math.floor(t0/BLD_CELL); j <= Math.floor(t1/BLD_CELL); j++){ const k = bldKey(i, j); (bldCells.get(k) || bldCells.set(k, []).get(k)).push(n); } }); }
@@ -3046,6 +3046,19 @@ function roadAt(s, t){   // the named street (or path) you're on, if any
     if (d < 4 && d + (r.c === 6 ? -3 : r.c === 7 ? 1 : 0) < bd){ bd = d + (r.c === 6 ? -3 : r.c === 7 ? 1 : 0); best = r; } }
   return best; }
 let LAND_BOXES = [];   // other solid things on land, [s0, t0, s1, t1, top]: lifeguard towers, home, ... (filled in by buildCoast)
+// Mariasol, at the end of the pier (real pier coordinates A along, off north+): two floors and a patio, walls by floor, the stairs in the inland corner
+const MARI = (() => { const A0 = 587, A1 = 606, o0 = 0, o1 = 24, up = 3.8, oPatio = 18, door = [594.5, 597.5], st = [587.25, 589.8, 4, 14], T = .25;
+  const walls0 = [[A0, door[0], o0, o0 + T, 0, 'glass'], [door[1], A1, o0, o0 + T, 0, 'glass'], [A0, A1, o1 - T, o1], [A0, A0 + T, o0, o1], [A1 - T, A1, o0, o1, 0, 'glass'], [592, 603, 20.6, 21.6, 1.1, 'counter']];
+  const walls1 = [[A0, A1, o0, o0 + T, 0, 'glass'], [A0, A0 + T, o0, oPatio], [A1 - T, A1, o0, oPatio, 0, 'glass'], [A0, 595, oPatio - T, oPatio, 0, 'glass'], [598, A1, oPatio - T, oPatio, 0, 'glass'],
+    [A0, A1, o1 - .15, o1, 1.1, 'rail'], [A0, A0 + .15, oPatio, o1, 1.1, 'rail'], [A1 - .15, A1, oPatio, o1, 1.1, 'rail'], [st[1], st[1] + .12, st[2] - .5, st[3] - 1.5, 1.1, 'rail'], [st[0], st[1], st[2] - .62, st[2] - .5, 1.1, 'rail']];
+  return { A0, A1, o0, o1, up, oPatio, door, st, walls0, walls1 }; })();
+function mariH(s, t){ const M = MARI, A = 390 - s, off = -t; if (A < M.A0 - .05 || A > M.A1 + .05 || off < M.o0 - .05 || off > M.o1 + .05) return null;
+  const dk = pierDeckH(s), r = walkRef - dk, L = [0], inSt = A > M.st[0] && A < M.st[1] && off > M.st[2] - .5 && off < M.st[3] + .3;
+  if (inSt){ const sh = M.up*clamp((off - M.st[2])/(M.st[3] - M.st[2]), 0, 1); if (sh > r + .6 && r < 1.2 && sh > .7) return dk + 8; L.push(sh); }   // (the stairs: walk up from the bottom, not into their side)
+  const well = A < M.st[1] && off > M.st[2] - .5 && off < M.st[3]; if (!well) L.push(M.up);
+  const below = L.filter(v => v <= r + .6), h = below.length ? Math.max(...below) : Math.min(...L), lv = h > 2.5 ? 1 : 0;
+  for (const [a0, a1, b0, b1] of lv ? M.walls1 : M.walls0) if (A > a0 - .12 && A < a1 + .12 && off > b0 - .12 && off < b1 + .12) return dk + 8;   // (a wall, a window or the rail)
+  return dk + h; }
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
@@ -3053,6 +3066,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
+  if (s > -222 && s < -190 && t > -26 && t < 2){ const m = mariH(s, t); if (m != null) h = m; }   // (Mariasol's floors and walls)
   if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
     if (L.length){ L.push(h); const below = L.filter(v => v <= walkRef + .6); h = below.length ? Math.max(...below) : Math.min(...L); } }
   return h;
@@ -3085,7 +3099,7 @@ function groundAt(x, y){
   if (Math.abs(x - CAT.x) < 1200 && Math.abs(y - CAT.y) < 1200){ const e = catE(x, y); if (e < 1.02) g = Math.max(g, catH(...catLocal(x, y))); }   // Catalina Island
   if (Math.abs(x - EAGLE.x) < 200 && Math.abs(y - EAGLE.y) < 200 && Math.hypot(x - EAGLE.x, y - EAGLE.y) < EAGLE.r*METERS) g = Math.max(g, EAGLE.top);   // the flat top of Eagle Rock
   if (x > coastX(y) - 400) g = Math.max(g, walkH(x, y));   // the beach, the bluffs and the city (see LAND)
-  else if (ocean?.onLand && walkRef > PIER_L.h1 - 1.5){ const [s, t] = landST(x, y); if (s > PIER_L.s0 - 1 && t > -20 && t < 90 && onPierDeck(s, t)) g = Math.max(g, walkH(x, y)); }   // (the pier, out over the water: if you're up on it)
+  else if (ocean?.onLand && walkRef > PIER_L.h1 - 1.5){ const [s, t] = landST(x, y); if (s > PIER_L.s0 - 1 && t > -40 && t < 90 && onPierDeck(s, t)) g = Math.max(g, walkH(x, y)); }   // (the pier, out over the water: if you're up on it)
   return g;
 }
 // trees, the hut and the house are solid on land (x, y, radius in units)
@@ -3496,7 +3510,7 @@ function walkStep(o, dt){
   const acc = air && o.iceJ ? 0 : sk ? (walking ? 1.3 : .3) : o.bike ? (walking ? 1.6 : .9) : 8; o.vx += (Math.cos(o.ang)*sp - o.vx)*Math.min(1, dt*acc); o.vy += (Math.sin(o.ang)*sp - o.vy)*Math.min(1, dt*acc);   // (in the air you just keep going)
   walkRef = o.gh ?? Infinity; const wx0 = o.x, wy0 = o.y; o.x += o.vx*dt; o.y += o.vy*dt;
   if (o.bike && (roomAt(...landST(o.x, o.y)) || inHomeBuilding(o))){ o.x = wx0; o.y = wy0; o.vx = o.vy = 0; if (time > (o.bike.nagT || 0)){ o.bike.nagT = time + 3; coach('🚲 Get off your bike to go inside (tap Get off)', 2.5); } }
-  if (o.x > coastX(o.y) - 200) steepStop(o, wx0, wy0);
+  if (o.x > coastX(o.y) - 200 || onPierNow(o)) steepStop(o, wx0, wy0);   // (on the pier too: its buildings and walls are solid)
   if (o.x > coastX(o.y) - 12000){ iceCollide(o, wx0, wy0); shopGlass(o, wx0, wy0); pierRail(o, wx0, wy0); }
   o.gh = groundAt(o.x, o.y);   // (the floor you're on now, for the stacked parts of home)
   o.walkPh = (o.walkPh || 0) + dt*(walking ? run ? 13 : 8 : 0); o.walking = walking;
@@ -4427,6 +4441,23 @@ function buildFreewayFence(g, P3){ const tex = canvasTex(64, 64, (x, w, h) => { 
       const uv = q.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)*len/.6, uv.getY(i)*H/.6); geos.push(q); posts.push(v0); } }
   if (!geos.length) return; g.add(new THREE.Mesh(mergeGeometries(geos), mesh));
   const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(.04, .04, H + .1, 6), std(0x9aa0a6, .4, .6), posts.length), m4 = new THREE.Matrix4(); posts.forEach((v, i) => { m4.makeTranslation(v.x, v.y + H/2, v.z); pm.setMatrixAt(i, m4); }); g.add(pm); }
+// The pier's railings, so you can see the edge: weathered wood posts with a top rail and a middle rail, all round the deck (open where the stairs go down to the sand)
+function buildPierRailings(g, P3){ const posts = [], rails = [], H = 1.1, s0 = PIER_L.s0, s1 = 257;
+  const gapAt = (s, t) => PIER_STAIRS.some(([a, b, e]) => s > Math.min(a, b) - .3 && s < Math.max(a, b) + .3 && Math.abs(t - e) < 1);
+  const run = (pa, pb) => { const L = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]); if (L < .05) return; const n = Math.max(1, Math.round(L/2.2));
+    for (let k = 0; k < n; k++){ const a = [lerp(pa[0], pb[0], k/n), lerp(pa[1], pb[1], k/n)], b = [lerp(pa[0], pb[0], (k + 1)/n), lerp(pa[1], pb[1], (k + 1)/n)]; if (gapAt(...a) || gapAt(...b)) continue; posts.push(a); rails.push([a, b]); } };
+  for (const side of [0, 1]){ let prev = null, ps = s0;
+    for (let sv = s0; sv <= s1 + .01; sv += 1){ const tv = pierSides(sv + .5)[side];
+      if (prev == null){ prev = tv; ps = sv; continue; }
+      if (Math.abs(tv - prev) > .4 && Math.abs(tv - prev) > 2){ run([ps, prev], [sv, prev]); run([sv, prev], [sv, tv]); ps = sv; prev = tv; }   // (a step in the edge: across it)
+      else if (Math.abs(tv - prev) > .01){ run([ps, prev], [sv, tv]); ps = sv; prev = tv; } }
+    run([ps, prev], [s1, prev]); }
+  { const [a, b] = pierSides(s0 + .5); run([s0 + .15, a], [s0 + .15, b]); }   // the very end, facing the sea
+  const wood = std(0x8a7660, .9), m4 = new THREE.Matrix4(), pm = new THREE.InstancedMesh(new THREE.BoxGeometry(.12, H, .12), wood, posts.length);
+  posts.forEach(([sv, tv], i) => { const [x, y] = landXY(sv, tv); m4.makeTranslation(x*U, pierDeckH(sv) + H/2, y*U); pm.setMatrixAt(i, m4); }); g.add(pm);
+  const geos = []; for (const [a, b] of rails) for (const [y, th] of [[H, .1], [.55, .06]]){ const [xa, ya] = landXY(...a), [xb, yb] = landXY(...b), va = new THREE.Vector3(xa*U, pierDeckH(a[0]) + y, ya*U), vb = new THREE.Vector3(xb*U, pierDeckH(b[0]) + y, yb*U), L = va.distanceTo(vb);
+    const q = new THREE.BoxGeometry(L, th, .08); q.applyMatrix4(new THREE.Matrix4().makeRotationY(-Math.atan2(vb.z - va.z, vb.x - va.x)).setPosition(va.clone().add(vb).multiplyScalar(.5))); geos.push(q); }
+  if (geos.length) g.add(new THREE.Mesh(mergeGeometries(geos), wood)); }
 function buildCoast(){
   const g = new THREE.Group(); coastGroup = g; bldIndex();
   const at = (obj, s, t, lift = 0, h) => { const [x, y] = landXY(s, t); obj.position.set(x*U, (h ?? landH(s, t)) + lift, y*U); g.add(obj); return obj; };
@@ -4742,7 +4773,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -5936,7 +5967,9 @@ function buildPalisades(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
 function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const S = A => 390 - A, dh = s => pierDeckH(s);
   // a box on the deck, by real coordinates (A0..A1 along, off0..off1 across), from y0 to y1 above the deck
-  const bx = (A0, A1, o0, o1, y0, y1, hex, m) => { const s0 = S(A1), s1 = S(A0), t0 = -Math.max(o0, o1), t1 = -Math.min(o0, o1), sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m || mat(hex)); me.position.set(...P3(sc, tc, dh(sc) + (y0 + y1)/2)); grp.add(me); return me; };
+  let solid = true;   // (buildings on the deck are solid: you go round them, or in at a door where there is one)
+  const bx = (A0, A1, o0, o1, y0, y1, hex, m) => { const s0 = S(A1), s1 = S(A0), t0 = -Math.max(o0, o1), t1 = -Math.min(o0, o1), sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m || mat(hex)); me.position.set(...P3(sc, tc, dh(sc) + (y0 + y1)/2)); grp.add(me);
+    if (solid && y0 <= .05 && y1 >= 2 && s1 - s0 > 1.2 && t1 - t0 > 1.2) LAND_BOXES.push([s0, t0, s1, t1, dh(sc) + y1]); return me; };
   // a sign: a plane at (A, off) facing 'n' (north, -t), 's', 'e' (toward land, +s) or 'w' (out to sea)
   const sign = (A, off, y, w, h, text, bg, fg, face, size) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.max(64, Math.round(1024*h/w)), size || Math.round(Math.min(150, 1024*h/w*.62))) })); const s = S(A); m.position.set(...P3(s, -off, dh(s) + y)); m.rotation.y = { n: Math.PI, s: 0, e: Math.PI/2, w: -Math.PI/2 }[face]; grp.add(m); return m; };
   const cyl = (A, off, y, r, h, hex, seg = 12, rt) => { const s = S(A), me = new THREE.Mesh(new THREE.CylinderGeometry(rt ?? r, r, h, seg), mat(hex)); me.position.set(...P3(s, -off, dh(s) + y + h/2)); grp.add(me); return me; };
@@ -6023,12 +6056,30 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
     sign(A1 + .02, (o0 + o1)/2 + 4, 4.6, 3.6, .9, 'THE END · 2448 MILES', '#5d4037', '#ffffff', 'w', 70);
     { const mx = (A0 + A1)/2; cyl(mx, (o0 + o1)/2, 7.8, .12, 10, 0xe8e0d0, 8, .07); bx(mx - .06, mx + .06, (o0 + o1)/2 - 2, (o0 + o1)/2 + 2, 14.5, 14.62, 0xe8e0d0); bx(mx - .05, mx + .05, (o0 + o1)/2 - 1.3, (o0 + o1)/2 + 1.3, 16.4, 16.5, 0xe8e0d0);
       const f = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .9), new THREE.MeshBasicMaterial({ map: canvasTex(60, 36, (x, w, h) => { for (let i = 0; i < 7; i++){ x.fillStyle = i % 2 ? '#fff' : '#b22234'; x.fillRect(0, i*h/7, w, h/7); } x.fillStyle = '#3c3b6e'; x.fillRect(0, 0, w*.4, h*.55); }, false), side: THREE.DoubleSide })); const s = S(mx); f.position.set(...P3(s, -(o0 + o1)/2 + .8, dh(s) + 17.3)); grp.add(f); } }
-  { const A0 = 587, A1 = 606, o0 = 0, o1 = 24, beige = 0xdccba6, green = 0x2e5d3a;   // Mariasol: tacos up top, big green-framed windows, yellow patio rails, upturned red eave tips
-    bx(A0, A1, o0 + 2.5, o1, 0, 3.8, beige); bx(A0, A1, o0, o1, 3.8, 7.2, beige); for (let A = A0 + 1; A < A1 - 1; A += 3.2) bx(A, A + 2.4, o0 - .02, o0 + .06, 4.4, 6.6, green);
-    { const r = new THREE.Mesh(new THREE.ConeGeometry(15.4, 3, 4), mat(0xd8b46a)); const s = S((A0 + A1)/2); r.position.set(...P3(s, -(o0 + o1)/2, dh(s) + 8.7)); r.rotation.y = Math.PI/4; r.scale.set(.88, 1, 1.12); grp.add(r);
-      for (const [A, o] of [[A0, o0], [A0, o1], [A1, o0], [A1, o1]]){ const tip = new THREE.Mesh(new THREE.ConeGeometry(.35, 1.2, 6), mat(0xd84315)); const s2 = S(A); tip.position.set(...P3(s2, -o, dh(s2) + 7.6)); tip.rotation.z = (A === A0 ? 1 : -1)*.9; grp.add(tip); } }
-    for (let A = A0; A < A1; A += 1.6) bx(A, A + .12, o1 + .1, o1 + .25, 3.8, 4.9, green); bx(A0, A1, o1 + .1, o1 + .3, 4.7, 4.9, 0xfdd835); bx(A0, A1, o1 + .12, o1 + .28, 3.9, 4.6, 0xfdd835);
-    sign((A0 + A1)/2, o0 - .1, 7.65, 5.4, .7, 'MARIASOL', '#00897b', '#ffffff', 's'); }
+  { const M = MARI, A0 = M.A0, A1 = M.A1, o0 = M.o0, o1 = M.o1, beige = 0xdccba6, green = 0x2e5d3a, U2 = M.up, glassM = new THREE.MeshStandardMaterial({ color: 0x9fc7d8, roughness: .08, metalness: .3, transparent: true, opacity: .35, depthWrite: false });   // Mariasol: you can go in. Downstairs the taco counter, the stairs up to the dining room with big green-framed windows, and the patio with yellow rails over the sea
+    solid = false;
+    for (const [lv, list] of [[0, M.walls0], [1, M.walls1]]) for (const [a0, a1, b0, b1, ht, kind] of list){ const y0 = lv ? U2 : 0, y1 = y0 + (ht || (lv ? 3.4 : U2));
+      if (kind === 'glass'){ bx(a0, a1, b0, b1, y0, y0 + .9, beige); bx(a0, a1, b0, b1, y0 + .9, y1 - .4, 0, glassM); bx(a0, a1, b0, b1, y1 - .4, y1, beige); const along = a1 - a0 > b1 - b0; for (let k = 0; k <= (along ? a1 - a0 : b1 - b0); k += 2.4) along ? bx(a0 + k - .06, a0 + k + .06, b0 - .03, b1 + .03, y0 + .9, y1 - .4, green) : bx(a0 - .03, a1 + .03, b0 + k - .06, b0 + k + .06, y0 + .9, y1 - .4, green); }
+      else if (kind === 'rail'){ bx(a0, a1, b0, b1, y0 + 1, y1, 0xfdd835); const along = a1 - a0 > b1 - b0; for (let k = 0; k <= (along ? a1 - a0 : b1 - b0); k += .8) along ? bx(a0 + k, a0 + k + .07, b0, b1, y0, y0 + 1, 0xfdd835) : bx(a0, a1, b0 + k, b0 + k + .07, y0, y0 + 1, 0xfdd835); }
+      else if (kind === 'counter'){ bx(a0, a1, b0, b1, y0, y0 + 1.05, 0x00897b); bx(a0 - .05, a1 + .05, b0 - .05, b1 + .05, y0 + 1.05, y0 + 1.12, 0xf4ead2); }
+      else bx(a0, a1, b0, b1, y0, y1, beige); }
+    bx(A0, A1, o0, o1, .01, .05, 0xc9a27a); bx(A0, A1, o0, M.oPatio, U2 - .25, U2, 0xf4ead2);   // floors: terracotta tile downstairs; the upstairs floor (with the stairwell left open)
+    bx(M.st[0], A1, M.st[3], M.oPatio, U2 - .25, U2 + .02, 0xb07a4f); bx(M.st[1], A1, o0, M.st[3], U2 - .25, U2 + .02, 0xb07a4f); bx(M.st[0], M.st[1], o0, M.st[2], U2 - .25, U2 + .02, 0xb07a4f); bx(A0, A1, M.oPatio, o1, U2 - .25, U2 + .02, 0x9e9e9e);
+    for (let k = 0; k < 14; k++){ const f = k/14, oo = M.st[2] + (M.st[3] - M.st[2])*f; bx(M.st[0] + .05, M.st[1] - .05, oo, oo + (M.st[3] - M.st[2])/14 + .02, 0, U2*(k + 1)/14, 0x8d5a3b); }   // the stairs
+    bx(A0, A1, o0, M.oPatio, U2 + 3.4, U2 + 3.6, beige);   // the roof over the dining room
+    { const r = new THREE.Mesh(new THREE.ConeGeometry(13.6, 2.4, 4), mat(0xd8b46a)); const sR = S((A0 + A1)/2); r.position.set(...P3(sR, -(o0 + M.oPatio)/2, dh(sR) + U2 + 4.8)); r.rotation.y = Math.PI/4; r.scale.set(.98, 1, .9); grp.add(r);
+      for (const [A, o] of [[A0, o0], [A0, M.oPatio], [A1, o0], [A1, M.oPatio]]){ const tip = new THREE.Mesh(new THREE.ConeGeometry(.35, 1.2, 6), mat(0xd84315)); const s2 = S(A); tip.position.set(...P3(s2, -o, dh(s2) + U2 + 3.9)); tip.rotation.z = (A === A0 ? 1 : -1)*.9; grp.add(tip); } }
+    // tables: downstairs by the windows, upstairs in the dining room, and on the patio under umbrellas
+    const table = (A, o, y, umb) => { cyl(A, o, y, .06, .72, 0x333333, 6); cyl(A, o, y + .72, .5, .05, 0xf4f4f0, 14); for (const [da, dd] of [[.8, 0], [-.8, 0], [0, .8], [0, -.8]]) cyl(A + da, o + dd, y, .2, .45, 0x00897b, 8);
+      if (umb){ cyl(A, o, y + .72, .03, 1.7, 0x333333, 6); const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .5, 8), mat([0xe53935, 0xfdd835, 0x00897b][Math.round(A) % 3])); const s2 = S(A); u.position.set(...P3(s2, -o, dh(s2) + y + 2.5)); grp.add(u); } };
+    for (const [A, o] of [[593, 6], [598, 6], [603, 6], [598, 11], [603, 11]]) table(A, o, 0);
+    for (const [A, o] of [[593, 4], [597.5, 4], [602, 4], [593, 9], [597.5, 9], [602, 9], [593, 14], [597.5, 14], [602, 14]]) table(A, o, U2);
+    for (const [A, o] of [[590, 21], [595, 21], [600, 21], [604, 21]]) table(A, o, U2, true);
+    // papel picado over the counter, a menu board, the sign
+    { const cols = ['#e53935', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#ff7043']; for (let k = 0; k < 12; k++){ const f = new THREE.Mesh(new THREE.PlaneGeometry(.55, .45), new THREE.MeshBasicMaterial({ color: cols[k % 6], side: THREE.DoubleSide })); const A = 591.5 + k*1, s2 = S(A); f.position.set(...P3(s2, -19.6, dh(s2) + 3.1)); grp.add(f); } }
+    sign(598, 23.5, 2.3, 5, .9, 'TACOS · MARISCOS · AGUAS FRESCAS', '#2e5d3a', '#fdd835', 's', 46);
+    sign((A0 + A1)/2, o0 - .1, U2 + 3.95, 5.4, .7, 'MARIASOL', '#00897b', '#ffffff', 's'); sign(M.door[0] - .9, o0 - .1, 2.4, 1.4, .3, 'OPEN', '#c62828', '#ffffff', 's', 60);
+    solid = true; }
   bx(579, 583, 4, 8, 0, 3, 0xfdd835); sign(581, 4, 2.6, 2.8, .4, "TOM'S FAST FOOD", '#c62828', '#ffffff', 'e', 50);   // (Tom Pearl's: a little food stand)
   sign(629, 33, 1.6, 3, .5, 'SUNSET POINT', '#1f2d5a', '#ffffff', 'e', 70); cyl(629, 33, 0, .05, 1.4, 0x444444, 6);
   // benches on the end deck and along the narrow pier, facing the sea
@@ -6100,7 +6151,7 @@ const PIER_DO = [
   ['menu:PierBurger', 318.5, -9.6, 2.4, '🍔 Pier Burger'], ["menu:Marlene's Beachcomber", 327.5, -9.6, 2.2, "🏖️ Marlene's Beachcomber"], ['menu:Soda Jerks', 157, -10.5, 2.4, '🥤 Soda Jerks'], ['menu:Pier Shop', 182, -11, 2.2, '🎁 Pier Shop'],
   ['menu:Seaside on the Pier', 196, -9, 2.4, '🦐 Seaside on the Pier'], ['menu:The Albright', 228, -9, 2.4, '🦞 The Albright'], ['menu:Bubba Gump', 268, 2, 2.6, '🍤 Bubba Gump Shrimp Co.'], ['menu:Oatman Rock Shop', 304, .8, 2, '💎 Oatman Rock Shop'],
   ['menu:Pier Gear', 389.8, -10, 1.8, '🧢 Pier Gear'], ['menu:Cosmic Funnel Cakes', 396.8, -10, 1.8, '🎡 Cosmic Funnel Cakes'], ['menu:Smashies Burger', 403.8, -10, 1.8, '🍔 Smashies Burger'], ['menu:The Coffee Bean', 410.8, -10, 1.8, '☕ The Coffee Bean'],
-  ['menu:Bait & Tackle', 610, -9, 2.2, '🎣 Bait & Tackle'], ['menu:Mariasol', 596.5, -1.2, 2.2, '🌮 Mariasol'] ];
+  ['menu:Bait & Tackle', 610, -9, 2.2, '🎣 Bait & Tackle'], ['menu:Mariasol', 597.5, 19.6, 2.4, '🌮 Order at Mariasol'], ['menu:Mariasol', 597.5, 6.5, 2, '🌮 Order at your table'] ];
 function pierDo(o){ if (!onPierNow(o)) return null; const [s, t] = landST(o.x, o.y), A = 390 - s, off = -t; let best = null, bd = 1e9;
   { const dc = Math.hypot(A - CAROUSEL.A, off - CAROUSEL.off); if (dc > CAROUSEL.R - 1.5 && dc < CAROUSEL.R + 2.2) return { label: '🎠 Ride a carousel horse', go: () => startRide2(o, 'carousel') }; }
   { const G = inRideLine(A, off); if (G && RIDES[G[0]]) return { label: PIER_DO.find(P => P[0] === G[0])?.[4] || `Ride ${G[5]}`, go: () => startRide2(o, G[0]) }; }
@@ -8767,7 +8818,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
     _tp.set(px - Math.cos(a)*dd, py + 1.35 - (1 - c)*.25, pz - Math.sin(a)*dd); _tl.set(px + fx*ahead, py - .5 + (1 - c)*.8, pz + fz*ahead); }
   else { const [d, h] = kind === 'race' || kind === 'pool' ? [lerp(5.6, 3.3, sub), lerp(3.1, .55, sub)] : boom(kind === 'ship' ? 3.3 : lerp(4.8, 3.3, sub), kind === 'ship' ? 1.2 : lerp(2.4, .55, sub));   // on deck the camera stays low, under the sails
     _tp.set(px - fx*d, Math.max(floorY, py + h), pz - fz*d); _tl.set(px + fx*3.2, py - .2 + sub*.1, pz + fz*3.2); }
-  if (kind !== 'title' && kind !== 'house' && _tp.x/U > coastX(_tp.z/U) - 300){
+  if (kind !== 'title' && kind !== 'house' && (_tp.x/U > coastX(_tp.z/U) - 300 || (ocean && onPierNow(ocean)))){
     if ((kind === 'car' || kind === 'ocean') && ocean?.onLand && !inHomeBuilding(ocean)){   // in town: a wall between you and the camera pulls the camera in close (rather than up onto the roof)
       const ex = _tp.x - px, ey = _tp.y - py, ez = _tp.z - pz; let f = 1;
       for (let k = 2; k <= 14; k++){ const q = k/14; if (walkH((px + ex*q)/U, (pz + ez*q)/U) > py + ey*q - .25){ f = Math.max(.12, (k - 1.5)/14); break; } }
@@ -8775,7 +8826,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
     const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
     const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
     if (rr){ const cy = downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + 3.25; if (_tp.y > cy) _tp.y = cy; }
-    if (ocean?.onLand){ const [cs, ct] = landST(_tp.x/U, _tp.z/U), cA = 390 - cs, cO = -ct; if (cA > 158 && cA < 185 && cO > -40 && cO < -15 && walkRef > PIER_L.h1 - 2){ const dk = pierDeckH(cs), dc = Math.hypot(cA - CAROUSEL.A, cO - CAROUSEL.off); _tp.y = Math.min(_tp.y, dk + (dc < CAROUSEL.R + .6 ? 3.7 : 8.5)); } } }   // (in the Hippodrome: under its ceiling, and under the carousel's canopy)
+    if (ocean?.onLand){ const [cs, ct] = landST(_tp.x/U, _tp.z/U), cA = 390 - cs, cO = -ct; if (cA > MARI.A0 && cA < MARI.A1 && cO > MARI.o0 && cO < MARI.oPatio){ const dk = pierDeckH(cs); _tp.y = Math.min(_tp.y, dk + (walkRef - dk > 2.5 ? MARI.up + 3.2 : MARI.up - .35)); } if (cA > 158 && cA < 185 && cO > -40 && cO < -15 && walkRef > PIER_L.h1 - 2){ const dk = pierDeckH(cs), dc = Math.hypot(cA - CAROUSEL.A, cO - CAROUSEL.off); _tp.y = Math.min(_tp.y, dk + (dc < CAROUSEL.R + .6 ? 3.7 : 8.5)); } } }   // (in the Hippodrome: under its ceiling, and under the carousel's canopy)
   const k = camInit ? 1 - Math.exp(-dt*(kind === 'ocean' && camAir > .5 ? 14 : 5)) : 1; camPos.lerp(_tp, k); camLook.lerp(_tl, k); camInit = true;   // follow fast during a big leap
   camera.position.copy(camPos); camera.lookAt(camLook);
   if (camShake > .001){ camera.position.x += (Math.random() - .5)*camShake; camera.position.y += (Math.random() - .5)*camShake; camShake = Math.max(0, camShake - dt*1.6); }   // (a crash shakes the camera)

@@ -4942,59 +4942,114 @@ function golfStep(o, w, dt){ const r = w.r, H = w.h, b = w.b, S = d => r.fs + r.
   G.club.visible = true; const sw = time - w.tapT < .35 ? Math.sin((time - w.tapT)/.35*Math.PI)*.5 : 0, [cx, cy] = landXY(S(b.d - Math.cos(w.aim)*(.16 + sw*.3)), b.t - Math.sin(w.aim)*(.16 + sw*.3));
   G.club.position.set(cx*U, r.floor + .5, cy*U); G.club.rotation.set(0, -o.ang, .12); }
 function golfPutt(w){ if (w.phase !== 'aim') return; const v = .5 + w.pow*4.6; w.b.vd = Math.cos(w.aim)*v; w.b.vt = Math.sin(w.aim)*v; w.strokes++; w.phase = 'roll'; sfx(520, .05, 'square', .04); sfx(180, .08, 'triangle', .04); }
-// ---- ICE at Santa Monica: the outdoor ice rink that goes up every winter at 1324 5th Street, on the corner of Arizona (in the empty lot west of 5th).
-// Get skates at the skate hut by the gate, then glide: it's slippery, so you keep sliding when you let go. Tap Spin for a twirl. Leave by the gate and the skates come off.
-const ICE = { s0: 853, s1: 879, t0: -606, t1: -570, gt: -596, gw: 2.4, hut: [880.6, 884.4, -592, -585], spot: [882.6, -593.6] };
-const inRink = (s, t) => s > ICE.s0 && s < ICE.s1 && t > ICE.t0 && t < ICE.t1;
+// ---- Frost on 5th (it was called ICE at Santa Monica): the winter ice rink in the parking lot on the corner of 5th and Arizona (1324 5th Street), copied from
+// photos (Nov 2026), the satellite view and the news (SMDP 2023-24): a 120 x 60 ft rink with clear boards, its end toward the Bank of America wall across the alley (they show movies on it:
+// the Chill Zone), a little kids' rink, a wood deck with glass railings, the skate building with its clear roof, three fire pits with seats right by the rink, white tents,
+// white star lanterns hanging over the ice, and the big ficus trees along 5th wrapped in fairy lights. (Which way round things go on the deck is my best guess.)
+// Get skates at the skate building, then glide: it's slippery, so you keep sliding when you let go. Tap Spin for a twirl. The skates come off when you leave by the entrance on 5th.
+const ICE = { site: [845, 883, -612, -570], ent: [-588.8, -585.8],   // (the deck: from the alley to the 5th Street sidewalk, and from Arizona south; the way in is from 5th)
+  rinks: [{ s0: 849, s1: 881, t0: -607, t1: -589, gate: { side: 't1', a: 869.6, b: 872.4 } }, { s0: 874.5, s1: 880.5, t0: -585.3, t1: -579.3, gate: { side: 's0', a: -583.4, b: -581.2 }, kids: true }],
+  hut: [861, 869, -584, -577], spot: [865, -585.8], cocoa: [870.2, 872, -575.4, -573.8], cocoaSpot: [871.1, -576.6],
+  pits: [[851.5, -584.6], [856.8, -584.6], [851.5, -578.4]], tents: [846.5, 862, -575, -571] };
+const inBoxST = (b, s, t) => s > b[0] && s < b[1] && t > b[2] && t < b[3], inR = (R, s, t) => s > R.s0 && s < R.s1 && t > R.t0 && t < R.t1;
+const inRink = (s, t) => ICE.rinks.some(R => inR(R, s, t));
 let iceVis = null;
-function iceBuild(){ if (iceVis) return iceVis; const I = ICE, sc = (I.s0 + I.s1)/2, tc = (I.t0 + I.t1)/2, h0 = landH(sc, tc), [cx, cy] = landXY(sc, tc), [ax, ay] = landXY(sc + 1, tc), [bx, by] = landXY(sc, tc + 1);
-  const g = new THREE.Group(), yaw = -Math.atan2((ay - cy), (ax - cx)); g.position.set(cx*U, h0, cy*U); g.rotation.y = yaw;
+function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] = I.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, h0 = landH(sc, tc), [cx, cy] = landXY(sc, tc), [ax, ay] = landXY(sc + 1, tc), [bx, by] = landXY(sc, tc + 1);
+  const g = new THREE.Group(), yaw = -Math.atan2(ay - cy, ax - cx); g.position.set(cx*U, h0, cy*U); g.rotation.y = yaw;
   const zt = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw), sg = zt.x*(bx - cx) + zt.z*(by - cy) > 0 ? 1 : -1;   // (local x runs along s; local z along t, or against it)
   const L = (s, t, y = 0) => new THREE.Vector3(s - sc, y, sg*(t - tc)), add = (geo, mat, s, t, y) => { const m = new THREE.Mesh(geo, mat); m.position.copy(L(s, t, y)); g.add(m); return m; };
-  const bx3 = (s0, s1, t0, t1, y0, y1, mat) => add(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), mat, (s0 + s1)/2, (t0 + t1)/2, (y0 + y1)/2);
-  // the ice, and the boards round it: white, a yellow kick plate, a blue rail on top (with a gate on the 5th Street side)
-  const ice = add(new THREE.PlaneGeometry(I.s1 - I.s0, I.t1 - I.t0), new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: .12, metalness: .15 }), sc, tc, .05); ice.rotation.x = -Math.PI/2; ice.receiveShadow = true;
-  const white = std(0xf7f9fb, .5), blue = std(0x1565c0, .4), yel = std(0xf2c230, .6);
-  const board = (s0, s1, t0, t1) => { bx3(s0, s1, t0, t1, 0, 1.05, white); bx3(s0 - .02, s1 + .02, t0 - .02, t1 + .02, 0, .2, yel); bx3(s0 - .04, s1 + .04, t0 - .04, t1 + .04, 1.05, 1.12, blue); };
-  board(I.s0 - .15, I.s0, I.t0 - .15, I.t1 + .15); board(I.s0, I.s1, I.t0 - .15, I.t0); board(I.s0, I.s1, I.t1, I.t1 + .15);
-  board(I.s1, I.s1 + .15, I.t0 - .15, I.gt - I.gw/2); board(I.s1, I.s1 + .15, I.gt + I.gw/2, I.t1 + .15);
-  // string lights on poles all the way round
-  const poles = [], ps = [I.s0 - .5, sc, I.s1 + .5], pt = [I.t0 - .5, I.t0 + (I.t1 - I.t0)/3, I.t0 + 2*(I.t1 - I.t0)/3, I.t1 + .5];
-  for (const s of ps) for (const t of pt) if (s !== sc || t === pt[0] || t === pt[3]) poles.push([s, t]);
-  const ring = [[ps[0], pt[0]], [ps[1], pt[0]], [ps[2], pt[0]], [ps[2], pt[1]], [ps[2], pt[2]], [ps[2], pt[3]], [ps[1], pt[3]], [ps[0], pt[3]], [ps[0], pt[2]], [ps[0], pt[1]], [ps[0], pt[0]]];
-  const pm = std(0x30363a, .6); for (const [s, t] of poles) bx3(s - .07, s + .07, t - .07, t + .07, 0, 5.2, pm);
-  const bulbs = []; for (let k = 0; k + 1 < ring.length; k++){ const [s0, t0] = ring[k], [s1, t1] = ring[k + 1], n = Math.round(Math.hypot(s1 - s0, t1 - t0)/.8); for (let j = 0; j < n; j++){ const f = j/n; bulbs.push([lerp(s0, s1, f), lerp(t0, t1, f), 5 - Math.sin(f*Math.PI)*.7]); } }
-  for (const [a, b] of [[0, 5], [2, 7]]){ const [s0, t0] = ring[a], [s1, t1] = ring[b], n = Math.round(Math.hypot(s1 - s0, t1 - t0)/.9); for (let j = 1; j < n; j++){ const f = j/n; bulbs.push([lerp(s0, s1, f), lerp(t0, t1, f), 5.2 - Math.sin(f*Math.PI)*1.2]); } }   // (and two strands across, over the ice)
-  { const im = new THREE.InstancedMesh(new THREE.SphereGeometry(.07, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), bulbs.length), M4 = new THREE.Matrix4(), C3 = new THREE.Color(), col = [0xffe9a8, 0xff5252, 0x69f0ae, 0x40c4ff, 0xffd740];
-    bulbs.forEach(([s, t, y], k) => { const v = L(s, t, y); M4.makeTranslation(v.x, v.y, v.z); im.setMatrixAt(k, M4); im.setColorAt(k, C3.setHex(col[k % col.length])); }); g.add(im); }
-  // the sign over the gate, and the skate hut beside it
-  for (const t of [I.gt - 1.6, I.gt + 1.6]) bx3(I.s1 + .9, I.s1 + 1.1, t - .1, t + .1, 0, 4.2, pm);
-  const tex = labelTex('ICE AT SANTA MONICA', '#0d47a1', '#ffffff', 1024, 132, 76);
-  for (const side of [1, -1]){ const sgn = add(new THREE.PlaneGeometry(4.2, .55), new THREE.MeshBasicMaterial({ map: tex }), I.s1 + 1 + side*.03, I.gt, 3.75); sgn.rotation.y = side*Math.PI/2; }
-  const [h0s, h1s, h0t, h1t] = I.hut; bx3(h0s, h1s, h0t, h1t, 0, 2.5, std(0xe3f2fd, .7)); bx3(h0s - .2, h1s + .2, h0t - .2, h1t + .2, 2.5, 2.7, std(0x1565c0, .5)); bx3(h0s + .4, h1s - .4, h0t - .02, h0t, 1, 1.9, std(0x263238, .3));   // (a window toward the gate)
-  bx3(h0s + .3, h1s - .3, h0t - .45, h0t, .95, 1.02, std(0xf7f9fb, .6));
-  { const st = add(new THREE.PlaneGeometry(3, .5), new THREE.MeshBasicMaterial({ map: labelTex('⛸️ SKATES', '#1565c0', '#ffffff', 512, 96, 64) }), (h0s + h1s)/2, h0t - .03, 2.2); st.rotation.y = sg > 0 ? Math.PI : 0; }
-  // skaters going round and round (scarves and hats: it's winter!)
+  const bx3 = (s0, s1, t0, t1, y0, y1, mat) => add(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat, (s0 + s1)/2, (t0 + t1)/2, (y0 + y1)/2);
+  const faceT = (m, toward) => { m.rotation.y = (toward < 0) === (sg > 0) ? Math.PI : 0; return m; }, faceS = (m, toward) => { m.rotation.y = toward*Math.PI/2; return m; };   // (turn a sign to face along t or along s)
+  const M4 = new THREE.Matrix4(), C3 = new THREE.Color(), inst = (geo, mat, pts, cols) => { const im = new THREE.InstancedMesh(geo, mat, pts.length); pts.forEach(([s, t, y], k) => { const v = L(s, t, y); M4.makeTranslation(v.x, v.y, v.z); im.setMatrixAt(k, M4); if (cols) im.setColorAt(k, C3.setHex(cols[k % cols.length])); }); g.add(im); return im; };
+  const wood = std(0x9a7550, .8), white = std(0xf7f9fb, .5), glass = new THREE.MeshStandardMaterial({ color: 0xdff3ff, transparent: true, opacity: .25, roughness: .05, depthWrite: false }), dark = std(0x30363a, .6);
+  // the deck over the parking lot, with teal turf by the tents and in the Chill Zone
+  bx3(S0, S1, T0, T1, 0, .04, wood);
+  for (const [a, b, c, d] of [[I.tents[0], I.tents[1], I.tents[2] - 1, T1], [S0, I.rinks[0].s0 - .3, I.rinks[0].t0, I.rinks[0].t1]]){ const q = add(new THREE.PlaneGeometry(b - a, d - c), std(0x2bb5a0, .95), (a + b)/2, (c + d)/2, .045); q.rotation.x = -Math.PI/2; }
+  // glass railings round the deck (open to 5th Street at the entrance)
+  const rail = (s0, s1, t0, t1) => { bx3(s0, s1, t0, t1, .04, 1.05, glass); bx3(s0 - .03, s1 + .03, t0 - .03, t1 + .03, 1.05, 1.11, wood); const n = Math.max(1, Math.round(Math.max(s1 - s0, t1 - t0)/2));
+    for (let k = 0; k <= n; k++){ const f = k/n, s = lerp(s0, s1, f), t = lerp(t0, t1, f); bx3(s - .04, s + .04, t - .04, t + .04, 0, 1.1, dark); } };
+  rail(S0, S1, T0, T0 + .08); rail(S0, S1, T1 - .08, T1); rail(S0, S0 + .08, T0, T1); rail(S1 - .08, S1, T0, I.ent[0]); rail(S1 - .08, S1, I.ent[1], T1);
+  // the rinks: ice, a white dasher with clear boards on top (a gate in each)
+  const iceM = new THREE.MeshStandardMaterial({ color: 0xeaf6ff, roughness: .12, metalness: .15 });
+  for (const R of I.rinks){ const ice = add(new THREE.PlaneGeometry(R.s1 - R.s0, R.t1 - R.t0), iceM, (R.s0 + R.s1)/2, (R.t0 + R.t1)/2, .07); ice.rotation.x = -Math.PI/2; ice.receiveShadow = true;
+    const side = (s0, s1, t0, t1) => { if (Math.abs(s1 - s0) < .01 || Math.abs(t1 - t0) < .01) return; bx3(s0, s1, t0, t1, 0, .55, white); bx3(s0, s1, t0, t1, .55, 1.25, glass); bx3(s0 - .02, s1 + .02, t0 - .02, t1 + .02, 1.25, 1.3, white); };
+    const w = .12, G = R.gate; side(R.s0 - w, R.s0, R.t0 - w, G.side === 's0' ? G.a : R.t1 + w); if (G.side === 's0') side(R.s0 - w, R.s0, G.b, R.t1 + w);
+    side(R.s1, R.s1 + w, R.t0 - w, R.t1 + w); side(R.s0, R.s1, R.t0 - w, R.t0);
+    side(R.s0, G.side === 't1' ? G.a : R.s1, R.t1, R.t1 + w); if (G.side === 't1') side(G.b, R.s1, R.t1, R.t1 + w); }
+  { const k = add(new THREE.PlaneGeometry(2.2, .45), new THREE.MeshBasicMaterial({ map: labelTex("KIDS' RINK", '#e91e63', '#ffffff', 512, 104, 64) }), I.rinks[1].s0 - .14, (I.rinks[1].t0 + I.rinks[1].t1)/2 + 1.6, 1.6); faceS(k, -1); }
+  // the skate building (a clear plastic roof, a counter toward the rink, racks of skates inside)
+  { const [a, b, c, d] = I.hut; bx3(a, b, c, c + .12, 0, 1, white); bx3(a, a + 1.6, c, c + .12, 1, 2.7, white); bx3(b - 1.6, b, c, c + .12, 1, 2.7, white); bx3(a, b, d - .12, d, 0, 2.7, white); bx3(a, a + .12, c, d, 0, 2.7, white); bx3(b - .12, b, c, d, 0, 2.7, white);
+    bx3(a - .1, b + .1, c - .1, d + .1, 2.7, 2.78, new THREE.MeshStandardMaterial({ color: 0xe8f4ff, transparent: true, opacity: .35, roughness: .1, depthWrite: false }));
+    bx3(a + 1.6, b - 1.6, c - .35, c + .12, .95, 1.02, wood); bx3(a + 1.6, b - 1.6, c, c + .12, 2, 2.7, white);   // (the counter window)
+    for (let k = 0; k < 4; k++) bx3(a + .5, b - .5, d - .7, d - .2, .3 + k*.5, .34 + k*.5, dark); const sk = []; for (let k = 0; k < 4; k++) for (let s = a + .6; s < b - .6; s += .28) sk.push([s, d - .45, .45 + k*.5]);
+    inst(new THREE.BoxGeometry(.22, .14, .3), std(0x222222, .5), sk);
+    const sgn = add(new THREE.PlaneGeometry(3.2, .55), new THREE.MeshBasicMaterial({ map: labelTex('⛸️ SKATES', '#0d47a1', '#ffffff', 512, 88, 60) }), (a + b)/2, c - .02, 2.35); faceT(sgn, -1); }
+  // the fire pits, each with a ring of seats, right by the rink
+  const flames = []; for (const [s, t] of I.pits){ add(new THREE.CylinderGeometry(.8, .9, .45, 16), std(0x5d5d5d, .9), s, t, .25); const f = add(new THREE.ConeGeometry(.4, .9, 8), new THREE.MeshBasicMaterial({ color: 0xff8f00 }), s, t, .9); flames.push(f);
+    const f2 = add(new THREE.ConeGeometry(.22, .55, 7), new THREE.MeshBasicMaterial({ color: 0xffe082 }), s, t, .78); flames.push(f2);
+    for (let k = 0; k < 7; k++){ const a = k/7*TAU; bx3(s + Math.cos(a)*1.9 - .3, s + Math.cos(a)*1.9 + .3, t + Math.sin(a)*1.9 - .3, t + Math.sin(a)*1.9 + .3, 0, .45, std([0x8d6e63, 0xeceff1][k % 2], .9)); } }
+  // white tents along the far side (a table and chairs in each)
+  { const [a, b, c, d] = I.tents, n = 4, wd = (b - a)/n, tm = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: .9, side: THREE.DoubleSide });
+    for (let k = 0; k < n; k++){ const s0 = a + k*wd + .1, s1 = s0 + wd - .2, sm = (s0 + s1)/2, tmid = (c + d)/2; bx3(s0, s1, d - .06, d, 0, 2.2, tm); bx3(s0, s0 + .05, c, d, 0, 2.2, tm); bx3(s1 - .05, s1, c, d, 0, 2.2, tm);
+      const roof = add(new THREE.ConeGeometry(Math.hypot(wd, d - c)/2*.98, 1.5, 4, 1, true), tm, sm, tmid, 2.95); roof.rotation.y = Math.PI/4; roof.scale.set(1, 1, (d - c)/wd);
+      bx3(sm - .45, sm + .45, tmid - .35, tmid + .35, .7, .75, wood); bx3(sm - .05, sm + .05, tmid - .05, tmid + .05, 0, .7, dark); for (const o2 of [-.7, .7]) bx3(sm + o2 - .2, sm + o2 + .2, tmid - .2, tmid + .2, 0, .45, white); } }
+  // the Chill Zone: beanbags, and a movie on the Bank of America wall across the alley
+  { const bb = []; for (let t = I.rinks[0].t0 + 1.5; t < I.rinks[0].t1 - 1; t += 2.2) bb.push([S0 + 1.8, t, .25]); const im = inst(new THREE.SphereGeometry(.55, 12, 8), std(0xffffff, .9), bb, [0x26a69a, 0xec407a, 0xffca28, 0x5c6bc0]); im.scale.set(1, .55, 1);
+    const scr = canvasTex(512, 288, (x, w, h) => { const sk = x.createLinearGradient(0, 0, 0, h); sk.addColorStop(0, '#0b1a3a'); sk.addColorStop(1, '#35507e'); x.fillStyle = sk; x.fillRect(0, 0, w, h); x.fillStyle = '#fff'; for (let k = 0; k < 60; k++) x.fillRect((k*97) % w, (k*53) % (h*.6), 2, 2);
+      x.fillStyle = '#eef4fb'; x.beginPath(); x.ellipse(w/2, h + 60, w*.8, 150, 0, 0, TAU); x.fill(); x.fillStyle = '#1b5e20'; for (const tx of [70, 130, 400, 455]){ x.beginPath(); x.moveTo(tx, 140); x.lineTo(tx - 30, 220); x.lineTo(tx + 30, 220); x.fill(); }
+      x.fillStyle = '#fff'; for (const [yy, rr] of [[228, 34], [178, 24], [140, 17]]){ x.beginPath(); x.arc(w/2, yy, rr, 0, TAU); x.fill(); } x.fillStyle = '#ff7043'; x.beginPath(); x.moveTo(w/2, 140); x.lineTo(w/2 + 22, 144); x.lineTo(w/2, 147); x.fill();
+      x.fillStyle = '#222'; for (const dx of [-6, 6]){ x.beginPath(); x.arc(w/2 + dx, 135, 2.5, 0, TAU); x.fill(); } x.fillStyle = '#e53935'; x.fillRect(w/2 - 20, 156, 40, 7); }, false);
+    const m = add(new THREE.PlaneGeometry(10, 5.6), new THREE.MeshBasicMaterial({ map: scr }), 833.3, (I.rinks[0].t0 + I.rinks[0].t1)/2, 3.4); faceS(m, 1); }
+  // the hot cocoa cart
+  { const [a, b, c, d] = I.cocoa; bx3(a, b, c, d, 0, 1, std(0xc62828, .6)); bx3(a - .1, b + .1, c - .1, d + .1, 1, 1.06, white); for (const s of [a + .05, b - .05]) bx3(s - .03, s + .03, c, c + .06, 1, 2.2, dark); bx3(a - .2, b + .2, c - .4, d + .2, 2.2, 2.3, std(0xfafafa, .8));
+    const sgn = add(new THREE.PlaneGeometry(1.7, .4), new THREE.MeshBasicMaterial({ map: labelTex('☕ HOT COCOA', '#5d4037', '#ffffff', 512, 120, 64) }), (a + b)/2, c - .02, 1.6); faceT(sgn, -1); }
+  // the way in from 5th Street, under the sign
+  for (const t of [I.ent[0] - .25, I.ent[1] + .25]) bx3(S1 + .2, S1 + .45, t - .12, t + .12, 0, 4, dark);
+  { const tex = labelTex('❄ FROST ON 5TH ❄', '#0d3b66', '#ffffff', 1024, 150, 84); for (const d of [1, -1]){ const m = add(new THREE.PlaneGeometry(4.6, .68), new THREE.MeshBasicMaterial({ map: tex }), S1 + .33 + d*.03, (I.ent[0] + I.ent[1])/2, 3.6); faceS(m, d); } }
+  // little Christmas trees in planters round the deck
+  for (const [s, t] of [[S1 - .8, I.ent[0] - 1.2], [S1 - .8, I.ent[1] + 1.2], [S0 + .8, T0 + .8], [S1 - .8, T0 + .8], [S0 + .8, T1 - .8], [S1 - .8, T1 - .8], [868.5, -574.5]]){ bx3(s - .35, s + .35, t - .35, t + .35, 0, .5, std(0x3e2723, .8)); add(new THREE.ConeGeometry(.45, 1.3, 8), std(0x1b5e20, .9), s, t, 1.15); }
+  // poles all round with strands of lights across, and white star lanterns hanging over the ice
+  const poles = []; for (const s of [S0 + .4, (S0 + S1)/2, S1 - .4]) for (const t of [T0 + .4, -598, T1 - .4]) if (!inRink(s, t)) poles.push([s, t]); for (const [s, t] of poles) bx3(s - .08, s + .08, t - .08, t + .08, 0, 7, dark);
+  const bulbs = [], stars = [], strand = (s0, t0, s1, t1, top, sag, star) => { const n = Math.round(Math.hypot(s1 - s0, t1 - t0)/.6); for (let j = 1; j < n; j++){ const f = j/n, y = top - Math.sin(f*Math.PI)*sag; bulbs.push([lerp(s0, s1, f), lerp(t0, t1, f), y]); if (star && j % 5 === 0) stars.push([lerp(s0, s1, f), lerp(t0, t1, f), y - .55]); } };
+  for (const t of [T0 + .4, -598, T1 - .4]){ strand(S0 + .4, t, (S0 + S1)/2, t, 6.9, .6, true); strand((S0 + S1)/2, t, S1 - .4, t, 6.9, .6, true); }
+  for (const s of [S0 + .4, (S0 + S1)/2, S1 - .4]){ strand(s, T0 + .4, s, -598, 6.9, .5, true); strand(s, -598, s, T1 - .4, 6.9, .5, true); }
+  inst(new THREE.SphereGeometry(.05, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), bulbs, [0xfff3c4, 0xffe9a8, 0xfffde7]);
+  { const sa = new THREE.OctahedronGeometry(.3), sb = new THREE.OctahedronGeometry(.3); sb.rotateY(Math.PI/4); sb.rotateX(Math.PI/4); const sm = new THREE.MeshBasicMaterial({ color: 0xf5fbff }); inst(sa, sm, stars); inst(sb, sm, stars); }
+  // the big ficus trees along 5th Street, wrapped in fairy lights
+  { const fl = [], R = mulberry(55); for (const t of [-611, -603.5, -596, -580, -572.5, -565, -557.5]){ const s = 885.2; add(new THREE.CylinderGeometry(.22, .32, 3.4, 8), std(0x6d5a48, .9), s, t, 1.7);
+      const cn = add(new THREE.IcosahedronGeometry(3.3, 1), std(0x2f5d2a, .95), s, t, 5.6); cn.scale.y = .8;
+      for (let k = 0; k < 70; k++){ const a = R()*TAU, z = R()*2 - 1, r = Math.sqrt(1 - z*z); fl.push([s + Math.cos(a)*r*3.35, t + Math.sin(a)*r*3.35, 5.6 + z*3.35*.8]); }
+      for (let k = 0; k < 14; k++) fl.push([s + (R() - .5)*.6, t + (R() - .5)*.6, .4 + R()*3]); }
+    inst(new THREE.SphereGeometry(.045, 4, 3), new THREE.MeshBasicMaterial({ color: 0xfff6d5 }), fl); }
+  // skaters going round and round (scarves and hats: it's winter!), and two little ones in the kids' rink
   const sk = [], SH = [0xd33a2c, 0x3f9fd2, 0xf2c230, 0x2e7d4f, 0x7a3e9d, 0xff7a2f, 0xd14a7a], SK = [0xf1c9a5, 0xc99a74, 0x8d5a3b, 0xe0b48c, 0x5c3a24];
-  for (let k = 0; k < 7; k++){ const p = new THREE.Group(), b = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, 1, 8), std(SH[k], .8)), hd = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), std(SK[k % 5], .7)), lg = new THREE.Mesh(new THREE.CylinderGeometry(.18, .14, .5, 8), std(0x2d3d58, .8)), hat = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 6, 0, TAU, 0, Math.PI/2), std(SH[(k + 3) % 7], .9)), arms = new THREE.Mesh(new THREE.BoxGeometry(.12, .1, 1.3), std(SH[k], .8));
-    b.position.y = .95; hd.position.y = 1.6; lg.position.y = .25; hat.position.y = 1.64; arms.position.y = 1.25; p.add(b, hd, lg, hat, arms); g.add(p); sk.push({ m: p, ph: k/7*TAU + Math.random()*.4, v: .16 + Math.random()*.08, lane: Math.random()*2.5, dir: k % 3 ? 1 : -1 }); }
-  oceanScene.add(g); return iceVis = { g, L, sk, sc, tc, sg }; }
-function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), near = Math.abs(s - (ICE.s0 + ICE.s1)/2) < 220 && Math.abs(t - (ICE.t0 + ICE.t1)/2) < 260; if (!near && !iceVis) return; const V = iceBuild(); V.g.visible = near; if (!near) return;
-  const rs = (ICE.s1 - ICE.s0)/2 - 2.6, rt = (ICE.t1 - ICE.t0)/2 - 2.6;
-  for (const k of V.sk){ k.ph += k.dir*k.v*dt; const a = rs - k.lane, b = rt - k.lane, ss = V.sc + Math.cos(k.ph)*a, tt = V.tc + Math.sin(k.ph)*b, ds = -Math.sin(k.ph)*a*k.dir, dtt = Math.cos(k.ph)*b*k.dir;
-    k.m.position.copy(V.L(ss, tt, .05 + Math.abs(Math.sin(k.ph*9))*.03)); k.m.rotation.set(0, Math.atan2(-V.sg*dtt, ds), Math.sin(k.ph*6)*.12); }
-  if (o.skates && (Math.abs(s - (ICE.s0 + ICE.s1)/2) > 60 || Math.abs(t - (ICE.t0 + ICE.t1)/2) > 60)) o.skates = false; }   // (you took them off when you went off somewhere)
+  for (let k = 0; k < 9; k++){ const p = new THREE.Group(), b = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, 1, 8), std(SH[k % 7], .8)), hd = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), std(SK[k % 5], .7)), lg = new THREE.Mesh(new THREE.CylinderGeometry(.18, .14, .5, 8), std(0x2d3d58, .8)), hat = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 6, 0, TAU, 0, Math.PI/2), std(SH[(k + 3) % 7], .9)), arms = new THREE.Mesh(new THREE.BoxGeometry(.12, .1, 1.3), std(SH[k % 7], .8));
+    b.position.y = .95; hd.position.y = 1.6; lg.position.y = .25; hat.position.y = 1.64; arms.position.y = 1.25; p.add(b, hd, lg, hat, arms); g.add(p); const kid = k >= 7; if (kid) p.scale.setScalar(.65);
+    sk.push({ m: p, R: I.rinks[kid ? 1 : 0], ph: k/7*TAU + Math.random()*.4, v: kid ? .35 + Math.random()*.1 : .16 + Math.random()*.08, lane: kid ? Math.random()*.6 : Math.random()*2.5, dir: k % 3 ? 1 : -1, edge: kid ? 1.2 : 2.6 }); }
+  oceanScene.add(g); return iceVis = { g, L, sk, sg, flames }; }
+function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), [S0, S1, T0, T1] = ICE.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, near = Math.abs(s - sc) < 220 && Math.abs(t - tc) < 260; if (!near && !iceVis) return; const V = iceBuild(); V.g.visible = near; if (!near) return;
+  for (const k of V.sk){ const R = k.R, a = (R.s1 - R.s0)/2 - k.edge - k.lane, b = (R.t1 - R.t0)/2 - k.edge - k.lane, cs = (R.s0 + R.s1)/2, ct = (R.t0 + R.t1)/2; k.ph += k.dir*k.v*dt;
+    const ss = cs + Math.cos(k.ph)*a, tt = ct + Math.sin(k.ph)*b, ds = -Math.sin(k.ph)*a*k.dir, dtt = Math.cos(k.ph)*b*k.dir;
+    k.m.position.copy(V.L(ss, tt, .07 + Math.abs(Math.sin(k.ph*9))*.03)); k.m.rotation.set(0, Math.atan2(-V.sg*dtt, ds), Math.sin(k.ph*6)*.12); }
+  V.flames.forEach((f, k) => { f.scale.set(1 + Math.sin(time*7 + k)*.08, 1 + Math.sin(time*11 + k*2)*.22, 1 + Math.cos(time*8 + k)*.08); });
+  if (o.skates && (Math.abs(s - sc) > 60 || Math.abs(t - tc) > 60)) o.skates = false; }   // (you took them off when you went off somewhere)
 const onIce = o => o?.onLand && !o.car && mode === 'ocean' && inRink(...landST(o.x, o.y));
-function iceAction(o){ const [s, t] = landST(o.x, o.y); if (o.skates || Math.hypot(s - ICE.spot[0], t - ICE.spot[1]) > 2.4) return null;
-  return { label: '⛸️ Get skates', go: () => { o.skates = true; initAudio(); [660, 880].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); banner('⛸️ Skates on!', "Go through the gate onto the ice. It's slippery! Tap Spin for a twirl"); } }; }
-function iceCollide(o, x0, y0){ const [s0, t0] = landST(x0, y0), [s1, t1] = landST(o.x, o.y), I = ICE, h = I.hut;
-  if (s1 > h[0] - .3 && s1 < h[1] + .3 && t1 > h[2] - .3 && t1 < h[3] + .3 && !(s0 > h[0] - .3 && s0 < h[1] + .3 && t0 > h[2] - .3 && t0 < h[3] + .3)){ o.x = x0; o.y = y0; o.vx = o.vy = 0; return; }   // (the skate hut is solid)
-  const in0 = inRink(s0, t0), in1 = inRink(s1, t1); if (in0 === in1) return;
-  if (Math.abs(t1 - I.gt) < I.gw/2 - .2 && s1 > I.s1 - 1.5){   // through the gate
-    if (in1 && o.skates) return; if (!in1){ if (o.skates){ o.skates = false; banner('Skates off', 'Come back and skate any time!'); } return; }
-    coach('Get skates at the skate hut first ⛸️', 2); }
-  const crossS = (s0 > I.s0 && s0 < I.s1) !== (s1 > I.s0 && s1 < I.s1), [ax, ay] = landXY(s1, t1), [bx, by] = crossS ? landXY(s1 + 1, t1) : landXY(s1, t1 + 1), nx = (bx - ax)/METERS, ny = (by - ay)/METERS, vn = o.vx*nx + o.vy*ny;
-  o.x = x0; o.y = y0; o.vx -= 1.7*vn*nx; o.vy -= 1.7*vn*ny; if (Math.abs(vn) > 40) sfx(120, .12, 'square', .03); }   // bonk off the boards
+function iceAction(o){ const [s, t] = landST(o.x, o.y);
+  if (!o.skates && Math.hypot(s - ICE.spot[0], t - ICE.spot[1]) < 2.4) return { label: '⛸️ Get skates', go: () => { o.skates = true; initAudio(); [660, 880].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); banner('⛸️ Skates on!', "Go through the gate onto the ice. It's slippery! Tap Spin for a twirl"); } };
+  if (Math.hypot(s - ICE.cocoaSpot[0], t - ICE.cocoaSpot[1]) < 1.8) return { label: '☕ Hot cocoa · 4 coins', go: () => { initAudio(); if ((save.coins || 0) < 4){ sfx(200, .2, 'square', .04); banner('Not enough coins', 'Hot cocoa is 4 coins. Pearls, races and treasure chests get you coins!'); return; }
+    save.coins -= 4; persist(); flushCloud(); $('coinVal').textContent = save.coins; [784, 988].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.07)); treat = { e: '☕', n: 'Hot cocoa', act: 'drink', bites: 4 }; banner('☕ Hot cocoa!', 'With marshmallows. Tap Drink to drink it'); } };
+  return null; }
+function iceCollide(o, x0, y0){ const I = ICE, [s0, t0] = landST(x0, y0), [s1, t1] = landST(o.x, o.y), S = I.site; if (s1 < S[0] - 6 || s1 > S[1] + 6 || t1 < S[2] - 6 || t1 > S[3] + 6) return;
+  const back = () => { o.x = x0; o.y = y0; o.vx = o.vy = 0; };
+  if (inBoxST(I.hut, s1, t1) && !inBoxST(I.hut, s0, t0)) return back(); if (inBoxST(I.cocoa, s1, t1) && !inBoxST(I.cocoa, s0, t0)) return back();   // (the skate building and the cocoa cart are solid,
+  for (const [ps, pt] of I.pits) if (Math.hypot(s1 - ps, t1 - pt) < 1 && Math.hypot(s0 - ps, t0 - pt) >= 1) return back();                         //  and so are the fire pits)
+  const a = inBoxST(S, s0, t0), b = inBoxST(S, s1, t1);
+  if (a !== b){ if (s1 > S[1] - 2 && t1 > I.ent[0] && t1 < I.ent[1]){ if (!b && o.skates){ o.skates = false; banner('Skates off', 'Come back and skate any time!'); } } else return back(); }   // in and out only by the entrance on 5th
+  for (const R of I.rinks){ const ra = inR(R, s0, t0), rb = inR(R, s1, t1); if (ra === rb) continue; const G = R.gate;
+    const atG = G.side === 't1' ? s1 > G.a + .2 && s1 < G.b - .2 && Math.abs(t1 - R.t1) < 1.5 : t1 > G.a + .2 && t1 < G.b - .2 && Math.abs(s1 - R.s0) < 1.5;
+    if (atG && (!rb || o.skates)) continue; if (atG) coach('Get skates at the skate building first ⛸️', 2);
+    const crossS = (s0 > R.s0 && s0 < R.s1) !== (s1 > R.s0 && s1 < R.s1), [ax, ay] = landXY(s1, t1), [bx, by] = crossS ? landXY(s1 + 1, t1) : landXY(s1, t1 + 1), nx = (bx - ax)/METERS, ny = (by - ay)/METERS, vn = o.vx*nx + o.vy*ny;
+    o.x = x0; o.y = y0; o.vx -= 1.7*vn*nx; o.vy -= 1.7*vn*ny; if (Math.abs(vn) > 40) sfx(120, .12, 'square', .03); return; } }   // bonk off the boards
 function iceSpin(o){ if (time - (o.spinT || -9) < 1.2) return; o.spinT = time; o.spins = (o.spins || 0) + 1; sfx(1200, .9, 'sine', .02, 0, 900);
   if (o.spins % 5 === 0){ heartsAt = time; banner(`${o.spins} spins! 🌀`, 'You could be in the ice show'); } else coach(['Twirl!', 'Wheee!', 'Spin, spin, spin!', 'Graceful!'][o.spins % 4], 1.2); }
 // ---- new on the Promenade (thirdstreetoccupancy.com, November 2026): the Museum of Illusions (1232), PicklePop (1231), Yogurtland (1321) and TMNT Pizzeria (1444) ----

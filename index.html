@@ -1547,6 +1547,7 @@ function coastX(y){   // (a plain function so the save, made near the top of the
 function coastS(x, y){ const sl = (coastX(y + 5) - coastX(y - 5))/10; return (coastX(y) - x)/Math.sqrt(1 + sl*sl); }
 const shelfD = m => .15 + .32*m + .01*m*m;   // how deep the sea is m meters out from the beach
 const onMainland = (x, y) => coastS(x, y) < 0;
+const onPierNow = o => o.onLand && (o.gh ?? 0) > PIER_L.h1 - 1.5 && onPierDeck(...landST(o.x, o.y));   // (up on the pier, out over the water: still Santa Monica, not the sea)
 function zoneAt(x,y){
   if (y < STRETCH.y0 && y > STRETCH.y0 - STRETCH.d && coastS(x, y) < 70*40) return 0;   // (the water along the city's beach is Santa Monica's)
   y = bayY(y);   // (the long straight bit of coast by the city is otherwise like the water just north of the pier)
@@ -2939,10 +2940,10 @@ function inclineAt(s, t){   // { d: meters from its middle, h: the road's height
     if (d < bd){ bd = d; ba = INCLINE.at[i] + f*Math.sqrt(l2); } }
   return bd > INCLINE.w + 1.5 ? null : { d: bd, a: ba, h: lerp(INCLINE.h0, INCLINE.h1, ba/INCLINE.L) }; }
 // The pier (OpenStreetMap): the bridge down from Ocean and Colorado, then the deck, level on its pilings, across the sand and on out over the water (about 240 m past the waterline)
-const PIER_L = { s0: -242, s1: 262, s2: 366, h0: 8.5, h1: 8.5 }; PIER_L.h2 = smElev(PIER_L.s2, 0);
-const pierSides = s => s > PIER_L.s1 ? [-6, 6] : s > 70 ? [-24, 44] : s > -66 ? [-24, 82] : s > -205 ? [-11, 9] : [-17, 12];   // where the deck's edges are (t): the bridge, the deck, wide where Pacific Park is, the long narrow pier, and the wider end
-const DIVE_SHOP = [55, -36];   // the Dive Shop: a stand on the sand just north of the pier
-const PIER_STAIRS = [[100, 104, -24, -1], [120, 124, 44, 1]];   // stairs down to the sand on each side (s from, s to, the deck's edge, which way down): the real ones are by the beach path
+const PIER_L = { s0: -243, s1: 262, s2: 366, h0: 8.5, h1: 8.5 }; PIER_L.h2 = smElev(PIER_L.s2, 0);
+const pierSides = s => s > 257 ? [-5.2, 5.2] : s > 227 ? [-5, lerp(7, 89, (257 - s)/30)] : s > -68 ? [s > 102 && s < 132 ? -23 : s > 135 && s < 157 ? -7 : -5, 89] : s > -188 ? (s > -161 && s < -140 ? [-12, 12] : [-5, 6.3]) : s > -210 ? [-26, 19] : [-35, 19];   // the deck's edges (t), from the survey: the bridge, the wide deck (Bubba Gump's patio bulging north, the parking deck and Pacific Park to the south), the long narrow pier with its fishing decks, and the wide end   // where the deck's edges are (t): the bridge, the deck, wide where Pacific Park is, the long narrow pier, and the wider end
+const DIVE_SHOP = [40, -36];   // the Dive Shop: a stand on the sand just north of the pier
+const PIER_STAIRS = [[97, 101, -5, -1], [70, 74, 89, 1]];   // stairs down to the sand on each side (s from, s to, the deck's edge, which way down): the real ones are by the beach path
 const pierHW = s => { const [a, b] = pierSides(s); return Math.max(-a, b); };
 const pierDeckH = s => s < PIER_L.s1 ? lerp(PIER_L.h0, PIER_L.h1, clamp((s - PIER_L.s0)/(PIER_L.s1 - PIER_L.s0), 0, 1)) : lerp(PIER_L.h1, PIER_L.h2, clamp((s - PIER_L.s1)/(PIER_L.s2 - PIER_L.s1), 0, 1));
 const onPierDeck = (s, t) => { if (!(s > PIER_L.s0 && s < PIER_L.s2)) return false; const [a, b] = pierSides(s); return t > a && t < b; };
@@ -3666,7 +3667,7 @@ function updOcean(dt){
   if (rb.hidden === showRide) rb.hidden = !showRide;
   if (showRide){ const t = o.bison ? 'Get off the bison' : bis ? 'Ride the bison' : o.onShip || o.onBoat ? 'Jump into the sea' : ladder ? 'Climb aboard' : boat ? 'Climb into the boat' : o.ride ? 'Let go' : 'Ride the dolphin'; if (rb.firstChild.textContent !== t) rb.firstChild.textContent = t; }
 
-  const z = o.onLand && onMainland(o.x, o.y) ? o.zone : zoneAt(o.x,o.y);   // (on land you're still in the last place you swam)
+  const z = o.onLand && (onMainland(o.x, o.y) || onPierNow(o)) ? o.zone : zoneAt(o.x,o.y);   // (on land you're still in the last place you swam)
   if (z !== o.zone){ o.zone = z;
     const Z = ZONES[z], fact = Z.facts[(save.worlds.length + (time|0)) % Z.facts.length];
     if (!save.worlds.includes(z)){ save.worlds.push(z); persist(); flushCloud(); buildMinimap();
@@ -3715,7 +3716,7 @@ function updOcean(dt){
   // the Dive Shop is in the hut on Pool Island: walk in to shop
   if (o.onLand){ const [hx, hy] = landXY(...DIVE_SHOP), nearHut = Math.hypot(o.x - hx, o.y - hy) < 2.2*METERS; if (nearHut && !o.shopNear){ o.shopNear = true; openShop(); return; } if (!nearHut) o.shopNear = false; }
   o.saveT += dt; if (o.saveT > 4){ o.saveT = 0; persist(); }
-  const ashore = o.onLand && onMainland(o.x, o.y);
+  const ashore = o.onLand && (onMainland(o.x, o.y) || onPierNow(o));
   $('hudLbl').textContent = ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
   $('hudProg').hidden = true;
   $('hudSub').textContent = `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
@@ -4506,7 +4507,8 @@ function buildCoast(){
     for (let i = 0; i < F.length - 1; i++){ if (F[i + 1] - F[i] < 1e-4) continue; const tm = lerp(a[1], b[1], (F[i] + F[i + 1])/2), r = R.find(r => tm > r.t0 && tm < r.t1); out.push([F[i], F[i + 1], r ? r.floor + 3.5 : null]); }
     return out; };
   for (const b of CITY.bldgs){ const [s0, t0, s1, t1] = b.box, sc = (s0 + s1)/2, tc = (t0 + t1)/2;
-    if (sc > -70 && sc < 60 && tc > 0 && tc < 90) continue;   // (Pacific Park's rides are built by hand)   // (the far end of the real pier is out over the water, where Pool Island's pier is)
+    if (sc > -70 && sc < 60 && tc > 0 && tc < 90) continue;
+    if (sc < 262 && onPierDeck(sc, tc)) continue;   // (the pier's buildings are built by hand: buildPierTown)   // (Pacific Park's rides are built by hand)   // (the far end of the real pier is out over the water, where Pool Island's pier is)
     if (s1 < 70 && s0 > 0 && (s1 - s0)*(t1 - t0) < 45) continue;   // (the little squares on the sand are the lifeguard towers: they're built as towers, not boxes)
     if (s1 > HOME_APT.front - 1 && s0 < HOME_APT.front + HOME_APT.deep && t1 > HOME_APT.mid - HOME_APT.len/2 - 1 && t0 < HOME_APT.mid + HOME_APT.len/2 + 1) continue;   // (home is built by hand)
     const pal = PAL[b.k] || PAL[3], onProm = t1 > PROM.t0 - 12 && t0 < PROM.t1 + 12 && ((s0 < PROM.s0 + 1.5 && s1 > PROM.s0 - 2.5) || (s0 > PROM.s1 - 2.5 && s0 < PROM.s1 + 1.5)), pav = s0 > PROM.s0 + 4 && s1 < PROM.s1 - 4 && tc > PROM.t0 && tc < PROM.t1;
@@ -4701,14 +4703,6 @@ function buildCoast(){
         if (k % 3 === 0) for (const ss of [a + .05, b - .05]){ const post = new THREE.Mesh(new THREE.BoxGeometry(.08, 1, .08), railW); post.position.set(...P3(ss, t, h + .5)); br.add(post); } }
       for (const ss of [a + .05, b - .05]){ const p0 = new THREE.Vector3(...P3(ss, e, pierDeckH(a) + 1)), p1 = new THREE.Vector3(...P3(ss, e + d*9, gEnd + 1)), r = new THREE.Mesh(new THREE.BoxGeometry(.07, .07, p0.distanceTo(p1)), railW); r.position.copy(p0).add(p1).multiplyScalar(.5); r.lookAt(p1); br.add(r); } }
     g.add(br); mergeStatic(br); }
-  // at the end of the pier: Mariasol (the Mexican restaurant out on the end) and the harbor office, with a bench or two for the fishermen
-  { const eg = new THREE.Group(), stuc = std(0xf1e6cf, .85), roofT = std(0xa8553a, .85), win = std(0x2f4a5a, .3), dh = pierDeckH(-230);
-    const bx = (s0, s1, t0, t1, y0, y1, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m); b.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, dh + (y0 + y1)/2)); eg.add(b); return b; };
-    bx(-238, -222, -15, -2, 0, 6.2, stuc); bx(-238.4, -221.6, -15.4, -1.6, 6.2, 6.6, roofT); for (let t = -14; t < -2.5; t += 2.2) bx(-221.98, -221.9, t, t + 1.4, 1.2, 4.6, win);   // Mariasol
-    bx(-212, -205, -16, -11, 0, 3.4, stuc); bx(-212.3, -204.7, -16.3, -10.7, 3.4, 3.7, roofT);   // the harbor office
-    for (const t of [3, 7]) bx(-225, -223, t, t + .5, 0, .45, std(0x6b4a32, .9));
-    const sgn = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 1), new THREE.MeshBasicMaterial({ map: labelTex('MARIASOL', '#a8553a', '#ffffff', 512, 96, 66) })); sgn.position.set(...P3(-221.85, -8.5, dh + 5.3)); sgn.rotation.y = Math.PI/2; eg.add(sgn);
-    g.add(eg); LAND_BOXES.push([-238, -15, -222, -2, dh + 6.6], [-212, -16, -205, -11, dh + 3.7]); }
   // the Dive Shop: a stand on the sand just north of the pier (walk in to shop)
   { const [ds, dt] = DIVE_SHOP, gh = landH(ds, dt), hut = new THREE.Group(), blue = std(0x1f6b8a, .6), wh = std(0xf4f4f0, .6);
     const bx = (s0, s1, t0, t1, y0, y1, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m); b.position.set(...P3(ds + (s0 + s1)/2, dt + (t0 + t1)/2, gh + (y0 + y1)/2)); hut.add(b); };
@@ -4716,22 +4710,23 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
-  { const arch = new THREE.Group(), blue = std(0x1f4f9e, .5), cream = std(0xf3ead2, .6), span = 7.6, H = 5.8;
+  { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
     for (const z of [-span/2, span/2]){ const post = new THREE.Mesh(new THREE.BoxGeometry(.45, H, .45), cream); post.position.set(0, H/2, z); arch.add(post); }
     const tex = (() => { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 360; const x = cv.getContext('2d');
-      x.fillStyle = '#1f4f9e'; x.fillRect(0, 0, 1024, 360); x.strokeStyle = '#ffd23f'; x.lineWidth = 10; x.strokeRect(14, 14, 996, 332);
-      x.fillStyle = '#ffd23f'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.shadowColor = '#ffe680'; x.shadowBlur = 18;
-      x.font = '900 120px Nunito, sans-serif'; x.fillText('SANTA MONICA', 512, 108); x.font = '900 84px Nunito, sans-serif'; x.fillText('YACHT HARBOR', 512, 214);
-      x.font = '800 46px Nunito, sans-serif'; x.fillStyle = '#fff'; x.fillText('SPORT FISHING · BOATING · CAFES', 512, 300);
+      x.fillStyle = '#f7f4ec'; x.fillRect(0, 0, 1024, 120); x.fillStyle = '#1b3f9c'; x.fillRect(0, 110, 1024, 250);   // (the white crown with blue SANTA MONICA, over the cobalt arch panel in white neon)
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '900 96px Nunito, sans-serif'; x.fillStyle = '#1b3f9c'; x.fillText('SANTA MONICA', 512, 62);
+      x.fillStyle = '#ffffff'; x.shadowColor = '#bfe4ff'; x.shadowBlur = 20; x.font = '800 50px Nunito, sans-serif'; x.fillText('YACHT HARBOR', 512, 160);
+      x.font = '900 70px Nunito, sans-serif'; x.fillText('SPORT FISHING ★ BOATING', 512, 240); x.font = 'italic 700 56px Georgia, serif'; x.fillText('Cafes', 512, 318);
       const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t; })();
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(span + .4, 2.6), new THREE.MeshBasicMaterial({ map: tex })); sign.position.set(-.05, H - .6, 0); sign.rotation.y = -Math.PI/2; arch.add(sign);
     const back = new THREE.Mesh(new THREE.BoxGeometry(.12, 2.75, span + .55), blue); back.position.set(.05, H - .6, 0); arch.add(back);
     const street = sign.clone(); street.position.x = .15; street.rotation.y = Math.PI/2; arch.add(street);   // (and from Ocean Avenue)
     const crown = new THREE.Mesh(new THREE.TorusGeometry(span/2 + .2, .14, 8, 28, Math.PI), cream); crown.position.y = H + .6; crown.scale.y = .35; crown.rotation.y = Math.PI/2; arch.add(crown);
-    arch.scale.setScalar(1.45); at(arch, AVES.ocean - 10.5, 0); }
+    for (const z of [-span/2, span/2]) for (const dz of [-.12, .12]){ const st = new THREE.Mesh(new THREE.BoxGeometry(.47, H*.8, .06), blue); st.position.set(0, H*.4, z + dz); arch.add(st); }   // (blue stripes up the gold pylons)
+    arch.scale.setScalar(1.45); at(arch, 377, 0); }
   // ---- the railing along the top of the bluff in Palisades Park: cream precast concrete posts and three rails (with a gap where the California Incline goes down) ----
   { const posts = [], rails = [], E = CITY.E; let prev = null;
     for (let t = E.t0; t < E.t0 + (E.nt - 1)*E.dt; t += 2.5){ const s = fenceS(t); if (isNaN(s) || inclineAt(s, t)){ prev = null; continue; }
@@ -5249,7 +5244,7 @@ function buildPacificPark(g, P3){
     const tex = canvasTex(512, 512, (x, w, h) => { x.fillStyle = '#5d4037'; x.fillRect(0, 0, w, h); x.strokeStyle = '#fff'; x.lineWidth = 14; x.strokeRect(14, 14, w - 28, h - 28); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
       x.font = '800 66px Nunito, sans-serif'; x.fillText('SANTA MONICA', w/2, 100); x.font = '900 190px Nunito, sans-serif'; x.fillText('66', w/2, 260); x.font = '800 50px Nunito, sans-serif'; x.fillText('END OF THE TRAIL', w/2, 420); }, false);
     for (const ry of [Math.PI/2, -Math.PI/2]){ const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), new THREE.MeshBasicMaterial({ map: tex })); pl.position.y = 3.2; pl.rotation.y = ry; pl.translateZ(.02); r66.add(pl); }
-    r66.position.set(...P3(110, 2, pierDeckH(110))); g.add(r66); }
+    r66.position.set(...P3(84, 1, pierDeckH(84))); g.add(r66); }
   pacPark = { wheel, spin, gond, ang: 0, curve, L: curve.getLength(), train, tu: 0, tv: 3, scrSpin, top: (() => { let y = -1e9, u = 0; for (let i = 0; i < 200; i++){ const p = curve.getPointAt(i/200); if (p.y > y){ y = p.y; u = i/200; } } return { y, u }; })() };
 }
 function parkStep(dt){ const P = pacPark; if (!P) return; const w = ocean?.workout;
@@ -5864,6 +5859,132 @@ function buildPalisades(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     for (let t = -40; t > -2380; t -= 34){ const s = parkCurb(t) - 13.5; if (inclineAt(s, t) || Math.abs(t - XST.california) < 10) continue; const p = new THREE.Mesh(col, cM); p.position.set(...P3(s, t, landH(s, t) + 1.8)); grp.add(p); const gl = new THREE.Mesh(glob, gM); gl.position.set(...P3(s, t, landH(s, t) + 3.8)); grp.add(gl); } }
   // the Camera Obscura building by Broadway (closed to the public since 2020)
   { const t = XST.broadway - 40, s = parkCurb(t) - 23, sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .5), new THREE.MeshBasicMaterial({ map: labelTex('CAMERA OBSCURA', '#efe6d2', '#4e342e', 512, 72, 50) })); sg.position.set(...P3(s + 11, t, landH(s + 11, t) + 2.6)); sg.rotation.y = Math.PI/2; grp.add(sg); }
+  g.add(grp); mergeStatic(grp); }
+/* The Santa Monica Pier, building by building, from a Street View survey (Mar 2019 / Aug 2024) and OpenStreetMap footprints.
+   Real pier coordinates: A = meters out from the Ocean Ave crosswalk, off = meters north (+) / south (-) of the centerline;
+   in the game, s = 390 - A and t = -off. Modeled as it stood through 2025: the 1939 bridge and the neon sign came down
+   in 2026 for the rebuild (back in 2027). */
+function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const S = A => 390 - A, dh = s => pierDeckH(s);
+  // a box on the deck, by real coordinates (A0..A1 along, off0..off1 across), from y0 to y1 above the deck
+  const bx = (A0, A1, o0, o1, y0, y1, hex, m) => { const s0 = S(A1), s1 = S(A0), t0 = -Math.max(o0, o1), t1 = -Math.min(o0, o1), sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m || mat(hex)); me.position.set(...P3(sc, tc, dh(sc) + (y0 + y1)/2)); grp.add(me); return me; };
+  // a sign: a plane at (A, off) facing 'n' (north, -t), 's', 'e' (toward land, +s) or 'w' (out to sea)
+  const sign = (A, off, y, w, h, text, bg, fg, face, size) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.max(64, Math.round(1024*h/w)), size || Math.round(Math.min(150, 1024*h/w*.62))) })); const s = S(A); m.position.set(...P3(s, -off, dh(s) + y)); m.rotation.y = { n: Math.PI, s: 0, e: Math.PI/2, w: -Math.PI/2 }[face]; grp.add(m); return m; };
+  const cyl = (A, off, y, r, h, hex, seg = 12, rt) => { const s = S(A), me = new THREE.Mesh(new THREE.CylinderGeometry(rt ?? r, r, h, seg), mat(hex)); me.position.set(...P3(s, -off, dh(s) + y + h/2)); grp.add(me); return me; };
+  // windows/doors along the north face (off = the building's north edge) of a building, between A0 and A1
+  const northRow = (A0, A1, off, y0, y1, n, hex, frame) => { const w = (A1 - A0)/n; for (let k = 0; k < n; k++){ const a = A0 + k*w + w*.2, b = A0 + (k + 1)*w - w*.2; if (frame) bx(a - .08, b + .08, off + .02, off + .1, y0 - .08, y1 + .08, frame); bx(a, b, off + .05, off + .14, y0, y1, hex); } };
+
+  // ---- the Looff Hippodrome (1916): the carousel building. Salmon stucco, navy trim, an octagonal tower on each corner,
+  //      arched doors with rainbow fanlights, paired arched windows upstairs, a pale tent roof with a navy drum on top
+  { const A0 = 155, A1 = 188, o0 = -43, o1 = -12, salmon = 0xe7a98c, navy = 0x1f2d5a;
+    bx(A0 + 3, A1 - 3, o0 + 3, o1 - 3, 0, 9.2, salmon); bx(A0 + 2.6, A1 - 2.6, o0 + 2.6, o1 - 2.6, 9.2, 9.6, navy);
+    for (const [A, o] of [[A0 + 3, o0 + 3], [A0 + 3, o1 - 3], [A1 - 3, o0 + 3], [A1 - 3, o1 - 3]]){ cyl(A, o, 0, 3.3, 12, salmon, 8); cyl(A, o, 12, 3.6, .5, navy, 8);
+      for (let k = 0; k < 8; k++){ const a = k/8*TAU + TAU/16, s = S(A) + Math.cos(a)*3.32, t = -o + Math.sin(a)*3.32, w = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.9, .06), mat(0x24344f)); w.position.set(...P3(s, t, dh(s) + 10.2)); w.rotation.y = -a + Math.PI/2; grp.add(w); } }
+    for (let A = A0 + 7; A < A1 - 6; A += 3.4){ bx(A, A + 1.8, o1 - 3.05, o1 - 2.95, 0, 2.6, 0x3b2f2a); const fan = new THREE.Mesh(new THREE.CircleGeometry(.9, 12, 0, Math.PI), new THREE.MeshBasicMaterial({ map: canvasTex(64, 32, (x, w, h) => { const c = ['#e53935', '#ff9800', '#fdd835', '#43a047', '#1e88e5', '#8e24aa']; for (let i = 0; i < 6; i++){ x.fillStyle = c[i]; x.beginPath(); x.moveTo(w/2, h); x.arc(w/2, h, h, Math.PI + i*Math.PI/6, Math.PI + (i + 1)*Math.PI/6); x.fill(); } }, false), side: THREE.DoubleSide })); const s = S(A + .9); fan.position.set(...P3(s, -(o1 - 3.12), dh(s) + 2.6)); fan.rotation.y = Math.PI; grp.add(fan);
+      for (const d of [.2, 1.0]) bx(A + d, A + d + .6, o1 - 3.05, o1 - 2.95, 5.4, 7.6, 0x24344f); }
+    { const roof = new THREE.Mesh(new THREE.ConeGeometry(14.5, 5.2, 4, 1, true), mat(0xc9c9c4)); const s = S((A0 + A1)/2); roof.position.set(...P3(s, -(o0 + o1)/2, dh(s) + 12.2)); roof.rotation.y = Math.PI/4; grp.add(roof); }
+    cyl((A0 + A1)/2, (o0 + o1)/2, 14.6, 2.1, 2.6, navy, 16); cyl((A0 + A1)/2, (o0 + o1)/2, 17.2, 2.4, .35, navy, 16); cyl((A0 + A1)/2, (o0 + o1)/2, 17.55, .3, .65, 0xd4af37, 8, .05);
+    sign((A0 + A1)/2, o1 - 2.9, 8.2, 10, .9, 'MERRY GO ROUND', '#e7a98c', '#1f2d5a', 'n'); sign(A0 + 3, o1 - 6.4, 9.2, 4.6, .8, 'SODA JERKS', '#e7a98c', '#c62828', 'e');
+    sign(A1 - 6, o1 - 2.9, 3.3, 4.4, .6, 'PIER SHOP', '#1f2d5a', '#ffffff', 'n'); }
+  // ---- Seaside on the Pier / the old Rusty's / The Albright: one long low building, white siding over seafoam, a white gable roof
+  { const A0 = 191, A1 = 233, o0 = -41, o1 = -10;
+    bx(A0, A1, o0, o1, 0, 2.2, 0x8fd3c1); bx(A0, A1, o0, o1, 2.2, 6.6, 0xf4f4f0); northRow(A0 + 1, A1 - 1, o1, 1, 4.2, 12, 0x2f4a55, 0x8fd3c1);
+    { const r = new THREE.Mesh(new THREE.CylinderGeometry(.01, 16, 3.4, 4, 1), mat(0xeeeeec)); const s = S((A0 + A1)/2); r.position.set(...P3(s, -(o0 + o1)/2, dh(s) + 8.3)); r.scale.set(1.35, 1, .95); r.rotation.y = Math.PI/4; grp.add(r); }
+    sign(A1 - 5, o1 + .2, 5.4, 6.5, .8, 'THE ALBRIGHT', '#f4f4f0', '#1f2d5a', 'n'); sign(A0 + 6, o1 + .2, 5.4, 7.5, .8, 'SEASIDE ON THE PIER', '#f4f4f0', '#00796b', 'n');
+    for (let A = A0 + 1; A < A1; A += .6) bx(A, A + .08, o1 + .6, o1 + .7, 0, .9, 0xffffff); bx(A0 + 1, A1 - 1, o1 + .6, o1 + .7, .85, .95, 0xffffff); }   // (white picket patio fence)
+  // ---- Bubba Gump Shrimp Co. on the north side, over the beach: grey-blue boards, curvy Mission gables, a porthole, the red sign, flags
+  { const A0 = 259, A1 = 277, o0 = 3, o1 = 17, gb = 0xa9bccb;
+    bx(A0, A1, o0, o1, -2.5, 7, gb); for (let A = A0; A < A1; A += .5) bx(A, A + .05, o0 - .08, o0, -2.5, 7, 0x8ea2b2);
+    for (const [a, b] of [[A0 + 1, A0 + 8], [A1 - 8, A1 - 1]]){ bx(a, b, o0 - .05, o0 + .3, 7, 8.6, gb); const arc = new THREE.Mesh(new THREE.CylinderGeometry((b - a)/2, (b - a)/2, .3, 16, 1, false, 0, Math.PI), mat(gb)); const s = S((a + b)/2); arc.position.set(...P3(s, -(o0 + .1), dh(s) + 8.6)); arc.rotation.set(Math.PI/2, 0, Math.PI/2); grp.add(arc); }
+    { const ph = new THREE.Mesh(new THREE.CylinderGeometry(.7, .7, .12, 18), mat(0x23313b)); const s = S((A0 + A1)/2); ph.position.set(...P3(s, -(o0 - .02), dh(s) + 5.2)); ph.rotation.x = Math.PI/2; grp.add(ph); }
+    for (let A = A0 + 2; A < A1 - 1; A += 3) bx(A, A + 1.6, o0 - .1, o0, 0, 2.6, 0x9a5a2e);
+    sign((A0 + A1)/2, o0 - .15, 3.6, 7, 1, 'BUBBA GUMP', '#a9bccb', '#c62828', 's'); sign((A0 + A1)/2, o0 - .15, 2.95, 6, .45, 'SHRIMP COMPANY', '#a9bccb', '#1f2d5a', 's');
+    for (let A = 260; A < 283; A += 2) bx(A, A + .08, 22.6, 22.7, 0, 1, 0x1f2d5a); bx(260, 283, 22.6, 22.7, .95, 1.05, 0x1f2d5a);
+    for (const A of [A0 + 2, A1 - 2]){ cyl(A, (o0 + o1)/2, 8.6, .04, 3, 0xdddddd, 6); const f = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .7), new THREE.MeshBasicMaterial({ map: canvasTex(60, 36, (x, w, h) => { for (let i = 0; i < 7; i++){ x.fillStyle = i % 2 ? '#fff' : '#b22234'; x.fillRect(0, i*h/7, w, h/7); } x.fillStyle = '#3c3b6e'; x.fillRect(0, 0, w*.4, h*.55); }, false), side: THREE.DoubleSide })); const s = S(A); f.position.set(...P3(s + .6, -(o0 + o1)/2, dh(s) + 11.2)); grp.add(f); } }
+  // ---- the police substation and Blazing Saddles bike rentals: white with a navy base band, red door frames, a sweeping blue canopy
+  { const A0 = 268, A1 = 292, o0 = -43, o1 = -12;
+    bx(A0, A1, o0, o1, 0, 4.4, 0xf6f6f2); bx(A0, A1, o1 - .05, o1 + .05, 0, .7, 0x1f2d5a);
+    for (const A of [A0 + 3, A0 + 10, A1 - 6]) bx(A, A + 1.6, o1 + .02, o1 + .12, .7, 3, 0xc62828);
+    { const c = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, A1 - A0, 16, 1, true, 0, Math.PI/2), mat(0x1565c0)); const s = S((A0 + A1)/2); c.position.set(...P3(s, -o1 - 1.2, dh(s) + 2.8)); c.rotation.z = Math.PI/2; grp.add(c); }
+    sign(A0 + 7, o1 + 1, 4, 6, .6, 'SANTA MONICA POLICE', '#1565c0', '#ffffff', 'n', 80); sign(A1 - 4, o1 + 1, 4, 6.4, .6, 'BLAZING SADDLES · BIKES', '#1565c0', '#ffeb3b', 'n', 70);
+    cyl(A0 + 6, o1 + 1.4, 0, .25, 1.6, 0x1565c0, 8); }
+  // restrooms (olive block), the Oatman Rock Shop kiosk on the north rail, coin binoculars and the dolphin statue
+  bx(293, 300, -43, -17, 0, 3.6, 0x8a8a5c); sign(296.5, -17, 3, 4, .5, 'RESTROOMS', '#8a8a5c', '#ffffff', 'n');
+  { bx(300, 308, 2, 5, 0, 1, 0x1565c0); for (const [A, o] of [[300.2, 2.2], [307.8, 2.2], [300.2, 4.8], [307.8, 4.8]]) bx(A, A + .12, o, o + .12, 1, 2.6, 0xffffff); bx(299.6, 308.4, 1.7, 5.3, 2.6, 2.75, 0xffffff); sign(304, 1.6, 2.2, 3.6, .4, 'OATMAN ROCK SHOP', '#ffffff', '#1565c0', 's', 60); }
+  for (const A of [240, 250, 296]){ cyl(A, 4.4, 0, .05, 1.1, 0x607d8b, 6); bx(A - .15, A + .15, 4.2, 4.6, 1.1, 1.4, 0x455a64); }
+  { const s = S(285), d = new THREE.Group(), bm = mat(0x7d8a8f, .35, .6), body = new THREE.Mesh(new THREE.SphereGeometry(.4, 14, 10), bm); body.scale.set(2.1, .8, .8); d.add(body); const fin = new THREE.Mesh(new THREE.ConeGeometry(.2, .45, 6), bm); fin.position.set(0, .45, 0); d.add(fin); const tail = new THREE.Mesh(new THREE.BoxGeometry(.1, .5, .7), bm); tail.position.set(-.9, .15, 0); d.add(tail);
+    d.rotation.z = .5; d.position.set(...P3(s, -2, dh(s) + 1.25)); grp.add(d); cyl(285, 2, 0, .35, .6, 0x9e9e9e, 10); }
+  // ---- Pier Burger (red, a red-and-white striped awning, the script sign on the roof) and Marlene's Beachcomber (blue awning)
+  { bx(314, 323, -33, -11, 0, 4.2, 0xc62828); for (let k = 0; k < 9; k++) bx(314 + k, 315 + k, -11, -9.6, 2.6 - (k%2)*0, 2.8, k % 2 ? 0xffffff : 0xc62828); bx(314, 323, -11.4, -9.6, 2.55, 2.62, 0xffffff);
+    sign(318.5, -10.9, 5.1, 6, 1.2, 'PierBurger', '#c62828', '#ffffff', 'n', 140); bx(323, 332, -30, -11, 0, 3.8, 0xf4f4f0); bx(323, 332, -11.4, -9.6, 2.5, 2.62, 0x1565c0); sign(327.5, -10.9, 3.3, 6, .55, "MARLENE'S BEACHCOMBER", '#f4f4f0', '#1565c0', 'n', 60); }
+  // ---- Playland Arcade: white with blue trim, a teal lattice frieze and little gables
+  { const A0 = 332, A1 = 356, o0 = -45, o1 = -10; bx(A0, A1, o0, o1, 0, 6.2, 0xf6f6f2); bx(A0, A1, o1 - .05, o1 + .1, 4.4, 5.4, 0x26a69a); for (let A = A0; A < A1; A += .8) bx(A, A + .1, o1 + .1, o1 + .2, 4.4, 5.4, 0xf6f6f2);
+    for (let A = A0 + 2; A < A1 - 2; A += 6){ const gab = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.6, 3), mat(0xf6f6f2)); const s = S(A + 2); gab.position.set(...P3(s, -(o1 + .3), dh(s) + 7)); gab.rotation.set(0, 0, 0); gab.scale.z = .15; grp.add(gab); bx(A + 1.95, A + 2.05, o1 + .1, o1 + .3, 7.8, 8.6, 0x1565c0); }
+    for (let A = A0 + 1; A < A1 - 1; A += 3) bx(A, A + 2.2, o1 + .02, o1 + .1, .2, 3.4, 0x26323a); for (let A = A0; A <= A1; A += 3) bx(A, A + .2, o1 + .1, o1 + .3, 0, 4.4, 0x1565c0);
+    sign(344, o1 + .35, 3.9, 9, .8, 'PLAYLAND ARCADE', '#f6f6f2', '#1565c0', 'n'); sign(337, o1 + .35, 3.95, 3.6, .4, 'Kiddie Rides', '#f6f6f2', '#c62828', 'n', 60); }
+  // ---- the trapeze school rig: tall galvanized posts, guy wires, a white net and little flags
+  { const gal = 0xb0b8bc, A0 = 360, A1 = 382, o = -26; for (const A of [A0, A1]) for (const off of [-20, -32]){ cyl(A, off, 0, .14, 8.8, gal, 8); }
+    bx(A0, A1, -20.2, -19.8, 8.6, 8.75, gal); bx(A0, A1, -32.2, -31.8, 8.6, 8.75, gal); bx(A0 + 1, A1 - 1, -31, -21, 2.4, 2.46, 0xfafafa, new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .55, roughness: .9 }));
+    bx(A0 + 2, A0 + 4, -27, -25, 6.4, 6.6, 0xd8d8d8); bx(A1 - 4, A1 - 2, -27, -25, 7.2, 7.4, 0xd8d8d8); cyl(A0 + 3, -26, 6.6, .02, 2, 0x444444, 4); cyl(A1 - 3, -26, 6.4, .02, 2, 0x444444, 4); bx(A0 + 1.8, A0 + 4.2, -27.2, -24.8, 3.9, 4, 0x8d6e63);
+    sign((A0 + A1)/2, -19.6, 6.5, 6.2, .55, 'TRAPEZE SCHOOL', '#1565c0', '#ffffff', 'n', 70); }
+  // ---- Snackville: orange, white roll-up shutters, the mural, and the stands (Pier Gear, Cosmic Funnel Cakes, Smashies, Coffee Bean)
+  { const A0 = 386, A1 = 415, o0 = -45, o1 = -11; bx(A0, A1, o0, o1, 0, 5.2, 0xef6c00); bx(A0, A1, o0, o0 + 8, 5.2, 6.4, 0x5e35b1);
+    for (const [k, [n, bg, fg]] of [['Pier Gear', '#26a69a', '#fff'], ['Cosmic Funnel Cakes', '#fdd835', '#4a148c'], ['Smashies Burger', '#c62828', '#fff'], ['The Coffee Bean', '#4e342e', '#fff']].entries()){ const a = A0 + 1 + k*7; bx(a, a + 5.6, o1 + .02, o1 + .12, .3, 2.8, 0xf4f4f4); sign(a + 2.8, o1 + .2, 3.4, 5.4, .55, n, bg, fg, 'n', 56); }
+    sign((A0 + A1)/2, o0 + 8.2, 4.4, 12, 1, 'SNACKVILLE AT PACIFIC PARK', '#ef6c00', '#ffffff', 'n', 72); }
+  // ---- Pacific Park's front gate, with Inkie the octopus sitting on top
+  { const A0 = 416, A1 = 425; bx(A0, A0 + 1, -35, -10, 0, 5.6, 0x7b1fa2); bx(A1 - 1, A1, -35, -10, 0, 5.6, 0x7b1fa2); bx(A0, A1, -35, -10, 5.6, 6.4, 0x6a1b9a);
+    const ink = mat(0x8e2a6b, .6), s = S((A0 + A1)/2), head = new THREE.Mesh(new THREE.SphereGeometry(2.4, 16, 12), ink); head.scale.y = 1.25; head.position.set(...P3(s, 22, dh(s) + 9)); grp.add(head);
+    for (const e of [-.9, .9]){ const ey = new THREE.Mesh(new THREE.SphereGeometry(.45, 10, 8), mat(0xffffff)); ey.position.set(...P3(s + 2.1, 22 + e, dh(s) + 9.4)); grp.add(ey); const pu = new THREE.Mesh(new THREE.SphereGeometry(.22, 8, 6), mat(0x111111)); pu.position.set(...P3(s + 2.45, 22 + e, dh(s) + 9.4)); grp.add(pu); }
+    for (let k = 0; k < 8; k++){ const a = k/8*TAU, tn = new THREE.Mesh(new THREE.CylinderGeometry(.18, .45, 6, 8), ink); tn.position.set(...P3(s + Math.cos(a)*2.4, 22 + Math.sin(a)*2.4, dh(s) + 5.2)); tn.rotation.set(Math.sin(a)*.5, 0, -Math.cos(a)*.5); grp.add(tn); }
+    sign((A0 + A1)/2, -9.8, 4.6, 7, .8, 'PACIFIC PARK', '#6a1b9a', '#ffeb3b', 'n'); }
+  // the building by the far end of the park, under its blue pyramid shade roof
+  { bx(425, 454, -43, -15, 0, 6, 0xf4f4f0); const r = new THREE.Mesh(new THREE.ConeGeometry(9.5, 3.2, 4), mat(0x1565c0)); const s = S(445.5); r.position.set(...P3(s, 22.5, dh(s) + 7.6)); r.rotation.y = Math.PI/4; grp.add(r); }
+  // ---- the end of the pier: the Harbor Office (beige clapboard, a glass lookout, a ship's mast) and Mariasol across the walk
+  { const A0 = 581, A1 = 609, o0 = -16, o1 = -2, beige = 0xd9c7a3, green = 0x2e5d3a;
+    bx(A0, A1, o0, o1, 0, 3.6, beige); bx(A0 + 2, A1 - 2, o0 + 1, o1 - 1, 3.6, 6.6, 0x9fc7d8, new THREE.MeshStandardMaterial({ color: 0x9fc7d8, roughness: .1, metalness: .3, transparent: true, opacity: .6 })); bx(A0 + 1.6, A1 - 1.6, o0 + .6, o1 - .6, 6.6, 7.8, beige);
+    for (let A = A0 + 1; A < A1 - 1; A += 3) bx(A, A + 1.6, o1 - .02, o1 + .08, 1, 2.6, green);
+    sign((A0 + A1)/2, o1 + .1, 3.05, 6, .6, 'HARBOR OFFICE', '#d9c7a3', '#2e5d3a', 'n'); sign(A1 - 1, (o0 + o1)/2, 2, 5, .6, 'SANTA MONICA PIER BAIT & TACKLE', '#2e5d3a', '#ffffff', 'w', 50);
+    sign(A1 + .02, (o0 + o1)/2 + 4, 4.6, 3.6, .9, 'THE END · 2448 MILES', '#5d4037', '#ffffff', 'w', 70);
+    { const mx = (A0 + A1)/2; cyl(mx, (o0 + o1)/2, 7.8, .12, 10, 0xe8e0d0, 8, .07); bx(mx - .06, mx + .06, (o0 + o1)/2 - 2, (o0 + o1)/2 + 2, 14.5, 14.62, 0xe8e0d0); bx(mx - .05, mx + .05, (o0 + o1)/2 - 1.3, (o0 + o1)/2 + 1.3, 16.4, 16.5, 0xe8e0d0);
+      const f = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .9), new THREE.MeshBasicMaterial({ map: canvasTex(60, 36, (x, w, h) => { for (let i = 0; i < 7; i++){ x.fillStyle = i % 2 ? '#fff' : '#b22234'; x.fillRect(0, i*h/7, w, h/7); } x.fillStyle = '#3c3b6e'; x.fillRect(0, 0, w*.4, h*.55); }, false), side: THREE.DoubleSide })); const s = S(mx); f.position.set(...P3(s, -(o0 + o1)/2 + .8, dh(s) + 17.3)); grp.add(f); } }
+  { const A0 = 587, A1 = 606, o0 = 0, o1 = 24, beige = 0xdccba6, green = 0x2e5d3a;   // Mariasol: tacos up top, big green-framed windows, yellow patio rails, upturned red eave tips
+    bx(A0, A1, o0 + 2.5, o1, 0, 3.8, beige); bx(A0, A1, o0, o1, 3.8, 7.2, beige); for (let A = A0 + 1; A < A1 - 1; A += 3.2) bx(A, A + 2.4, o0 - .02, o0 + .06, 4.4, 6.6, green);
+    { const r = new THREE.Mesh(new THREE.ConeGeometry(15.4, 3, 4), mat(0xd8b46a)); const s = S((A0 + A1)/2); r.position.set(...P3(s, -(o0 + o1)/2, dh(s) + 8.7)); r.rotation.y = Math.PI/4; r.scale.set(.88, 1, 1.12); grp.add(r);
+      for (const [A, o] of [[A0, o0], [A0, o1], [A1, o0], [A1, o1]]){ const tip = new THREE.Mesh(new THREE.ConeGeometry(.35, 1.2, 6), mat(0xd84315)); const s2 = S(A); tip.position.set(...P3(s2, -o, dh(s2) + 7.6)); tip.rotation.z = (A === A0 ? 1 : -1)*.9; grp.add(tip); } }
+    for (let A = A0; A < A1; A += 1.6) bx(A, A + .12, o1 + .1, o1 + .25, 3.8, 4.9, green); bx(A0, A1, o1 + .1, o1 + .3, 4.7, 4.9, 0xfdd835); bx(A0, A1, o1 + .12, o1 + .28, 3.9, 4.6, 0xfdd835);
+    sign((A0 + A1)/2, o0 - .1, 7.65, 5.4, .7, 'MARIASOL', '#00897b', '#ffffff', 's'); }
+  bx(579, 583, 4, 8, 0, 3, 0xfdd835); sign(581, 4, 2.6, 2.8, .4, "TOM'S FAST FOOD", '#c62828', '#ffffff', 'e', 50);   // (Tom Pearl's: a little food stand)
+  sign(629, 33, 1.6, 3, .5, 'SUNSET POINT', '#1f2d5a', '#ffffff', 'e', 70); cyl(629, 33, 0, .05, 1.4, 0x444444, 6);
+  // benches on the end deck and along the narrow pier, facing the sea
+  for (const [A, off] of [[615, 20], [620, 10], [622, -8], [618, -14], [500, 4], [520, -5], [470, 4], [545, -5]]) { bx(A - .9, A + .9, off - .25, off + .25, .42, .5, 0xf4f4f0); bx(A - .9, A + .9, off + (off > 0 ? .2 : -.3), off + (off > 0 ? .3 : -.2), .5, 1, 0xf4f4f0); }
+  // people fishing along the rails of the narrow pier and the end
+  { const R = mulberry(9); for (let k = 0; k < 14; k++){ const A = 470 + k*11 + R()*4, north = k % 2 === 0, off = A > 579 ? (north ? 33 : -18) : (north ? 4.4 : -5.8), s = S(A), t = -off, gh = dh(s), col = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047, 0x8e24aa, 0xff7043][k % 6];
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, 1, 8), mat(col)); body.position.set(...P3(s, t + (north ? .4 : -.4), gh + 1.05)); grp.add(body); const legs = new THREE.Mesh(new THREE.CylinderGeometry(.18, .2, .55, 8), mat(0x37474f)); legs.position.set(...P3(s, t + (north ? .4 : -.4), gh + .28)); grp.add(legs);
+    const hd = new THREE.Mesh(new THREE.SphereGeometry(.17, 10, 8), mat([0xf1c27d, 0x8d5524, 0xc68642][k % 3])); hd.position.set(...P3(s, t + (north ? .4 : -.4), gh + 1.73)); grp.add(hd); const hat = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .06, 10), mat(0xf5f5dc)); hat.position.set(...P3(s, t + (north ? .4 : -.4), gh + 1.86)); grp.add(hat);
+    const A2 = new THREE.Vector3(...P3(s, t + (north ? .3 : -.3), gh + 1.2)), B2 = new THREE.Vector3(...P3(s - .6, t + (north ? -2.6 : 2.6), gh + 3.2)), rod = new THREE.Mesh(new THREE.CylinderGeometry(.015, .025, A2.distanceTo(B2), 5), mat(0x222222)); rod.position.copy(A2).add(B2).multiplyScalar(.5); rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B2.clone().sub(A2).normalize()); grp.add(rod);
+    const line = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, gh + 3.2, 3), mat(0xeeeeee)); line.position.set(B2.x, (B2.y)/2, B2.z); grp.add(line); } }
+  // the concrete strip down the middle of the deck from the Route 66 sign out to the end
+  for (let A = 280; A < 630; A += 6) bx(A, Math.min(631, A + 6), -.9, .9, .01, .04, 0xc9c6bd);
+  // lamps: tall white cobra-heads along the north edge of the wide deck; black lanterns on shepherd's crooks out on the narrow pier and the end
+  for (let A = 190; A < 455; A += 27){ const off = A > 258 && A < 288 ? 22.4 : 4.8; cyl(A, off, 0, .1, 9, 0xeeeeee, 8, .07); bx(A - .9, A + .1, off - .1, off + .1, 8.9, 9.05, 0xeeeeee); const lt = new THREE.Mesh(new THREE.BoxGeometry(.6, .16, .3), new THREE.MeshBasicMaterial({ color: 0xfff6d8 })); const s = S(A - .9); lt.position.set(...P3(s, -off, dh(s) + 8.86)); grp.add(lt);
+    const ban = new THREE.Mesh(new THREE.PlaneGeometry(.5, 1.3), mat(0x1565c0)); const s2 = S(A); ban.position.set(...P3(s2 - .3, -off, dh(s2) + 6.6)); ban.rotation.y = Math.PI/2; grp.add(ban); }
+  for (let A = 462; A < 633; A += 10) for (const off of A > 579 ? [34, -18.4] : [4.5, -6]){ cyl(A, off, 0, .06, 4.2, 0x1e1e1e, 6); const arm = new THREE.Mesh(new THREE.TorusGeometry(.35, .035, 5, 10, Math.PI), mat(0x1e1e1e)); const s = S(A); arm.position.set(...P3(s, -off + (off > 0 ? .35 : -.35), dh(s) + 4.2)); arm.rotation.y = Math.PI/2; grp.add(arm); const bell = new THREE.Mesh(new THREE.SphereGeometry(.18, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff1c8 })); bell.position.set(...P3(s, -off + (off > 0 ? .7 : -.7), dh(s) + 3.95)); grp.add(bell); }
+  g.add(grp); mergeStatic(grp); }
+// more Pacific Park rides from the survey: Sea Dragon, the Pacific Plunge drop tower, the bumper cars, Wave Jumper, Frog Hopper and two little spinning rides
+function buildParkRides(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .7) => M[hex + ':' + r] || (M[hex + ':' + r] = std(hex, r)), S = A => 390 - A;
+  const put = (o, A, off, y = 0) => { const s = S(A); o.position.set(...P3(s, -off, pierDeckH(s) + y)); grp.add(o); return o; };
+  { const sd = new THREE.Group(); const fr = new THREE.Mesh(new THREE.BoxGeometry(.3, 8, .3), mat(0x9e9e9e)); for (const z of [-2.5, 2.5]) for (const x of [-3, 3]){ const l = fr.clone(); l.position.set(x*.5, 3.8, z); l.rotation.x = x > 0 ? .3 : -.3; sd.add(l); }
+    const ship = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 9, 12, 1, false, Math.PI/2, Math.PI), mat(0x2e7d32)); ship.rotation.set(0, 0, Math.PI/2); ship.position.y = 2.4; ship.rotation.y = Math.PI/2; sd.add(ship);
+    for (const e of [-4.6, 4.6]){ const hd = new THREE.Mesh(new THREE.ConeGeometry(.6, 1.8, 6), mat(0xc62828)); hd.position.set(e, 3.4, 0); hd.rotation.z = e > 0 ? -1.2 : 1.2; sd.add(hd); }
+    put(sd, 406, -67.5); }
+  { const tw = new THREE.Group(), col = new THREE.Mesh(new THREE.CylinderGeometry(.7, .9, 14, 12), mat(0x1565c0)); col.position.y = 7; tw.add(col); const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, .35, 8, 18), mat(0xfdd835)); ring.rotation.x = Math.PI/2; ring.position.y = 5; tw.add(ring); const top = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.4, 12), mat(0xc62828)); top.position.y = 14.7; tw.add(top); put(tw, 443, -70.5); }
+  { const bc = new THREE.Group(), roof = new THREE.Mesh(new THREE.BoxGeometry(14, .4, 10), mat(0x0277bd)); roof.position.y = 4.4; bc.add(roof); for (const [x, z] of [[-6.8, -4.8], [6.8, -4.8], [-6.8, 4.8], [6.8, 4.8]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 4.4, 6), mat(0xeeeeee)); p.position.set(x, 2.2, z); bc.add(p); }
+    for (let k = 0; k < 6; k++){ const car = new THREE.Mesh(new THREE.CylinderGeometry(.8, .9, .6, 12), mat([0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0xff7043, 0x8e24aa][k])); car.position.set(-4 + (k % 3)*4, .3, k < 3 ? -2 : 2); bc.add(car); }
+    put(bc, 356, -75); const sg = new THREE.Mesh(new THREE.PlaneGeometry(4, .6), new THREE.MeshBasicMaterial({ map: labelTex('SIG ALERT', '#0277bd', '#ffffff', 512, 77, 55), side: THREE.DoubleSide })); put(sg, 356, -69.8, 5); }
+  { const wj = new THREE.Group(); for (const [c, x] of [[0xff7043, -2], [0x26c6da, 2]]){ const sail = new THREE.Mesh(new THREE.ConeGeometry(4, .6, 3), mat(c)); sail.position.set(x, 5, 0); wj.add(sail); } for (let k = 0; k < 6; k++){ const a = k/6*TAU, sk = new THREE.Mesh(new THREE.BoxGeometry(1.2, .5, .7), mat(0x1e88e5)); sk.position.set(Math.cos(a)*3, .8, Math.sin(a)*3); sk.rotation.y = -a; wj.add(sk); } put(wj, 338, -72); }
+  { const fh = new THREE.Group(), p = new THREE.Mesh(new THREE.CylinderGeometry(.4, .5, 6, 10), mat(0x43a047)); p.position.y = 3; fh.add(p); const seat = new THREE.Mesh(new THREE.TorusGeometry(1.1, .3, 8, 14), mat(0x7cb342)); seat.rotation.x = Math.PI/2; seat.position.y = 3.6; fh.add(seat); put(fh, 366, -81); }
+  for (const [A, off, r, c] of [[376, -72, 6, 0x1e88e5], [388, -66, 4, 0xfdd835]]){ const sp = new THREE.Group(), base = new THREE.Mesh(new THREE.CylinderGeometry(r, r, .5, 20), mat(0xeeeeee)); base.position.y = .25; sp.add(base); const hub = new THREE.Mesh(new THREE.CylinderGeometry(.4, .4, 4, 8), mat(c)); hub.position.y = 2; sp.add(hub);
+    for (let k = 0; k < 6; k++){ const a = k/6*TAU, cr = new THREE.Mesh(new THREE.SphereGeometry(.8, 10, 8), mat(c)); cr.position.set(Math.cos(a)*(r - 1.2), 1.4, Math.sin(a)*(r - 1.2)); sp.add(cr); } put(sp, A, off); }
   g.add(grp); mergeStatic(grp); }
 function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPHONE', '#111111', '#ffffff', 512, 96, 60) });
   for (const b of PHONE_BOOTHS){ if (b.soon) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));

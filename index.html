@@ -267,6 +267,7 @@
   .how li b{display:block;font-family:var(--display);font-weight:400;font-size:18px;color:var(--deep);margin-bottom:2px}
   .how li:nth-child(2){background:#ffe9e4} .how li:nth-child(3){background:#dbeefd} .how li:nth-child(4){background:#fff3d6}
   .how kbd{font-size:12px;padding:0 5px;min-width:20px;margin:1px}
+  body.touch .how .k, body:not(.touch) .how .tch{display:none}
   @media (max-width:460px){.how{grid-template-columns:1fr}}
   .path{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:0;list-style:none}
   .path li{background:#e8f5fa;border-radius:14px;padding:10px;font-size:13px;font-weight:800;line-height:1.3}
@@ -427,12 +428,12 @@
       <p class="kicker">A swimming simulator</p>
       <h1>Swim<em>world</em></h1>
     </div>
-    <p class="explain"><b>Your own island in Santa Monica Bay.</b> Build your dream house, then swim out to explore the real bay: the pier, the kelp forest, an old shipwreck and a deep canyon. Find treasure, go on quests and make friends.</p>
+    <p class="explain">Swim, skate, shop and explore the real Santa Monica: the pier, the Promenade, the kelp forest and an old shipwreck.</p>
     <ul class="how">
-      <li><b>Move</b>Use the joystick, or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, to walk or swim the way the camera looks. Drag the screen to turn the camera (<kbd>←</kbd> <kbd>→</kbd> turn it too), and pinch or scroll to zoom. Hold <kbd>Space</kbd> or Dive to go under.</li>
-      <li><b>Stay alive</b>Keep moving or you'll sink. Come up for air. Stay away from sharks and orange-red sea nettles (stinging jellyfish).</li>
-      <li><b>Build &amp; explore</b>Press Build on your island to place blocks. Press <kbd>T</kbd> to talk to people and animals, and <kbd>M</kbd> for your map.</li>
-      <li><b>Coins &amp; XP</b>Grab pearls and shells, open treasure chests, talk to people and find new places. Coins buy gear for every animal at the Dive Shop, and you can upgrade each piece, level by level, to swim faster and hold your breath longer. Every Turbo Booster doubles your speed again! You can also buy kayaks, canoes, boats, a submarine and a pirate ship. XP makes you faster and unlocks new swimmers: turtle, otter, dolphin.</li>
+      <li><b>Move</b><span class="tch">Drag the joystick to go. Drag the screen to look around, and pinch to zoom.</span><span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to go. Drag or use <kbd>←</kbd><kbd>→</kbd> to look around, and scroll to zoom.</span></li>
+      <li><b>Swim</b>Keep moving or you'll sink, and come up for air. <span class="tch">Hold Dive</span><span class="k">Hold <kbd>Space</kbd></span> to go under. Watch out for sharks and orange jellyfish!</li>
+      <li><b>Do things</b>When a button pops up, <span class="tch">tap it</span><span class="k">click it</span> to talk, shop, ride, play or skate. <span class="tch">Tap the little map to see where you are.</span><span class="k"><kbd>M</kbd> opens your map.</span></li>
+      <li><b>Coins</b>Grab pearls, open treasure chests and find new places. Spend coins at the Dive Shop and in the stores.</li>
     </ul>
     <div class="actions">
       <button id="startBtn" class="btn primary" type="button">Start Game</button>
@@ -3624,6 +3625,7 @@ const GFX = [   // lowest to highest
   { pr:1.25,bloom:true,  shadow:true,  view:6, near:3, fish:32 },
   { pr:1.5, bloom:true,  shadow:true,  view:6, near:3, fish:32 } ];
 const TOUCH_DEVICE = navigator.maxTouchPoints > 1 || matchMedia('(pointer: coarse)').matches;
+document.body.classList.toggle('touch', TOUCH_DEVICE);   // (the start screen shows the phone way to play, or the keyboard way)
 let gfx = TOUCH_DEVICE ? 2 : 5, gfxCap = GFX.length - 1, gfxT = 0, gfxUpAt = -99, frameMs = 16, VIEW_R = 6, NEAR_R = 3, FISH_R = 32;
 function applyGfx(first){
   const g = GFX[gfx]; maxPR = g.pr; VIEW_R = g.view; NEAR_R = g.near; FISH_R = g.fish;

@@ -4393,12 +4393,12 @@ function buildCoast(){
   const parts = [];   // (home's own walls go in with the buildings)
   // home, 1045 3rd Street (see HOME_APT): gray stucco around a courtyard, catwalks, the stairwell under its tile roof, the passage and front steps
   { const H = HOME_APT, B = homeBase(), F = homeFloor, [c0, c1] = H.court, S = H.stair, roofY = F(3) + H.fh + .1, hm = new THREE.Group();
-    const stucco = std(0xcfd3d3, .85), trim = std(0x7f97ab, .6), conc = std(0xd4d2cc, .85), rail = std(0x5d7387, .5), tile = std(0x8b5a3c, .8), base = std(0x50685e, .85), dark = new THREE.MeshBasicMaterial({ color: 0x15181a });
+    const stucco = std(0xc4c6c2, .9), trim = std(0x9dbcd6, .6), conc = std(0xd4d2cc, .85), rail = std(0x5d7387, .5), tile = std(0x5a4334, .9), base = std(0x9da3a2, .9), dark = new THREE.MeshBasicMaterial({ color: 0x15181a });   // (from Street View: warm light gray stucco, light blue trim, a dark brown shingle roof)
     const at3 = (u, v) => { const [x, y] = landXY(...homeST(u, v)); return [x*U, y*U]; };
     const box = (u0, u1, v0, v1, y0, y1, m) => { const [x, z] = at3((u0 + u1)/2, (v0 + v1)/2), b = new THREE.Mesh(new THREE.BoxGeometry(u1 - u0, y1 - y0, v1 - v0), m); b.position.set(x, (y0 + y1)/2, z); hm.add(b); return b; };
     const plane = (u, v, y, w, h, m, face) => { const [x, z] = at3(u, v), p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); p.position.set(x, y, z); p.rotation.y = face; hm.add(p); return p; };
     // the building itself: stucco blocks with windows around the open parts (you can't walk into these), from the garage level up to the roof
-    const block = (u0, u1, v0, v1, y0 = B - .3, solid = true) => { const [ss0] = homeST(u0, 0), [, tt0] = homeST(0, v0), d = u1 - u0, w = v1 - v0, h = roofY - y0, bx = new THREE.BoxGeometry(d, h, w).toNonIndexed(), uv = bx.attributes.uv, cols = [], cc = new THREE.Color(0xd3d7d8);
+    const block = (u0, u1, v0, v1, y0 = B - .3, solid = true) => { const [ss0] = homeST(u0, 0), [, tt0] = homeST(0, v0), d = u1 - u0, w = v1 - v0, h = roofY - y0, bx = new THREE.BoxGeometry(d, h, w).toNonIndexed(), uv = bx.attributes.uv, cols = [], cc = new THREE.Color(0xc6c8c4);
       for (let k = 0; k < uv.count; k++){ const f = Math.floor(k/6), side = f === 2 || f === 3; uv.setXY(k, side ? .02 : uv.getX(k)*(f < 2 ? w : d)/3.2, side ? .02 : uv.getY(k)*h/3); cols.push(cc.r, cc.g, cc.b); }
       bx.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); const [x, z] = at3((u0 + u1)/2, (v0 + v1)/2); bx.translate(x, y0 + h/2, z); parts.push(bx);
       if (solid) LAND_BOXES.push([ss0, tt0, ss0 + d, tt0 + w, roofY]); };
@@ -4409,9 +4409,24 @@ function buildCoast(){
     { const [x, z] = at3((S.u0 + c0)/2, (S.v0 + S.v1)/2), hip = new THREE.Mesh(new THREE.ConeGeometry(3.1, 1.3, 4), tile); hip.position.set(x, roofY + .6, z); hip.rotation.y = Math.PI/4; hm.add(hip); }   // ...its little tile roof
     // the front: a dark green garage band at the bottom (the garage door at the far end), balconies across all three floors, a tile edge on the roof
     box(-.15, 0, -L2, L2, B - .3, F(1) - .1, base); plane(-.17, -L2 + 2.6, B + .6, 4, 1.6, dark, -Math.PI/2);
-    for (const n of [1, 2, 3]){ for (const [a, b] of [[-L2, -1.9], [1.9, L2]]){ box(-1.3, 0, a, b, F(n) - .25, F(n), conc); box(-1.32, -1.24, a, b, F(n) + .55, F(n) + .9, trim); box(-1.32, -1.24, a, b, F(n), F(n) + .1, trim); }
-      for (let v = -L2 + 2; v < L2; v += 3.8) if (Math.abs(v) > 2.2) box(-1.3, -1.18, v - .06, v + .06, F(n), F(n) + .9, rail); }
-    box(-.5, .2, -L2 - .2, L2 + .2, roofY - .2, roofY + .45, tile);
+    const latTex = canvasTex(128, 128, (x, w, h) => { x.clearRect(0, 0, w, h); x.strokeStyle = '#f4f4f0'; x.lineWidth = 9; for (let k = -2; k <= 2; k++){ x.beginPath(); x.moveTo(k*64, 0); x.lineTo(k*64 + 128, 128); x.stroke(); x.beginPath(); x.moveTo(k*64 + 128, 0); x.lineTo(k*64, 128); x.stroke(); } });
+    latTex.repeat.set(2, 4); const latM = new THREE.MeshStandardMaterial({ map: latTex, transparent: true, alphaTest: .4, side: THREE.DoubleSide, roughness: .8 });
+    for (const n of [1, 2, 3]){ for (const [a, b] of [[-L2, -1.9], [1.9, L2]]){ box(-1.3, 0, a, b, F(n) - .25, F(n), conc);   // each balcony: a solid stucco wall along the front, with a light blue cap and a stripe along the bottom
+        box(-1.36, -1.16, a, b, F(n), F(n) + 1, stucco); box(-1.4, -1.12, a, b, F(n) + 1, F(n) + 1.07, trim); box(-1.4, -1.34, a, b, F(n) - .25, F(n) + .05, trim);
+        for (const v of [a, b]) box(-1.3, 0, v - .05, v + .05, F(n), F(n) + 1, stucco); }   //   (and its ends)
+      for (const v of [-L2/2 - 1, L2/2 + 1, -1.9, 1.9]) plane(-.65, v, F(n) + 1.5, 1.3, 2.6, latM, 0); }   // white diamond lattice between the balconies
+    for (const v of [-L2, L2]) box(-.08, .06, v - .12, v + .12, B - .3, roofY, trim);   // light blue strips up the front corners
+    // the roof: dark brown shingles, sloping down on all four sides with the eaves sticking out (over the front building and each wing; the courtyard stays open)
+    const hipRoof = (u0, u1, v0, v1, rise) => { const e = .6; u0 -= e; u1 += e; v0 -= e; v1 += e; const du = u1 - u0, dv = v1 - v0, r = Math.min(du, dv)/2, y0 = roofY - .25, y1 = y0 + rise;
+      const along = du > dv, A = along ? [u0 + r, (v0 + v1)/2] : [(u0 + u1)/2, v0 + r], Z = along ? [u1 - r, (v0 + v1)/2] : [(u0 + u1)/2, v1 - r];
+      const P = (u, v, y) => { const [x, z] = at3(u, v); return [x, y, z]; }, c = [P(u0, v0, y0), P(u1, v0, y0), P(u1, v1, y0), P(u0, v1, y0)], ra = P(A[0], A[1], y1), rz = P(Z[0], Z[1], y1), pos = [];
+      const tri = (a, b, cc) => pos.push(...a, ...b, ...cc);
+      if (along){ tri(c[0], c[1], rz); tri(c[0], rz, ra); tri(c[2], c[3], ra); tri(c[2], ra, rz); tri(c[1], c[2], rz); tri(c[3], c[0], ra); }
+      else { tri(c[1], c[2], rz); tri(c[1], rz, ra); tri(c[3], c[0], ra); tri(c[3], ra, rz); tri(c[0], c[1], ra); tri(c[2], c[3], rz); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x5a4334, roughness: .95, side: THREE.DoubleSide })); m.castShadow = m.receiveShadow = true; hm.add(m);
+      box(u0, u1, v0, v0 + .08, y0 - .22, y0, base); box(u0, u1, v1 - .08, v1, y0 - .22, y0, base); box(u0, u0 + .08, v0, v1, y0 - .22, y0, base); box(u1 - .08, u1, v0, v1, y0 - .22, y0, base); };   // (the fascia boards)
+    hipRoof(-1.3, c0, -L2, L2, 2.2); hipRoof(c0, H.deep, -L2, -H.cv, 1.6); hipRoof(c0, H.deep, H.cv, L2, 1.6); hipRoof(c1, H.deep, -H.cv, H.cv, 1.6);
     // the front steps between two lamp pillars, a low wall and planters along the sidewalk
     for (let k = 0; k < 8; k++){ const u = -H.steps + H.steps*k/8; box(u, 0, -1.5, 1.5, B, B + H.f1*(k + 1)/8, conc); }
     for (const v of [-1.75, 1.75]){ box(-H.steps, -H.steps + .45, v - .22, v + .22, B, B + 1.7, stucco); const lamp = box(-H.steps + .1, -H.steps + .35, v - .12, v + .12, B + 1.7, B + 2.05, new THREE.MeshBasicMaterial({ color: 0xfff1c8 })); }
@@ -4442,7 +4457,7 @@ function buildCoast(){
       plane(u + du*1.5 + along[0]*.0, v + dv*1.5, F(n) + 2.3, .5, .25, new THREE.MeshBasicMaterial({ map: labelTex(num, '#f7f4ec', '#22303c', 256, 128, 90) }), wallFace[w]);
       plane(u + du + along[0]*1.3, v + dv + along[1]*1.3, F(n) + 1.4, .8, .8, new THREE.MeshBasicMaterial({ color: mine ? 0xffd36b : 0x4d5e6b }), wallFace[w]); }
     plane(-.18, 0, F(1) + 2.7, 1.2, .45, new THREE.MeshBasicMaterial({ map: labelTex('1045', '#22303c', '#f7f4ec', 256, 96, 72) }), -Math.PI/2);   // the street number, over the entrance
-    const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, z] = at3(c1 + 1, 0); sign.position.set(x, roofY + 2, z); } hm.add(sign);   // up on the roof, over 303
+    const sign = sprite(labelTex('HOME', '#ffb300', '#fff', 512, 200, 140), 3.2, 1.25); { const [x, z] = at3(c1 + 1, 0); sign.position.set(x, roofY + 3.2, z); } hm.add(sign);   // up on the roof, over 303
     g.add(hm); homeSign = sign; }
   for (const arr of tiles.values()){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr.pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(arr.uv, 2)); geo.setAttribute('color', new THREE.Float32BufferAttribute(arr.col, 3)); geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, bldMat); m.receiveShadow = true; g.add(m);
@@ -6168,7 +6183,7 @@ function drawCar(o, dt){   // your car, and its engine
 const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion(), _cv = new THREE.Vector3(), _cs = new THREE.Vector3(), _cu = new THREE.Vector3(0, 1, 0);
 function updCoast(o){
   const dt = Math.min(.05, time - (updCoast.t ?? time)); updCoast.t = time;
-  if (homeSign) homeSign.position.y = homeFloor(3) + HOME_APT.fh + 2.2 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
+  if (homeSign) homeSign.position.y = homeFloor(3) + HOME_APT.fh + 3.4 + Math.sin(time*2)*.15;   // (the HOME sign bobs)
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)

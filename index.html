@@ -3997,12 +3997,16 @@ function buildSwimmer(){
   hair.scale.setScalar(1.14); hair.rotation.z = -1.02; hair.position.copy(head.position); hair.castShadow = true; body.add(hair); street.push(hair);
   for (const o of street) o.visible = false;
   // things you can buy on the Promenade and wear: a cap, sunglasses, sneakers (and the T-shirt's color)
-  const wearM = { hat: std(0xe53935, .7), shades: std(0x111111, .12, .5), shoes: std(0xf4f4f0, .7) }, wear = { hat: [], shades: [], shoes: [] };
+  const wearM = { hat: std(0xe53935, .7), shades: std(0x111111, .12, .5), shoes: std(0xf4f4f0, .7), phones: std(0x222222, .4) }, wear = { hat: [], shades: [], shoes: [], phones: [] };
   { const h = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 12, 0, TAU, 0, Math.PI*.52), wearM.hat); h.scale.setScalar(1.2); h.rotation.z = -.8; h.position.copy(head.position); h.castShadow = true; body.add(h); wear.hat.push(h);
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .014, 20), wearM.hat); brim.scale.set(1, 1, .95); brim.rotation.z = Math.PI/2 - .15; brim.position.set(.735, -.1, 0); body.add(brim); wear.hat.push(brim); }
   for (const s of [-1, 1]){ const l = ellip(.034, .8, .55, 1.1, wearM.shades, 14); l.position.set(.7, -.093, s*.045); body.add(l); wear.shades.push(l); }
   { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
   for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); legs[id].sh = sh; }
+  { const hg = new THREE.Group(); hg.position.copy(head.position); hg.rotation.x = Math.PI/2; body.add(hg);   // headphones: a band over the top of your head and a cup on each ear
+    const band = new THREE.Mesh(new THREE.TorusGeometry(.118, .013, 8, 24, Math.PI), wearM.phones); band.rotation.z = -Math.PI/2; hg.add(band); wear.phones.push(band);
+    for (const sd of [-1, 1]){ const cup = new THREE.Mesh(new THREE.CylinderGeometry(.052, .052, .035, 18), wearM.phones); cup.position.set(-.005, sd*.112, 0); hg.add(cup); wear.phones.push(cup);
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .012, 16), std(0x111111, .9)); pad.position.set(-.005, sd*.094, 0); hg.add(pad); wear.phones.push(pad); } }
   for (const k in wear) for (const o of wear[k]) o.visible = false;
   root.userData = { kind:'swimmer', body, arms, legs, torso, tee, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
@@ -4690,8 +4694,8 @@ const STORE_MENU = {
   shoes: [['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h })),
   shades: [['Black', '#111111'], ['Pink', '#f06292'], ['Gold', '#d4a020'], ['Blue mirror', '#2f80ed'], ['Red', '#e53935']].map(([c, h]) => M('🕶️', `${c} sunglasses`, 30, 'wear', { slot: 'shades', col: h })),
   books: 'books',   // (bookshops: read any book for free, or buy one to take with you; see BOOKS)
-  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'puzzle'), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
-  tech: [M('📱', 'Phone', 150, 'selfie'), M('🎧', 'Headphones', 80, 'tune'), M('⌚', 'Watch', 100, 'time')],
+  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'puzzle'), M('🪁', 'Kite', 20, 'kite')],
+  tech: [M('📱', 'Phone', 150, 'selfie'), M('🎧', 'Headphones', 80, 'wear', { slot: 'phones', col: '#222222' }), M('⌚', 'Watch', 100, 'time')],
   beauty: [M('🌸', 'Perfume', 25, 'spritz'), M('💅', 'Nail polish', 15, 'play', { say: 'Your nails look amazing!' }), M('💄', 'Lip gloss', 15, 'play', { say: 'So shiny!' })],
   gift: [M('🔮', 'Snow globe', 20, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('🐚', 'Shell necklace', 15, 'play', { say: 'So pretty!' }), M('🔑', 'Keychain', 8, 'play', { say: 'Jingle jingle!' }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
   movies: [M('🎟️', 'Ticket: Ocean Wonders', 10, 'movie'), M('🍿', 'Popcorn', 8), M('🥤', 'Soda', 5, 'drink'), M('🍫', 'Movie candy', 5)],
@@ -4720,7 +4724,7 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Hummus Bar Express': [M('🥙', 'Falafel wrap', 10), M('🫓', 'Hummus & pita', 8)], "Barney's Beanery": [M('🍔', 'Burger', 12), M('🍲', 'Chili', 8)],
   'Bruxie': [M('🧇', 'Waffle sandwich', 10), M('🍦', 'Frozen custard', 5)], 'Trastevere': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12)],
   "IT'SUGAR": [M('🐻', 'Giant gummy bear', 15), M('🍭', 'Giant lollipop', 10), M('🍫', 'Chocolate bar', 6), M('🌈', 'Sour belts', 6)],
-  'MINISO': [M('🧸', 'Plush toy', 15, 'hug'), M('🎧', 'Cute headphones', 25, 'tune'), M('🖊️', 'Cute pen', 3, 'play', { say: 'So cute!' })],
+  'MINISO': [M('🧸', 'Plush toy', 15, 'hug'), M('🎧', 'Pink headphones', 25, 'wear', { slot: 'phones', col: '#f48fb1' }), M('🎧', 'White headphones', 25, 'wear', { slot: 'phones', col: '#f4f4f0' }), M('🖊️', 'Cute pen', 3, 'play', { say: 'So cute!' })],
   'Wilson': [M('🏀', 'Basketball', 20, 'play', { say: 'Swish!' }), M('🎾', 'Tennis racket', 30, 'play', { say: 'Ace!' }), M('🏈', 'Football', 20, 'play', { say: 'Touchdown!' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e' })],
   'Gacha & Catch': [M('🥚', 'Capsule toy', 5, 'gacha'), M('🥚', 'Capsule toy (5 pack)', 20, 'gacha', { left: 5 })],
   'Holey Moley': [M('🍔', 'Slider', 8), M('🍕', 'Pizza', 10), M('🥨', 'Churros', 6), M('🍦', 'Ice cream', 6), M('🍋', 'Lemonade', 4, 'drink')],
@@ -5479,7 +5483,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
-const SPOT = { golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
+const SPOT = { rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''], gallery: ['🖼️ Test your eyes', ''], vr: ['🥽 Try VR', ''], froyo: ['🍨 Fill a cup', ''], pickle: ['🏓 Play pickleball', '🏓 Hit!'] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
@@ -5514,14 +5518,14 @@ function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAud
   const hi = { tread: ['On the treadmill!', 'Tap Faster to speed up. Walk away when you\'re done'], bike: ['Spin time!', 'Tap Pedal faster to go faster'], weights: ['Pump some iron!', 'Tap Lift! for every lift'],
     stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat and people will come dance'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
   banner(...hi); sfx(660, .1, 'triangle', .05); }
-function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null;
+function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null; if (w.k === 'rc'){ if (rcObj) rcObj.visible = false; sfx(600, .08, 'triangle', .04); return banner('Picked up your mini car', 'Tap Drive to drive it again'); }
   const [x, y] = landXY(w.r.fs + w.r.inw*w.sp.ed, w.sp.et); o.x = x; o.y = y; walkRef = w.r.floor + .3; o.gh = groundAt(x, y);
   const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. Strength ${strengthLv()} 💪` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
   if (w.k === 'weights' && w.n){ flushCloud(); o.flexT = time + 2.2; }
   if (w.k === 'pickle'){ if (pkVis) pkVis.ball.visible = pkVis.shadow.visible = pkVis.pad.visible = false; banner('Good game! 🏓', `You ${w.score[0]}, Coach Pip ${w.score[1]}`); return; }
   if (w.k === 'golf') return;
   if (w.k === 'dj') banner('What a set!', 'The whole gym was dancing'); else if (w.k === 'stage') banner('What a show!', 'Take a bow next time too'); else banner('Great workout! 💪', how); }
-function workTap(){ const o = ocean, w = o?.workout; if (!w || paused) return; initAudio(); w.tapT = time;
+function workTap(){ const o = ocean, w = o?.workout; if (!w || paused) return; initAudio(); w.tapT = time; if (w.k === 'rc') return stopWorkout();
   if (w.k === 'wheel') return takePhoto(); if (w.k === 'golf') return golfPutt(w); if (w.k === 'pickle') return pkHit(w); if (w.k === 'coaster'){ sfx(1000, .7, 'sawtooth', .015, 0, -500); return; }
   if (w.k === 'tread' || w.k === 'bike'){ w.lvl = w.lvl % 3 + 1; coach(`${['', w.k === 'bike' ? 'Easy pedaling' : 'Walking', w.k === 'bike' ? 'Faster!' : 'Jogging!', w.k === 'bike' ? 'Racing!' : 'Sprinting!'][w.lvl]} Speed ${w.lvl} of 3`, 2); sfx(500 + w.lvl*150, .08, 'square', .03); }
   else if (w.k === 'weights'){ if (time - w.tapT0 < .45) return; w.tapT0 = time; w.n++; save.lifts = (save.lifts || 0) + 1; persist(); sfx(140, .12, 'square', .04, .3);   // (one lift at a time)
@@ -5529,7 +5533,7 @@ function workTap(){ const o = ocean, w = o?.workout; if (!w || paused) return; i
   else if (w.k === 'stretch'){ w.n++; sfx(400, .4, 'sine', .03, 0, 300); coach(['Reach for the sky!', 'Breathe in... and out', 'Stretch, stretch, stretch!'][w.n % 3], 2); }
   else if (w.k === 'dj'){ w.lvl = w.lvl % 3 + 1; [0, .13, .26].forEach(dl => sfx(466, .11, 'sawtooth', .03, dl)); coach(['', 'Chill beat', 'Turn it up!', 'Full party mode!'][w.lvl], 2); }
   else if (w.k === 'stage'){ w.bowT = time; heartsAt = time; for (let k = 0; k < 26; k++) sfx(1800 + Math.random()*2500, .04, 'square', .012, Math.random()*1.4); banner('Bravo! 👏', 'The audience loves you'); } }
-function workStep(o, dt){ const w = o.workout; if (w.pier) return rideStep(o, w, dt); if (w.k === 'golf') return golfStep(o, w, dt); if (w.k === 'pickle') return pickleStep(o, w, dt); o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = false; o.air = airMax(); o.idle = 0;
+function workStep(o, dt){ const w = o.workout; if (w.k === 'rc') return rcStep(o, w, dt); if (w.pier) return rideStep(o, w, dt); if (w.k === 'golf') return golfStep(o, w, dt); if (w.k === 'pickle') return pickleStep(o, w, dt); o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = false; o.air = airMax(); o.idle = 0;
   if (time - w.t0 > .6 && wantHeading()) return stopWorkout();
   if (w.k === 'tread' || w.k === 'bike'){ const v = [0, 1.5, 2.7, 4][w.lvl]*(w.k === 'bike' ? 2 : 1), before = w.dist; w.dist += v*dt;
     if (Math.floor(w.dist/100) > Math.floor(before/100)){ coach(`${Math.floor(w.dist/100)*100} meters! Keep going!`, 2); sfx(880, .1, 'triangle', .04); }
@@ -5567,6 +5571,49 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
   if (k === 'stage'){ if (time - (w.bowT || -9) < 1.4){ m.rotation.z -= Math.sin(clamp((time - w.bowT)/1.4, 0, 1)*Math.PI)*.7; drawHearts(px, gy + 2, pz, 0); return; }
     const a = Math.sin(time*6.5); m.position.y += Math.abs(a)*.08; m.rotation.y += Math.sin(time*2)*.6; if (!human) return;
     u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
+// a real kite: a diamond with a bow tail, about 90 cm tall. Tap to let it fly up high on its string; tap again to reel it in.
+// the mini car from the capsule machine: put it down and drive it like a remote-control car (the stick or WASD drives it, you stay put)
+let rcObj = null;
+function startRC(o){ const [s, t] = landST(o.x, o.y); if (inHomeBuilding?.(o)) return banner('Not in here!', 'Take it outside to drive it');
+  o.workout = { k: 'rc', x: o.x, y: o.y, s: s + Math.cos(o.ang)*0, t, ang: o.ang, v: 0, t0: time, tapT: -9, room: roomAt(s, t) };
+  { const [x2, y2] = landXY(s + .01, t), [x3, y3] = landXY(s, t + .01), fx = Math.cos(o.ang), fy = Math.sin(o.ang), ds = (fx*(x2 - o.x) + fy*(y2 - o.y))/.01/METERS, dt2 = (fx*(x3 - o.x) + fy*(y3 - o.y))/.01/METERS, L = Math.hypot(ds, dt2) || 1;   // (one meter in front of you, in street coordinates)
+    o.workout.s += ds/L; o.workout.t += dt2/L; o.workout.ang = Math.atan2(dt2, ds); }
+  if (!rcObj){ rcObj = new THREE.Group(); const col = [0xe53935, 0x1e88e5, 0xfdd835][(Math.random()*3)|0], bodyM = std(col, .35, .3);
+    const bx = (w, h, d, x, y, z, m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; rcObj.add(b); };
+    bx(.3, .06, .15, 0, .055, 0, bodyM); bx(.15, .055, .13, -.02, .11, 0, bodyM); bx(.01, .04, .11, .056, .11, 0, std(0x9fd3ff, .1, .5)); bx(.02, .02, .03, .15, .06, .045, std(0xfff59d, .3)); bx(.02, .02, .03, .15, .06, -.045, std(0xfff59d, .3));
+    for (const [x, z] of [[.09, .075], [.09, -.075], [-.09, .075], [-.09, -.075]]){ const wh = new THREE.Mesh(new THREE.CylinderGeometry(.032, .032, .025, 12), std(0x222222, .8)); wh.rotation.x = Math.PI/2; wh.position.set(x, .032, z); rcObj.add(wh); }
+    rcObj.scale.setScalar(1.5); oceanScene.add(rcObj); }
+  rcObj.visible = true; [392, 523, 784].forEach((f, i) => sfx(f, .08, 'square', .03, i*.06)); banner('🚗 Drive your mini car!', 'Use the stick (or WASD) to drive it. Tap Pick it up when you\'re done'); }
+function rcStep(o, w, dt){ o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = false; o.idle = 0; o.air = airMax();
+  const inp = moveInput(), thr = Math.abs(inp.y) > .15 ? inp.y : 0, steer = Math.abs(inp.x) > .15 ? inp.x : 0;
+  w.v += (thr*9 - w.v*(thr ? 1.2 : 3))*dt; w.v = clamp(w.v, -3, 7); w.ang -= steer*dt*3*Math.sign(w.v || 1)*Math.min(1, Math.abs(w.v)/1.5 + .2);
+  const ns = w.s + Math.cos(w.ang)*w.v*dt, nt = w.t + Math.sin(w.ang)*w.v*dt, [ps, pt] = landST(w.x, w.y), [x0, y0] = landXY(w.s, w.t), [x1, y1] = landXY(ns, nt), h0 = groundAt(x0, y0), h1 = groundAt(x1, y1);
+  const blocked = Math.abs(h1 - h0) > .25 || (roomAt(ns, nt) || null) !== (w.room || null) || (!w.room && bldAt(ns, nt)) || Math.hypot(ns - ps, nt - pt) > 35;
+  if (blocked){ if (Math.abs(w.v) > 2) sfx(160, .08, 'square', .03); w.v = -w.v*.35; } else { w.s = ns; w.t = nt; }
+  if (Math.abs(w.v) > .3 && (w.buzz = (w.buzz || 0) - dt) <= 0){ w.buzz = .09; sfx(220 + Math.abs(w.v)*60, .07, 'sawtooth', .012); }   // (the little motor)
+  const [x, y] = landXY(w.s, w.t), [xa, ya] = landXY(w.s + Math.cos(w.ang), w.t + Math.sin(w.ang)); rcObj.position.set(x*U, groundAt(x, y), y*U); rcObj.rotation.set(0, -Math.atan2(ya - y, xa - x), 0);
+  rcObj.children.forEach(c => { if (c.geometry?.type === 'CylinderGeometry') c.rotation.y += w.v*dt/.032; }); }
+let kiteObj = null; const _kv = new THREE.Vector3();
+function drawKite(o, m, hand){
+  if (!kiteObj){ kiteObj = new THREE.Group(); const kg = new THREE.Group(); kiteObj.add(kg);
+    const tri = (a, b, c, hex) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c], 3)); g.computeVertexNormals(); const me = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: hex, roughness: .7, side: THREE.DoubleSide })); kg.add(me); };
+    const T = [0, .55, 0], B = [0, -.38, 0], L = [-.36, .1, 0], R = [.36, .1, 0];
+    tri(T, L, [0, .1, 0], 0xe53935); tri(T, [0, .1, 0], R, 0xfdd835); tri(L, B, [0, .1, 0], 0x1e88e5); tri([0, .1, 0], B, R, 0xe53935);
+    for (const [a, b] of [[T, B], [L, R]]){ const d = new THREE.Vector3(...b).sub(new THREE.Vector3(...a)), st = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, d.length(), 5), std(0x8d6e63, .8)); st.position.set((a[0] + b[0])/2, (a[1] + b[1])/2, .01); st.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); kg.add(st); }
+    const tail = []; for (let k = 0; k < 7; k++){ const bow = new THREE.Mesh(new THREE.BoxGeometry(.13, .05, .01), std([0xfdd835, 0xe53935, 0x1e88e5][k % 3], .7)); kiteObj.add(bow); tail.push(bow); }
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(Array.from({ length: 16 }, () => new THREE.Vector3())), new THREE.LineBasicMaterial({ color: 0xf4f4f4, transparent: true, opacity: .8 }));
+    line.frustumCulled = false; oceanScene.add(line); kiteObj.userData = { kg, tail, line, pos: new THREE.Vector3(), vel: 0 }; }
+  if (kiteObj.parent !== oceanScene) oceanScene.add(kiteObj);
+  const U2 = kiteObj.userData, it = treat; kiteObj.visible = true; U2.line.visible = !!it.fly;
+  if (!it.fly){ U2.kg.scale.setScalar(.75); kiteObj.position.copy(hand); kiteObj.position.y += .45; kiteObj.rotation.set(0, -o.ang + Math.PI/2, 0); U2.pos.copy(kiteObj.position);
+    U2.tail.forEach((b, k) => b.position.set(0, -.3 - k*.1, 0)); return; }
+  // up in the sky: out in front of you and high (higher by the ocean, where the wind is), dancing about on the wind
+  const beach = coastS(o.x, o.y) > -320, up = Math.min(1, (time - it.flyT)/3), hgt = (beach ? 17 : 11)*up, back = (beach ? 13 : 8)*up;
+  _kv.set(m.position.x + Math.cos(o.ang)*back + Math.sin(time*.7)*1.6*up, m.position.y + 1.4 + hgt + Math.sin(time*1.3)*1.1*up, m.position.z + Math.sin(o.ang)*back + Math.cos(time*.9)*1.3*up);   // (out in front of you, where you're looking)
+  U2.pos.lerp(_kv, Math.min(1, .05 + up*.04)); kiteObj.position.copy(U2.pos); U2.kg.scale.setScalar(1);
+  kiteObj.lookAt(hand.x, hand.y, hand.z); kiteObj.rotateX(-.5); kiteObj.rotateZ(Math.sin(time*1.7)*.35);
+  U2.tail.forEach((b, k) => { b.position.set(Math.sin(time*4 - k*.8)*.08*(k + 1), -.42 - k*.16, -k*.05); b.rotation.z = Math.sin(time*5 - k)*.6; });
+  const P = U2.line.geometry.attributes.position, n = P.count; for (let k = 0; k < n; k++){ const f = k/(n - 1), sag = Math.sin(f*Math.PI)*.12*hand.distanceTo(U2.pos)*.15; P.setXYZ(k, lerp(hand.x, U2.pos.x, f), lerp(hand.y, U2.pos.y, f) - sag, lerp(hand.z, U2.pos.z, f)); } P.needsUpdate = true; }
 let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
 const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'puzzle'), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
 const storeMenu = r => r.cat === 'froyo' ? 'froyo' : (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
@@ -5611,7 +5658,7 @@ function renderStore(){
   for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === it.col;
     card(`<div class="em">${it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
-      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
+      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
       if (it.act === 'tattoo'){ save.tattoo = it.e; persist(); flushCloud(); closeStore(); heartsAt = time; banner(`${it.e} New tattoo!`, 'Look at your arm! (It\'s only temporary)'); return; }
       treat = { ...it, bites: it.bites || (it.act === 'drink' ? 4 : 3) }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
@@ -5634,16 +5681,19 @@ function useTreat(){ const o = ocean; if (o?.workout) return workTap(); if (o?.s
   else if (it.act === 'puzzle') openPuzzle();
   else if (it.act === 'gacha'){ const T = [['🦖', 'Tiny dinosaur'], ['🐙', 'Squishy octopus'], ['🦄', 'Rainbow unicorn'], ['🐸', 'Little frog'], ['🚗', 'Mini car'], ['🐱', 'Lucky cat'], ['🦈', 'Baby shark'], ['🍩', 'Donut keychain'], ['👾', 'Space buddy'], ['🐼', 'Panda'], ['🦦', 'Sea otter'], ['🌟', 'Glow star']], [e, n] = T[(Math.random()*T.length)|0], more = (it.left || 1) - 1;
     [784, 988, 1319].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.08)); heartsAt = time; banner(`${e} You got a ${n.toLowerCase()}!`, more ? `${more} more capsule${more > 1 ? 's' : ''} to open` : 'Tap Play to play with it');
-    if (more) treat = { ...it, left: more }; else treat = { e, n, act: 'play', say: `Your ${n.toLowerCase()} loves you!` }; }
+    if (more) treat = { ...it, left: more }; else treat = n === 'Mini car' ? { e, n, act: 'rc' } : { e, n, act: 'play', say: `Your ${n.toLowerCase()} loves you!` }; }
   else if (it.act === 'play'){ banner(it.e + ' ' + it.n, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
   else if (it.act === 'selfie') takePhoto();
+  else if (it.act === 'rc') startRC(o);
+  else if (it.act === 'kite'){ if (!it.fly && (roomAt(...landST(o.x, o.y)) || inHomeBuilding?.(o))) return banner('Go outside to fly it!', 'Kites need the wind. The beach and the park are best'); it.fly = !it.fly; it.flyT = time;
+    if (it.fly){ [523, 659, 784, 1046].forEach((f, i) => sfx(f, .12, 'triangle', .04, i*.1)); banner('🪁 Up, up and away!', coastS(o.x, o.y) > -320 ? 'Great wind here by the ocean! Tap again to reel it in' : 'Tap again to reel it in. It flies higher by the beach'); } else { sfx(400, .3, 'sine', .03, 0, -150); banner('Reeled it in', 'Tap to fly it again'); } }
   else if (it.act === 'tune'){ if (song?.from === 'hand'){ stopSong(); banner('Music off', ''); } else { const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner(`🎶 ${SONGS[i].title}`, SONGS[i].by); } }
   else if (it.act === 'time'){ banner(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'is the time right now'); sfx(1200, .05, 'square', .03); }
   else if (it.act === 'spritz'){ heartsAt = time; banner('Spritz!', 'Mmm, smells lovely'); sfx(3000, .2, 'sawtooth', .01, 0, -1500); } }
 const treatTex = {};
 function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
-  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
+  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : treat.act === 'kite' ? (treat.fly ? 'Reel in' : 'Fly it') : treat.act === 'rc' ? 'Drive' : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
   placeNow = paused ? null : placeAction(o); if (song && ac && ac.currentTime > song.end){ song = null; if (!$('musicPanel').hidden) renderMusic(); } const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
@@ -5652,7 +5702,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(.068, .048, .09, 16), std(0xf8e1ee, .6)); cup.position.y = -.01; treatObj.add(cup);
     const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp, cup }; }
   if (treatObj.parent !== oceanScene) oceanScene.add(treatObj);
-  const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (!show) return;
+  const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (kiteObj){ kiteObj.visible = false; kiteObj.userData.line.visible = false; } if (!show) return;
   const { cn, sc, sp, cup } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick' || treat.act === 'froyo';
   cn.visible = cone3 && !treat.cup; cup.visible = cone3 && !!treat.cup; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
   if (!cone3){ if (!treatTex[treat.e]) treatTex[treat.e] = canvasTex(96, 96, (c, w, h) => emo(c, treat.e, w/2, h/2 + 4, 76), false); if (sp.material.map !== treatTex[treat.e]){ sp.material.map = treatTex[treat.e]; sp.material.needsUpdate = true; } }
@@ -5660,6 +5710,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   m.updateMatrixWorld(true);
   if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
   treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
+  if (treat.act === 'kite'){ sp.visible = false; drawKite(o, m, _cv); }
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
 $('puzzleBoard').addEventListener('pointerdown', tapPuzzle); $('puzzleClose').onclick = closePuzzle; $('puzzleEasy').onclick = () => newPuzzle(3); $('puzzleHard').onclick = () => newPuzzle(4);
 $('puzzleNext').onclick = () => newPuzzle(puzzle?.n || 3, ((puzzle?.pic ?? 0) + 1) % PUZZLE_PICS.length);

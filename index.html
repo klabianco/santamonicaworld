@@ -176,6 +176,9 @@
   .shop .sect{grid-column:1/-1;margin:6px 0 -4px;font-size:18px}
   .item .bcov{height:110px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   #puzzlePanel .panel{max-width:560px;width:calc(100% - 32px)}
+  #illPanel .panel{max-width:560px;width:calc(100% - 32px)}
+  #illPic svg{width:100%;max-width:460px;display:block;margin:0 auto;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+  #illAns{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
   #puzzleBoard{width:100%;max-width:460px;align-self:center;border-radius:8px;touch-action:none;cursor:pointer}
   .bk .r{background:linear-gradient(270deg,#fbf6ea 60%,#efe5cf);font:600 21px/1.55 Georgia,'Times New Roman',serif}
   .bk .r p{margin:0}
@@ -602,6 +605,16 @@
   </div>
 </div>
 
+<div id="illPanel" class="overlay" hidden>
+  <div class="panel">
+    <div><p class="kicker" id="illCount">Museum of Illusions</p><h2 id="illName">Illusion</h2></div>
+    <div id="illPic"></div>
+    <p class="savechip" id="illMsg"></p>
+    <div id="illAns"></div>
+    <div class="row2"><button id="illNext" class="btn primary" type="button">Next illusion ▶</button><button id="illClose" class="btn secondary" type="button">Back to the museum</button></div>
+  </div>
+</div>
+
 <div id="gamePanel" class="overlay" hidden>
   <div class="panel">
     <div><p class="kicker">Board game</p><h2>Snakes &amp; Ladders</h2></div>
@@ -854,6 +867,7 @@ function closeTopWindow(){
   else if (!$('musicPanel').hidden) closeMusic();
   else if (!$('gamePanel').hidden) closeGame();
   else if (!$('puzzlePanel').hidden) closePuzzle();
+  else if (!$('illPanel').hidden) closeIllusions();
   else if (!$('storePanel').hidden) closeStore();
   else if (!$('leaguePanel').hidden) closeLeague();
   else if (!$('questPanel').hidden) closeQuests();
@@ -4460,18 +4474,18 @@ function buildCoast(){
     parkCar({ x, y, ang: Math.atan2(y2 - y, x2 - x), h: walkH(x, y), color: col }); }
 }
 // ---- the 3rd Street Promenade: shopfronts with awnings and signs, the dinosaur topiary fountains, benches, lamps, bollards and people ----
-const PROM_STORES = [[-1,-801.0,"JOHN REED Fitness",0],[-1,-777.3,"1212 Santa Monica",1],[-1,-763.1,"Chipotle",1],[-1,-687.4,"Cabo Cantina",1],[-1,-672.7,"Sephora",0],[-1,-604.8,"Stefano's Pizzeria",1],[-1,-593.0,"AMC Santa Monica 7",2],[-1,-572.0,"The Coffee Bean & Tea Leaf",1],[-1,-557.0,"Barnes & Noble",0],[-1,-542.3,"For Lease",0],[-1,-524.3,"Skechers",0],[-1,-508.8,"Sunglass Hut",0],[-1,-493.8,"For Lease",0],[-1,-480.6,"Zara",0],[-1,-459.9,"For Lease",0],[-1,-451.7,"Starbucks",1],[-1,-428.1,"For Lease",0],[-1,-394.5,"For Lease",0],[-1,-365.4,"El Husuba",1],[-1,-352.8,"Bruxie",1],[-1,-342.4,"MINISO",0],[-1,-332.6,"Alo",0],[-1,-317.3,"For Lease",0],[-1,-286.1,"Urban Outfitters",0],[-1,-260.3,"For Lease",0],[-1,-247.0,"PacSun",0],[-1,-242.1,"Aldo",0],[-1,-230.7,"McConnell's",1],[-1,-224.8,"Google Store",0],[0,-395.7,"Ugo",1],[1,-655.0,"Casa Martin",1],[1,-638.3,"Foot Locker",0],[1,-602.2,"Victoria's Secret",0],[1,-593.9,"For Lease",0],[1,-554.4,"Holey Moley",0],[1,-539.1,"Silver Lake Ramen",1],[1,-527.9,"Dodgers Clubhouse",0],[1,-520.5,"Abercrombie & Fitch",0],[1,-510.3,"Adidas",0],[1,-498.3,"For Lease",0],[1,-476.4,"Patagonia",0],[1,-462.0,"Wilson",0],[1,-453.0,"Barney's Beanery",1],[1,-397.5,"Raising Cane's",1],[1,-392.6,"For Lease",0],[1,-387.8,"For Lease",0],[1,-383.0,"Sunsations",0],[1,-375.9,"Beyond Yoga",0],[1,-368.0,"Puzzle Zoo",0],[1,-365.0,"Lids",0],[1,-360.9,"For Lease",0],[1,-346.0,"Apple Store",0],[1,-322.9,"For Lease",0],[1,-290.3,"Culto",0],[1,-269.7,"For Lease",0],[1,-258.9,"Gacha & Catch",0],[1,-249.8,"For Lease",0],[1,-221.9,"Lululemon",0]];   // the shops on the Promenade (OpenStreetMap): [side (-1 ocean side, 1 inland, 0 the pavilions down the middle), t, name, 1 food / 2 movies]
+const PROM_STORES = [[-1,-801.0,"JOHN REED Fitness",0],[-1,-777.3,"1212 Santa Monica",1],[-1,-763.1,"Chipotle",1],[-1,-716.0,"Museum of Illusions",0],[-1,-687.4,"Cabo Cantina",1],[-1,-672.7,"Sephora",0],[-1,-604.8,"Stefano's Pizzeria",1],[-1,-593.0,"AMC Santa Monica 7",2],[-1,-572.0,"The Coffee Bean & Tea Leaf",1],[-1,-557.0,"Barnes & Noble",0],[-1,-542.3,"For Lease",0],[-1,-524.3,"Skechers",0],[-1,-508.8,"Sunglass Hut",0],[-1,-493.8,"For Lease",0],[-1,-480.6,"Zara",0],[-1,-459.9,"For Lease",0],[-1,-451.7,"Starbucks",1],[-1,-428.1,"For Lease",0],[-1,-394.5,"For Lease",0],[-1,-365.4,"El Husuba",1],[-1,-352.8,"Bruxie",1],[-1,-342.4,"MINISO",0],[-1,-332.6,"Alo",0],[-1,-317.3,"For Lease",0],[-1,-286.1,"Urban Outfitters",0],[-1,-260.3,"TMNT Pizzeria",1],[-1,-247.0,"PacSun",0],[-1,-242.1,"Aldo",0],[-1,-230.7,"McConnell's",1],[-1,-224.8,"Google Store",0],[0,-395.7,"Ugo",1],[1,-722.0,"PicklePop",0],[1,-655.0,"Casa Martin",1],[1,-638.3,"Foot Locker",0],[1,-602.2,"Victoria's Secret",0],[1,-593.9,"For Lease",0],[1,-554.4,"Holey Moley",0],[1,-539.1,"Silver Lake Ramen",1],[1,-533.0,"Yogurtland",1],[1,-527.9,"Dodgers Clubhouse",0],[1,-520.5,"Abercrombie & Fitch",0],[1,-510.3,"Adidas",0],[1,-498.3,"For Lease",0],[1,-476.4,"Patagonia",0],[1,-462.0,"Wilson",0],[1,-453.0,"Barney's Beanery",1],[1,-397.5,"Raising Cane's",1],[1,-392.6,"For Lease",0],[1,-387.8,"For Lease",0],[1,-383.0,"Sunsations",0],[1,-375.9,"Beyond Yoga",0],[1,-368.0,"Puzzle Zoo",0],[1,-365.0,"Lids",0],[1,-360.9,"For Lease",0],[1,-346.0,"Apple Store",0],[1,-322.9,"For Lease",0],[1,-290.3,"Culto",0],[1,-269.7,"For Lease",0],[1,-258.9,"Gacha & Catch",0],[1,-249.8,"For Lease",0],[1,-221.9,"Lululemon",0]];   // the shops on the Promenade (OpenStreetMap): [side (-1 ocean side, 1 inland, 0 the pavilions down the middle), t, name, 1 food / 2 movies]
 const PROM_START = [653, -428];   // where every trip starts: the Promenade at Santa Monica Boulevard, facing up the block toward the stegosaurus (Kevin's pick)
 const PROM_DINOS = [[653, -240, 'tri'], [653, -520, 'stego'], [653, -797, 'tri']];   // (in the planters down the middle, beside the two food pavilions; which dinosaur stands where is a guess)
 // Walk into the shops: each one on the Promenade has a room behind its storefront (as deep as the building lets it, up to 9 m), with a door in
 // the glass front and the inside of that kind of shop. Inside, walkH is the shop floor; the walls between shops are the building itself.
 const STORE_KIND = { 'JOHN REED Fitness': 'gym', 'Sephora': 'beauty', 'MAC Cosmetics': 'beauty', 'Sunglass Hut': 'shades', 'Sunsations': 'shades', 'Skechers': 'shoes', 'Foot Locker': 'shoes', 'Aldo': 'shoes',
   'Barnes & Noble': 'books', 'T-Mobile': 'tech', 'Apple Store': 'tech', 'Google Store': 'tech', 'Puzzle Zoo': 'toys', "IT'SUGAR": 'candy', "McConnell's": 'icecream', 'American Childrens Theatre': 'theatre',
-  'For Lease': 'vacant', 'MINISO': 'gift', 'Wilson': 'clothes', 'Beyond Yoga': 'clothes', 'Culto': 'shoes', 'Gacha & Catch': 'gacha', 'Holey Moley': 'golf',
+  'For Lease': 'vacant', 'MINISO': 'gift', 'Wilson': 'clothes', 'Beyond Yoga': 'clothes', 'Culto': 'shoes', 'Gacha & Catch': 'gacha', 'Holey Moley': 'golf', 'Museum of Illusions': 'illusions', 'PicklePop': 'pickle', 'Yogurtland': 'froyo',
   'See Sea': 'gift', 'Dodgers Clubhouse': 'clothes', 'Trastevere': 'food', "Carlo's Bake Shop": 'bakery', 'HOLEY MOLLY': 'bakery' };
 const STORE_HELLO = { clothes: 'Racks and racks of clothes', shoes: 'Shoes all the way up the walls', food: 'Something smells good!', bakery: 'Fresh out of the oven', icecream: 'So many flavors!', books: 'Shelves full of books. Tap Read a book!',
   tech: 'Phones and computers to try out', toys: 'Puzzles, games and stuffed animals', candy: 'Bins and bins of candy', beauty: 'Makeup and perfume', shades: 'Sunglasses to try on', movies: 'Popcorn! Movies are showing',
-  gym: 'Walk up to a treadmill, a bike, the weights or the DJ booth', vacant: 'This shop is empty right now. For lease!', gacha: 'Capsule toys and claw machines!', golf: 'Mini golf! Walk up to a tee to play', theatre: 'A little stage: climb up and perform!', gift: 'Little treasures on every shelf' };
+  gym: 'Walk up to a treadmill, a bike, the weights or the DJ booth', vacant: 'This shop is empty right now. For lease!', gacha: 'Capsule toys and claw machines!', golf: 'Mini golf! Walk up to a tee to play', illusions: 'Things are not what they seem! Try every room', pickle: 'Pickleball! Walk onto the court to play', froyo: 'Fill your own cup at the machines, add toppings, then weigh it', theatre: 'A little stage: climb up and perform!', gift: 'Little treasures on every shelf' };
 let PROM_ROOMS = null;
 const GENERIC_SHOPS = [['Gift Shop', 'gift'], ['Café', 'food'], ['Surf Shop', 'clothes'], ['Shoe Store', 'shoes'], ['Bookstore', 'books'], ['Toy Store', 'toys'], ['Clothing', 'clothes'], ['Sunglasses', 'shades'], ['Candy Shop', 'candy'], ['Bakery', 'bakery'], ['Ice Cream', 'icecream']];   // (for shopfronts whose real shop isn't in OpenStreetMap)
 // ---- buying things in the shops: walk up to the counter and tap Buy. Food you eat, clothes you wear, a movie ticket gets you into the film ----
@@ -4515,11 +4529,12 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Wilson': [M('🏀', 'Basketball', 20, 'play', { say: 'Swish!' }), M('🎾', 'Tennis racket', 30, 'play', { say: 'Ace!' }), M('🏈', 'Football', 20, 'play', { say: 'Touchdown!' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e' })],
   'Gacha & Catch': [M('🥚', 'Capsule toy', 5, 'gacha'), M('🥚', 'Capsule toy (5 pack)', 20, 'gacha', { left: 5 })],
   'Holey Moley': [M('🍔', 'Slider', 8), M('🍕', 'Pizza', 10), M('🥨', 'Churros', 6), M('🍦', 'Ice cream', 6), M('🍋', 'Lemonade', 4, 'drink')],
+  'TMNT Pizzeria': [M('🍕', 'Cheese slice', 6), M('🍕', 'Pepperoni slice', 7), M('🍕', 'Whole pie to share', 22, 'eat', { bites: 8 }), M('🧄', 'Garlic knots', 5), M('🥤', 'Soda', 4, 'drink')],   // (New York–style pies)
   'Ugo': [M('🍨', 'Gelato', 6), M('🍰', 'Tiramisu', 7), M('☕', 'Hot chocolate', 5, 'drink')],
   'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
   'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
   'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')] };
-const ACT_DO = { gacha: 'Open it', puzzle: 'Do the puzzle', game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
+const ACT_DO = { froyo: 'Eat a spoonful', gacha: 'Open it', puzzle: 'Do the puzzle', game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
 const ACT_SAY = { gacha: 'Tap Open it to see what you got', puzzle: 'Tap Do the puzzle', game: 'Tap Play to play it', eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
 const JOKES = ['Why did the fish blush? Because it saw the ocean\'s bottom!', 'What do you call a dinosaur that is sleeping? A dino-snore!', 'Why don\'t crabs share? Because they\'re shellfish!', 'What did the ocean say to the beach? Nothing, it just waved.',
   'What do you call a fish with no eyes? A fsh!', 'Why did the cookie go to the doctor? It was feeling crummy.', 'What\'s an ice cream\'s favorite day? Sundae!', 'How do you make an octopus laugh? With ten-tickles!'];
@@ -4925,6 +4940,162 @@ function golfStep(o, w, dt){ const r = w.r, H = w.h, b = w.b, S = d => r.fs + r.
   G.club.visible = true; const sw = time - w.tapT < .35 ? Math.sin((time - w.tapT)/.35*Math.PI)*.5 : 0, [cx, cy] = landXY(S(b.d - Math.cos(w.aim)*(.16 + sw*.3)), b.t - Math.sin(w.aim)*(.16 + sw*.3));
   G.club.position.set(cx*U, r.floor + .5, cy*U); G.club.rotation.set(0, -o.ang, .12); }
 function golfPutt(w){ if (w.phase !== 'aim') return; const v = .5 + w.pow*4.6; w.b.vd = Math.cos(w.aim)*v; w.b.vt = Math.sin(w.aim)*v; w.strokes++; w.phase = 'roll'; sfx(520, .05, 'square', .04); sfx(180, .08, 'triangle', .04); }
+// ---- new on the Promenade (thirdstreetoccupancy.com, November 2026): the Museum of Illusions (1232), PicklePop (1231), Yogurtland (1321) and TMNT Pizzeria (1444) ----
+// The Museum of Illusions: the illusion gallery (what do you see? then the trick), the Ames room (walk across it and you shrink, or grow),
+// the vortex tunnel (it spins round the bridge, so it feels like you're the one spinning) and the infinity room (lights that go on forever)
+const ILLUSIONS = [
+  { name: 'Which red line is longer?', a: ['The top one', 'The bottom one', 'They are the same'], right: 2,
+    trick: 'They are exactly the same length! The little arrows on the ends trick your brain: arrows pointing out make a line look longer.',
+    svg: show => { const fin = (x, y, dir) => `<path d="M${x} ${y} l${dir*22} -18 M${x} ${y} l${dir*22} 18" stroke="#c62828" stroke-width="5" stroke-linecap="round" fill="none"/>`;
+      return `<rect width="300" height="200" fill="#fffdf6"/><line x1="80" y1="60" x2="220" y2="60" stroke="#c62828" stroke-width="5"/>${fin(80, 60, 1)}${fin(220, 60, -1)}<line x1="80" y1="145" x2="220" y2="145" stroke="#c62828" stroke-width="5"/>${fin(80, 145, -1)}${fin(220, 145, 1)}`
+        + (show ? '<g stroke="#1e88e5" stroke-width="3" stroke-dasharray="6 6"><line x1="80" y1="22" x2="80" y2="182"/><line x1="220" y1="22" x2="220" y2="182"/></g>' : ''); } },
+  { name: 'Which orange circle is bigger?', a: ['The left one', 'The right one', 'They are the same'], right: 2,
+    trick: 'They are the same size! Big circles all around make the left one look small, and little circles make the right one look big.',
+    svg: show => { let s = '<rect width="300" height="200" fill="#fffdf6"/>';
+      if (!show){ for (let k = 0; k < 6; k++){ const a = k*TAU/6; s += `<circle cx="${(80 + Math.cos(a)*52).toFixed(1)}" cy="${(100 + Math.sin(a)*52).toFixed(1)}" r="26" fill="#90a4ae"/>`; }
+        for (let k = 0; k < 8; k++){ const a = k*TAU/8; s += `<circle cx="${(220 + Math.cos(a)*30).toFixed(1)}" cy="${(100 + Math.sin(a)*30).toFixed(1)}" r="8" fill="#90a4ae"/>`; } }
+      return s + '<circle cx="80" cy="100" r="16" fill="#fb8c00"/><circle cx="220" cy="100" r="16" fill="#fb8c00"/>'; } },
+  { name: 'Which gray square is darker?', a: ['The left one', 'The right one', 'They are the same'], right: 2,
+    trick: 'They are the very same gray! A dark background makes a square look lighter, and a light background makes it look darker.',
+    svg: show => `<defs><linearGradient id="illg" x1="0" x2="1"><stop offset="0" stop-color="#111"/><stop offset="1" stop-color="#f4f4f4"/></linearGradient></defs><rect width="300" height="200" fill="${show ? '#c9c9c9' : 'url(#illg)'}"/>`
+      + `<rect x="40" y="70" width="60" height="60" fill="#808080"/><rect x="200" y="70" width="60" height="60" fill="#808080"/>${show ? '<rect x="99" y="92" width="102" height="16" fill="#808080"/>' : ''}` },
+  { name: 'Are the gray lines straight, or tilted?', a: ['Tilted', 'Straight'], right: 1,
+    trick: 'Every gray line is perfectly straight! Each row of tiles is shifted a little, and that tricks your eyes into seeing slopes. It is called the café wall.',
+    svg: show => { let s = '<rect width="300" height="200" fill="#8a8a8a"/>'; const sh = [0, 6, 12, 6];
+      for (let row = 0; row < 7; row++){ const y = 11 + row*26; for (let k = -1; k < 11; k++){ const x = k*36 + sh[row % 4]; s += `<rect x="${x}" y="${y}" width="18" height="24" fill="#111"/><rect x="${x + 18}" y="${y}" width="18" height="24" fill="#fff"/>`; } }
+      if (show) for (let row = 0; row <= 7; row++) s += `<line x1="0" x2="300" y1="${10 + row*26}" y2="${10 + row*26}" stroke="#e53935" stroke-width="2"/>`; return s; } },
+  { name: 'How many black dots can you see?', a: ['Lots!', 'Just a few', 'None at all'], right: 2,
+    trick: 'There are no black dots! Every dot is white. The dark dots that flicker in and out are made by your eyes.',
+    svg: show => { let s = '<rect width="300" height="200" fill="#000"/>';
+      if (!show) for (let k = 0; k < 9; k++){ s += `<rect x="${12 + k*34}" y="0" width="6" height="200" fill="#777"/>`; if (k < 6) s += `<rect x="0" y="${12 + k*34}" width="300" height="6" fill="#777"/>`; }
+      for (let i = 0; i < 9; i++) for (let j = 0; j < 6; j++) s += `<circle cx="${15 + i*34}" cy="${15 + j*34}" r="5" fill="#fff"/>`; return s; } },
+  { name: 'Which way does the box point?', a: ['Down to the left', 'Up to the right', 'It flips both ways!'], right: 2,
+    trick: "Both! Your brain can't decide which square is in front, so the box flips back and forth. Stare at it and watch it flip.",
+    svg: () => '<rect width="300" height="200" fill="#fffdf6"/><g stroke="#1d3557" stroke-width="4" fill="none" stroke-linejoin="round"><rect x="90" y="60" width="90" height="90"/><rect x="130" y="30" width="90" height="90"/><path d="M90 60 L130 30 M180 60 L220 30 M90 150 L130 120 M180 150 L220 120"/></g>' }];
+let illus = null;   // { i, answered }
+function openIllusions(){ if (paused) return; initAudio(); paused = true; ptr.down = false; $('illPanel').hidden = false; illus = { i: illus?.i ?? 0, answered: -1 }; drawIllusion(); }
+function closeIllusions(){ $('illPanel').hidden = true; paused = false; graceAfterPause(); showPick(); }
+function drawIllusion(){ const I = ILLUSIONS[illus.i], done = illus.answered >= 0, box = $('illAns');
+  $('illCount').textContent = `Museum of Illusions · ${illus.i + 1} of ${ILLUSIONS.length}`; $('illName').textContent = I.name;
+  $('illPic').innerHTML = `<svg viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">${I.svg(done)}</svg>`;
+  $('illMsg').textContent = !done ? 'Look closely... what do you think?' : (illus.answered === I.right ? 'You got it! ' : 'Tricked you! ') + I.trick;
+  box.innerHTML = ''; I.a.forEach((t, k) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (done && k === I.right ? 'primary' : 'secondary'); b.textContent = t; b.disabled = done;
+    b.onclick = () => { illus.answered = k; if (k === I.right){ heartsAt = time; [523, 659, 784].forEach((f, i) => sfx(f, .12, 'triangle', .05, i*.08)); } else sfx(320, .3, 'sine', .05, 0, -150); drawIllusion(); }; box.appendChild(b); });
+  $('illNext').hidden = !done; pick = Math.max(0, menuBtns().indexOf(done ? $('illNext') : box.firstChild)); showPick(); }
+$('illNext').onclick = () => { illus.i = (illus.i + 1) % ILLUSIONS.length; illus.answered = -1; drawIllusion(); }; $('illClose').onclick = closeIllusions;
+function drawIllWall(x, w, h){   // the gallery wall: three famous illusions, framed
+  x.fillStyle = '#111'; x.fillRect(0, 0, w, h); const pw = w/3; for (let k = 0; k < 3; k++){ x.fillStyle = '#fffdf6'; x.fillRect(k*pw + 18, 18, pw - 36, h - 36); }
+  x.strokeStyle = '#c62828'; x.lineWidth = 10; x.lineCap = 'round';
+  for (const [y, dir] of [[130, 1], [260, -1]]){ x.beginPath(); x.moveTo(80, y); x.lineTo(260, y); for (const [ex, s] of [[80, 1], [260, -1]]){ x.moveTo(ex, y); x.lineTo(ex + s*dir*36, y - 30); x.moveTo(ex, y); x.lineTo(ex + s*dir*36, y + 30); } x.stroke(); }   // which line is longer?
+  x.fillStyle = '#111'; for (let i = 0; i < 6; i++) for (let j = 0; j < 7; j++) x.fillRect(pw + 30 + i*48, 30 + j*47, 38, 38);   // the gray dots that aren't there
+  const ring = (cx, n, d, rr) => { x.fillStyle = '#90a4ae'; for (let k = 0; k < n; k++){ const a = k*TAU/n; x.beginPath(); x.arc(cx + Math.cos(a)*d, h/2 + Math.sin(a)*d, rr, 0, TAU); x.fill(); } x.fillStyle = '#fb8c00'; x.beginPath(); x.arc(cx, h/2, 20, 0, TAU); x.fill(); };
+  ring(pw*2 + 102, 6, 56, 26); ring(pw*2 + 245, 8, 34, 9); }   // which orange circle is bigger?
+let spiralT = null;
+const spiralTex = () => spiralT || (spiralT = canvasTex(256, 256, (x, w, h) => { x.fillStyle = '#0b0820'; x.fillRect(0, 0, w, h); const C = ['#7c4dff', '#00e5ff', '#ff4fa3', '#ffeb3b'];
+  for (let k = -5; k < 5; k++){ x.fillStyle = C[(k + 8) % 4]; x.beginPath(); x.moveTo(k*64, 0); x.lineTo(k*64 + 26, 0); x.lineTo(k*64 + 26 + 256, h); x.lineTo(k*64 + 256, h); x.fill(); }
+  x.fillStyle = '#fff'; for (let k = 0; k < 40; k++){ x.beginPath(); x.arc((k*53) % w, (k*97) % h, 3, 0, TAU); x.fill(); } }));
+const PROM_SPIN = [];   // (the vortex tunnel)
+let amesK = 1, amesT = -9, vortexOn = false, illZone = '', illSeen = {};
+function kidStep(dt, o){ const rooms = PROM_ROOMS; if (!rooms) return; const [s, t] = landST(o.x, o.y);
+  { const pr = rooms.find(r => r.pk); if (pr && o.workout?.k !== 'pickle'){ const G = pkMeshes(); G.ball.visible = G.shadow.visible = G.pad.visible = false;   // PicklePop: Coach Pip waits on the court
+    if (Math.abs(t - pr.door) < 90) pkOpp(pr, { d: pr.pk.cd1 - .5, t: pr.pk.tm + Math.sin(time*.6)*.6, run: 1 }, null); else G.opp.visible = false; } }
+  for (const m of PROM_SPIN) m.rotation.y += dt*1.8;
+  const r = o.onLand && !o.car ? roomAt(s, t, true) : null, d = r ? (s - r.fs)*r.inw : 0, inZ = q => q && d > q[0] && d < q[1] && t > q[2] && t < q[3];
+  let zone = '', want = 1;
+  if (r?.ill){ const I = r.ill; if (inZ(I.ames)){ zone = 'ames'; want = lerp(1.7, .5, clamp((t - I.ames[2])/(I.ames[3] - I.ames[2]), 0, 1)); } else if (inZ(I.vortex)) zone = 'vortex'; else if (inZ(I.inf)) zone = 'inf'; }
+  if (zone !== illZone){ illZone = zone; if (zone && !(illSeen[zone] > time - 20)){ illSeen[zone] = time;
+    if (zone === 'ames') banner('The Ames Room', 'Walk from one corner to the other: you shrink! Walk back: you grow!');
+    else if (zone === 'vortex') banner('🌀 The Vortex Tunnel', "The bridge isn't moving. The tunnel is! Does it feel like you're spinning?");
+    else banner('♾️ The Infinity Room', 'Mirrors on every wall make the lights go on forever'); } }
+  amesK = lerp(amesK, want, Math.min(1, dt*4)); amesT = time; vortexOn = zone === 'vortex'; }
+function amesLook(m, o){ const u = m.userData; if (u.s0 == null) u.s0 = m.scale.x; const k = time - amesT < .5 && o.onLand ? amesK : 1;   // (in the Ames room you're as big as the corner you stand in)
+  if (Math.abs(k - 1) < .003){ if (m.scale.x !== u.s0) m.scale.setScalar(u.s0); }
+  else { m.scale.setScalar(u.s0*k); const gy = landY(o); m.position.y = gy + (m.position.y - gy)*k; }
+  if (vortexOn && time - amesT < .5 && !o.workout) m.rotation.x += Math.sin(time*2.3)*.16; }   // (whoa, wobbly)
+// PicklePop: indoor pickleball. A game to 5 against Coach Pip: move with the stick (you step toward the ball by yourself too), tap Hit! when it comes to you
+let pkVis = null;
+function pkMeshes(){ if (pkVis) return pkVis;
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(.06, 14, 10), std(0xd7f03c, .5)), shadow = new THREE.Mesh(new THREE.CircleGeometry(.08, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false }));
+  shadow.rotation.x = -Math.PI/2; const pad = new THREE.Mesh(new THREE.BoxGeometry(.24, .3, .025), std(0xff5aa5, .5)), hnd = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .13, 6), std(0x222222)); hnd.position.y = -.2; pad.add(hnd);
+  const opp = new THREE.Group(), body = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, 1.05, 10), std(0x2e7d4f, .8)), head = new THREE.Mesh(new THREE.SphereGeometry(.17, 12, 10), std(0x8d5a3b, .7)), legs = new THREE.Mesh(new THREE.CylinderGeometry(.2, .16, .45, 8), std(0x1d1d1f, .8)), visor = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .05, 14), std(0xffffff, .6));
+  body.position.y = .95; head.position.y = 1.66; legs.position.y = .22; visor.position.y = 1.78; const op = pad.clone(); op.material = std(0x1e88e5, .5); op.position.set(-.38, 1.0, .15); opp.add(body, head, legs, visor, op); opp.userData.pad = op;
+  for (const m of [ball, shadow, pad, opp]){ m.visible = false; oceanScene.add(m); } return pkVis = { ball, shadow, pad, opp }; }
+function pkOpp(r, op, B){ const G = pkMeshes(), S = d => r.fs + r.inw*d, [x, y] = landXY(S(op.d), op.t), [tx, ty] = B ? landXY(S(B.d), B.t) : landXY(S(op.d - 3), op.t);
+  G.opp.visible = true; G.opp.position.set(x*U, r.floor + (op.run ? Math.abs(Math.sin(time*9))*.05 : 0), y*U); G.opp.lookAt(tx*U, r.floor, ty*U);
+  const sw = time - (op.swT ?? -9) < .3 ? Math.sin((time - op.swT)/.3*Math.PI) : 0; G.opp.userData.pad.rotation.set(0, sw*1.4, 0); }
+function startPickle(r, sp){ const o = ocean; if (!o || paused || !r.pk) return; initAudio(); const P = r.pk; walkRef = r.floor + 1.5;
+  o.workout = { k: 'pickle', r, sp, P, me: { d: P.cd0 + .5, t: P.tm }, op: { d: P.cd1 - .5, t: P.tm, swT: -9 }, ball: null, score: [0, 0], server: 0, phase: 'serve', phT: time, rally: 0, t0: time, tapT: -9, lvl: 1, n: 0, run: 0 };
+  pkPlace(o, o.workout); o.gh = groundAt(o.x, o.y); sfx(660, .1, 'triangle', .05);
+  banner('🏓 Pickleball with Coach Pip!', 'First to 5 wins. Tap Hit! to serve. Then move with the stick, and tap Hit! when the ball comes to you'); }
+function pkPlace(o, w){ const r = w.r, S = d => r.fs + r.inw*d, [x, y] = landXY(S(w.me.d), w.me.t), [fx, fy] = landXY(S(w.me.d + 1), w.me.t); o.x = x; o.y = y; w.x = x; w.y = y; o.vx = o.vy = 0; o.ang = Math.atan2(fy - y, fx - x); }
+const pkMeet = (b, d) => { if (Math.abs(b.vd) < .01) return null; const k = (d - b.d)/b.vd; return k < 0 ? null : b.t + b.vt*k; };   // (where the ball will cross this line)
+function pkShot(w, b, td, tt, v){ const P = w.P; let T = Math.max(.5, Math.hypot(td - b.d, tt - b.t)/v);   // hit it so it lands at (td, tt), high enough to clear the net
+  for (let k = 0; k < 12; k++){ const vh = (4.9*T*T - b.h + .03)/T, vd = (td - b.d)/T, tn = (P.cm - b.d)/vd; if (tn <= 0 || tn >= T || b.h + vh*tn - 4.9*tn*tn > 1.1) break; T *= 1.12; }
+  b.vd = (td - b.d)/T; b.vt = (tt - b.t)/T; b.vh = (4.9*T*T - b.h + .03)/T; b.bounces = 0; sfx(900, .04, 'square', .05); sfx(450, .05, 'triangle', .04); }   // pock!
+function pkServe(w, who){ const P = w.P, f = who ? w.op : w.me, b = w.ball = { d: f.d + (who ? -.3 : .3), t: f.t, h: .8, vd: 0, vt: 0, vh: 0, by: who, bounces: 0 };
+  const td = who ? lerp(P.cd0 + .8, P.cm - P.kz - .4, Math.random()) : lerp(P.cm + P.kz + .4, P.cd1 - .8, Math.random()), tt = who ? clamp(w.me.t + (Math.random()*2 - 1)*1.2, P.tm - P.hw + .3, P.tm + P.hw - .3) : P.tm + (f.t > P.tm ? -1 : 1)*P.hw*.5;
+  if (who) w.op.swT = time; else { w.tapT = time; w.op.miss = Math.random() < .15; }
+  pkShot(w, b, td, tt, who ? 6.5 : 7); w.phase = 'play'; w.rally = 0; }
+function pkReset(w){ const P = w.P; w.me.d = P.cd0 + .5; w.me.t = P.tm; w.op.d = P.cd1 - .5; w.op.t = P.tm; w.ball = null; }
+function pkPoint(w, who, why){ if (w.phase !== 'play') return; w.score[who]++; w.phase = 'point'; w.phT = time; w.server = who; const [a, b] = w.score;
+  if (who === 0){ heartsAt = time; [659, 784, 988].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.07)); } else sfx(220, .3, 'sine', .05, 0, -80);
+  if (a >= 5 || b >= 5){ w.phase = 'over'; banner(a > b ? `🏆 You win, ${a} to ${b}!` : `Coach Pip wins, ${b} to ${a}`, a > b ? 'Pickleball champion! Tap Hit! to play again' : 'So close! Tap Hit! to play again');
+    if (a > b) [523, 659, 784, 1046, 1318].forEach((f, i) => sfx(f, .15, 'triangle', .05, .3 + i*.1)); return; }
+  coach(`${why} ${who ? "Coach Pip's point." : 'Your point!'} You ${a}, Coach Pip ${b}`, 2.5); }
+function pkHit(w){ const P = w.P, b = w.ball, me = w.me; w.tapT = time;
+  if (w.phase === 'over'){ w.score = [0, 0]; w.server = 0; w.phase = 'serve'; w.phT = time; pkReset(w); coach('New game! Your serve. Tap Hit!', 2); return; }
+  if (w.phase === 'serve'){ if (w.server === 0 && time - w.phT > .3) pkServe(w, 0); return; }
+  if (w.phase !== 'play' || !b || b.by !== 1) return;
+  const dist = Math.hypot(b.d - me.d, b.t - me.t);
+  if (dist > 1.6 || b.h > 2.4 || b.d > P.cm){ coach(b.d > me.d + 1.6 ? 'Too early! Wait for the ball' : 'Get closer to the ball!', 1.5); sfx(250, .08, 'triangle', .02); return; }
+  const away = w.op.t > P.tm ? -1 : 1, tt = clamp(P.tm + away*P.hw*(.3 + Math.random()*.45), P.tm - P.hw + .3, P.tm + P.hw - .3), td = lerp(P.cm + P.kz + .3, P.cd1 - .5, .3 + Math.random()*.7);
+  b.by = 0; pkShot(w, b, td, tt, dist < .8 ? 9 : 7.5); w.rally++; w.op.miss = Math.random() < Math.min(.5, .2 + w.rally*.05); if (dist < .8) coach('Great shot!', 1); }
+function pickleStep(o, w, dt){ const r = w.r, P = w.P, me = w.me, op = w.op, G = pkMeshes(); o.walking = false; o.air = airMax(); o.idle = 0;
+  const h = wantHeading(); w.run = 0;
+  if (h && w.phase !== 'over'){ const [s0, t0] = landST(o.x, o.y), [s1, t1] = landST(o.x + Math.cos(h.ang)*METERS, o.y + Math.sin(h.ang)*METERS), v = 3.4*h.m*dt; me.d += (s1 - s0)*r.inw*v; me.t += (t1 - t0)*v; w.run = 1; }
+  else if (w.ball && w.phase === 'play' && w.ball.by === 1){ const tt = pkMeet(w.ball, me.d); if (tt != null){ const k = clamp(tt - me.t, -1.6*dt, 1.6*dt); me.t += k; if (Math.abs(k) > dt*.3) w.run = 1; } }   // (you step toward the ball by yourself, a little)
+  me.d = clamp(me.d, P.cd0 - .9, P.cm - .35); me.t = clamp(me.t, P.tm - P.hw - .8, P.tm + P.hw + .8); pkPlace(o, w);
+  const b = w.ball;
+  { let want = P.tm; if (b && w.phase === 'play' && b.by === 0){ const tt = pkMeet(b, op.d); if (tt != null) want = tt; } const k = clamp(want - op.t, -3*dt, 3*dt); op.t = clamp(op.t + k, P.tm - P.hw - .8, P.tm + P.hw + .8); op.run = Math.abs(k) > dt*.3; }   // Coach Pip runs to meet the ball
+  if (w.phase === 'serve' && w.server === 1 && time - w.phT > 1.4) pkServe(w, 1);
+  if (w.phase === 'point' && time - w.phT > 1.5){ pkReset(w); w.phase = 'serve'; w.phT = time; if (w.server === 0) coach('Your serve! Tap Hit!', 2); }
+  if (b && w.phase === 'play'){ const nd = b.d + b.vd*dt;
+    if ((b.d - P.cm)*(nd - P.cm) < 0 && b.h < .9){ b.vd *= -.15; b.vt *= .3; pkPoint(w, 1 - b.by, 'Into the net!'); }
+    else { b.d = nd; b.t += b.vt*dt; b.vh -= 9.8*dt; b.h += b.vh*dt;
+      if (b.h < .03 && b.vh < 0){ b.h = .03; b.vh = -b.vh*.6; b.vd *= .78; b.vt *= .78; b.bounces++; sfx(1300, .03, 'square', .02);
+        const inn = b.d > P.cd0 - .05 && b.d < P.cd1 + .05 && Math.abs(b.t - P.tm) < P.hw + .05, theirs = b.by === 0 ? b.d > P.cm : b.d < P.cm;
+        if (b.bounces === 1 && (!inn || !theirs)) pkPoint(w, 1 - b.by, 'Out!');
+        else if (b.bounces >= 2) pkPoint(w, b.by, b.by ? 'Too slow!' : 'Coach Pip missed it!'); }
+      if (w.phase === 'play' && (b.d < .4 || b.d > r.D - .15 || Math.abs(b.t - P.tm) > (r.t1 - r.t0)/2 - .2)) pkPoint(w, b.bounces ? b.by : 1 - b.by, b.bounces ? (b.by ? 'Too slow!' : 'Coach Pip missed it!') : 'Out!');   // (it hit the wall)
+      if (w.phase === 'play' && b.by === 0 && !op.miss && b.d > op.d - .4 && b.h < 1.7 && Math.abs(b.t - op.t) < 1.1 && (b.bounces === 1 || b.h < 1.1)){   // Coach Pip hits it back
+        const err = Math.random() < .08, tt = err ? P.tm + (Math.random() < .5 ? -1 : 1)*(P.hw + .7) : clamp(me.t + (Math.random()*2 - 1)*Math.min(2.2, 1 + w.rally*.15), P.tm - P.hw + .3, P.tm + P.hw - .3), td = lerp(P.cd0 + .6, P.cm - P.kz - .2, Math.random());
+        b.by = 1; op.swT = time; pkShot(w, b, td, tt, 6 + Math.min(3, w.rally*.4)); } } }
+  // the ball (in the server's hand before the serve) and its shadow, so you can tell where it'll land
+  const B = w.ball, show = (B || w.phase === 'serve'); G.ball.visible = G.shadow.visible = !!show;
+  if (show){ const f = w.server ? op : me, bd = B ? B.d : f.d + (w.server ? -.35 : .35), bt = B ? B.t : f.t + .3, bh = B ? B.h : 1, [x, y] = landXY(r.fs + r.inw*bd, bt); G.ball.position.set(x*U, r.floor + bh, y*U); G.shadow.position.set(x*U, r.floor + .03, y*U); }
+  pkOpp(r, op, B); }
+// Yogurtland: fill your own cup (up to three flavors), add toppings, then weigh it at the register: 1 coin an ounce
+const FROYO = [['Plain Tart', '#f7f3ea'], ['Strawberry', '#f4a7b9'], ['Taro', '#c9a6d8'], ['Cookies & Cream', '#d8d2c8'], ['Mango', '#ffc94a'], ['Pistachio', '#c4dc9a'], ['Chocolate', '#6b3f2a'], ['Cake Batter', '#f6e3b4']];   // (Yogurtland's flavors change all the time: these are a guess at some regulars)
+const FROYO_TOP = [['🍓', 'Strawberries'], ['🫐', 'Blueberries'], ['🍡', 'Mochi'], ['🌈', 'Rainbow sprinkles'], ['🐻', 'Gummy bears'], ['🍪', 'Cookie crumbles'], ['🫧', 'Popping boba'], ['🍫', 'Chocolate chips']];
+let froyo = { pulls: [], tops: [], oz: 0 };
+const froyoCost = () => Math.max(1, Math.ceil(froyo.oz));
+function froyoCup(){ const P = froyo.pulls, n = P.length; let s = '<svg viewBox="0 0 120 120" width="130" height="130" xmlns="http://www.w3.org/2000/svg">';
+  P.forEach((i, k) => { s += `<ellipse cx="60" cy="${66 - k*14}" rx="${40 - k*7}" ry="11" fill="${FROYO[i][1]}" stroke="rgba(0,0,0,.15)"/>`; });
+  if (n) s += `<path d="M58 ${66 - n*14 - 9} q8 -2 4 -12" stroke="${FROYO[P[n - 1]][1]}" stroke-width="7" stroke-linecap="round" fill="none"/>`;   // (the little curl on top)
+  s += '<path d="M18 66 L102 66 L92 114 L28 114 Z" fill="#fbeef5" stroke="#e4007c" stroke-width="3"/><path d="M23 82 L97 82" stroke="#e4007c" stroke-width="3"/>';
+  froyo.tops.forEach((k, j) => { s += `<text x="${24 + (j % 3)*26}" y="${62 - Math.max(0, n - 1)*12 - (j > 2 ? 12 : 0)}" font-size="17">${FROYO_TOP[k][0]}</text>`; });
+  return s + '</svg>'; }
+function froyoStore(r, card, box, cv){ const F = froyo, n = F.pulls.length, sect = t => { const h = document.createElement('h3'); h.className = 'sect'; h.textContent = t; box.appendChild(h); };
+  $('storeNote').textContent = `You have ${save.coins || 0} coins. Fill your own cup: pull up to 3 flavors, add toppings, then put it on the scale. It's 1 coin for every ounce.`;
+  cv.innerHTML = froyoCup() + `<p>${n ? F.pulls.map(i => FROYO[i][0]).join(' + ') + (F.tops.length ? ' with ' + F.tops.map(k => FROYO_TOP[k][1].toLowerCase()).join(', ') : '') : 'Your cup is empty. Pull a handle!'}</p>`;
+  const buy = document.createElement('div'); buy.className = 'row2';
+  for (const [label, fn, dis, cls] of [[n ? `⚖️ Weigh it: ${F.oz.toFixed(1)} oz · ${froyoCost()} coins` : '⚖️ Weigh and pay', () => { if (!n) return; const oz = F.oz.toFixed(1), c = froyoCost(); if (!payFor(c, 'your froyo')) return;
+      treat = { e: '🍨', n: F.pulls.map(i => FROYO[i][0]).join(' + ') + ' froyo', act: 'froyo', scoops: F.pulls.map(i => FROYO[i][1]), licks: 0, cup: true }; froyo = { pulls: [], tops: [], oz: 0 }; closeStore();
+      banner(`${oz} ounces of froyo: yum!`, `That's ${c} coins. Tap Eat a spoonful to eat it`); }, !n, 'primary'],
+    ['Start over', () => { froyo = { pulls: [], tops: [], oz: 0 }; renderStore(); }, !n, 'secondary']]){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.disabled = dis; b.onclick = fn; buy.appendChild(b); }
+  cv.appendChild(buy);
+  sect('1. Pull a handle'); FROYO.forEach(([nm, c], i) => card(`<div class="sw" style="background:${c}"></div><h3>${htmlText(nm)}</h3>`, n >= 3 ? 'Your cup is full' : 'Pull the handle', () => { if (froyo.pulls.length >= 3) return; froyo.pulls.push(i); froyo.oz += 2.5 + Math.random()*1.5; sfx(180, .6, 'sawtooth', .012, 0, 60); renderStore(); }, n >= 3, 'secondary'));
+  sect('2. Toppings'); FROYO_TOP.forEach(([e, nm], k) => { const on = F.tops.includes(k); card(`<div class="em">${e}</div><h3>${htmlText(nm)}</h3>`, on ? 'On your cup' : !n ? 'Get yogurt first' : F.tops.length >= 4 ? 'No more room' : 'Add it', () => { froyo.tops.push(k); froyo.oz += .5 + Math.random()*.6; sfx(900, .06, 'triangle', .04); renderStore(); }, on || !n || F.tops.length >= 4, 'secondary'); }); }
 // ---- the DJ's dance party: drop the beat and people come in off the Promenade to dance in front of the booth ----
 function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o.workout : null;
   if (dj){ const r = dj.r, want = dj.crowd = Math.max(dj.crowd || 0, [0, 0, 5, 9][dj.lvl]); let n = C.people.filter(p => p.party && p.party.stage !== 'out').length;
@@ -4943,7 +5114,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
 const SPOT = { golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
-  dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''] };
+  dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''], gallery: ['🖼️ Test your eyes', ''], froyo: ['🍨 Fill a cup', ''], pickle: ['🏓 Play pickleball', '🏓 Hit!'] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
 function placeAction(o){   // what you can do right where you're standing (or null)
@@ -4956,12 +5127,12 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
   if (best?.k === 'golf') return { label: `⛳ Hole ${best.hole + 1}: ${r.golf[best.hole].name}`, go: () => startGolf(r, best) };
   if (best?.k === 'elevator') return { label: dn ? '🛗 Elevator up' : '🛗 Elevator down', go: () => rideElevator(r, !dn) };
-  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
-  if (r.cat === 'gym' || r.cat === 'vacant') return null;
+  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
+  if (r.cat === 'gym' || r.cat === 'vacant' || r.cat === 'illusions' || r.cat === 'pickle') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
   if (d <= r.D - 3.9) return null;
-  return { label: r.cat === 'golf' ? '🍔 Snack bar' : r.cat === 'gacha' ? '🥚 Get a capsule toy' : storeMenu(r) === 'scoops' ? '🍦 Order ice cream' : r.cat === 'movies' ? '🎟️ Buy a ticket' : r.kind === 1 ? '🍴 Order food' : '🛍️ Buy something', go: openStoreHere }; }
+  return { label: r.cat === 'froyo' ? '⚖️ Weigh your cup' : r.cat === 'golf' ? '🍔 Snack bar' : r.cat === 'gacha' ? '🥚 Get a capsule toy' : storeMenu(r) === 'scoops' ? '🍦 Order ice cream' : r.cat === 'movies' ? '🎟️ Buy a ticket' : r.kind === 1 ? '🍴 Order food' : '🛍️ Buy something', go: openStoreHere }; }
 function rideElevator(r, toDown){ const o = ocean; if (!o || paused) return; initAudio(); sfx(1046, .25, 'sine', .05); sfx(784, .35, 'sine', .05, .22);   // ding!
   walkRef = (toDown ? r.down.yB : r.floor) + .5; const [x, y] = landXY(r.fs + r.inw*(r.D - 3), r.t1 - .2 - 1); o.x = x; o.y = y; o.vx = o.vy = 0; o.gh = groundAt(x, y);
   banner(toDown ? '🛗 Ding! Downstairs' : '🛗 Ding! Main floor', toDown ? "Kids' books, toys, games, cookbooks and records" : 'Fiction, mysteries, sci-fi and New & Noteworthy'); }
@@ -4978,16 +5149,18 @@ function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.worko
   const [x, y] = landXY(w.r.fs + w.r.inw*w.sp.ed, w.sp.et); o.x = x; o.y = y; walkRef = w.r.floor + .3; o.gh = groundAt(x, y);
   const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. Strength ${strengthLv()} 💪` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
   if (w.k === 'weights' && w.n){ flushCloud(); o.flexT = time + 2.2; }
+  if (w.k === 'pickle'){ if (pkVis) pkVis.ball.visible = pkVis.shadow.visible = pkVis.pad.visible = false; banner('Good game! 🏓', `You ${w.score[0]}, Coach Pip ${w.score[1]}`); return; }
+  if (w.k === 'golf') return;
   if (w.k === 'dj') banner('What a set!', 'The whole gym was dancing'); else if (w.k === 'stage') banner('What a show!', 'Take a bow next time too'); else banner('Great workout! 💪', how); }
 function workTap(){ const o = ocean, w = o?.workout; if (!w || paused) return; initAudio(); w.tapT = time;
-  if (w.k === 'wheel') return takePhoto(); if (w.k === 'golf') return golfPutt(w); if (w.k === 'coaster'){ sfx(1000, .7, 'sawtooth', .015, 0, -500); return; }
+  if (w.k === 'wheel') return takePhoto(); if (w.k === 'golf') return golfPutt(w); if (w.k === 'pickle') return pkHit(w); if (w.k === 'coaster'){ sfx(1000, .7, 'sawtooth', .015, 0, -500); return; }
   if (w.k === 'tread' || w.k === 'bike'){ w.lvl = w.lvl % 3 + 1; coach(`${['', w.k === 'bike' ? 'Easy pedaling' : 'Walking', w.k === 'bike' ? 'Faster!' : 'Jogging!', w.k === 'bike' ? 'Racing!' : 'Sprinting!'][w.lvl]} Speed ${w.lvl} of 3`, 2); sfx(500 + w.lvl*150, .08, 'square', .03); }
   else if (w.k === 'weights'){ if (time - w.tapT0 < .45) return; w.tapT0 = time; w.n++; save.lifts = (save.lifts || 0) + 1; persist(); sfx(140, .12, 'square', .04, .3);   // (one lift at a time)
     if (save.lifts % 20 === 0){ flex(); banner(`Stronger! 💪 Strength ${strengthLv()}`, save.lifts < 200 ? 'Your muscles are growing!' : 'Maximum muscles!'); } }
   else if (w.k === 'stretch'){ w.n++; sfx(400, .4, 'sine', .03, 0, 300); coach(['Reach for the sky!', 'Breathe in... and out', 'Stretch, stretch, stretch!'][w.n % 3], 2); }
   else if (w.k === 'dj'){ w.lvl = w.lvl % 3 + 1; [0, .13, .26].forEach(dl => sfx(466, .11, 'sawtooth', .03, dl)); coach(['', 'Chill beat', 'Turn it up!', 'Full party mode!'][w.lvl], 2); }
   else if (w.k === 'stage'){ w.bowT = time; heartsAt = time; for (let k = 0; k < 26; k++) sfx(1800 + Math.random()*2500, .04, 'square', .012, Math.random()*1.4); banner('Bravo! 👏', 'The audience loves you'); } }
-function workStep(o, dt){ const w = o.workout; if (w.pier) return rideStep(o, w, dt); if (w.k === 'golf') return golfStep(o, w, dt); o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = false; o.air = airMax(); o.idle = 0;
+function workStep(o, dt){ const w = o.workout; if (w.pier) return rideStep(o, w, dt); if (w.k === 'golf') return golfStep(o, w, dt); if (w.k === 'pickle') return pickleStep(o, w, dt); o.vx = o.vy = 0; o.x = w.x; o.y = w.y; o.walking = false; o.air = airMax(); o.idle = 0;
   if (time - w.t0 > .6 && wantHeading()) return stopWorkout();
   if (w.k === 'tread' || w.k === 'bike'){ const v = [0, 1.5, 2.7, 4][w.lvl]*(w.k === 'bike' ? 2 : 1), before = w.dist; w.dist += v*dt;
     if (Math.floor(w.dist/100) > Math.floor(before/100)){ coach(`${Math.floor(w.dist/100)*100} meters! Keep going!`, 2); sfx(880, .1, 'triangle', .04); }
@@ -5013,6 +5186,10 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
       const bar = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .14, 8), std(0x9aa0a6, .4)); bar.rotation.x = Math.PI/2; g.add(bar); bells.add(g); } }
     if (bells.parent !== oceanScene) oceanScene.add(bells); bells.visible = true; m.updateMatrixWorld(true);
     ['la', 'ra'].forEach((a, i) => { const g = bells.children[i]; g.position.set(.33, 0, 0).applyMatrix4(u.arms[a].el.matrixWorld); g.rotation.set(0, -ocean.ang, 0); g.scale.setScalar(1 + .9*muscleNow()); }); return; }   // (heavier weights as you get stronger)
+  if (k === 'pickle'){ if (w.run) poseWalk(m, time*11, true); const G = pkMeshes(), sw = time - w.tapT < .3 ? Math.sin((time - w.tapT)/.3*Math.PI) : 0; G.pad.visible = true;
+    if (human){ u.arms.ra.sh.rotation.set(0, -sw*1.1, Math.PI + .8 + sw*.5); u.arms.ra.el.rotation.set(0, 0, .4); m.updateMatrixWorld(true); _cv.set(.36, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); G.pad.position.copy(_cv); }
+    else G.pad.position.set(px + Math.cos(ocean.ang + Math.PI/2)*.35, gy + .5, pz + Math.sin(ocean.ang + Math.PI/2)*.35);
+    G.pad.rotation.set(0, -ocean.ang + Math.PI/2 - sw*1.1, 0); return; }
   if (k === 'golf'){ if (!human) return; const sw = time - w.tapT < .35 ? Math.sin((time - w.tapT)/.35*Math.PI)*.5 : 0; for (const a of ['la', 'ra']){ u.arms[a].sh.rotation.set(0, 0, Math.PI + .3 + sw); u.arms[a].el.rotation.set(0, 0, .1); } return; }
   if (k === 'stretch'){ if (!human) return; const sw = Math.sin(time*1.4)*.35, up = time - w.tapT < 1.2 ? .12 : 0; m.position.y += up;
     u.arms.la.sh.rotation.set(0, 0, .12 + sw*.4); u.arms.ra.sh.rotation.set(0, 0, .12 - sw*.4); u.arms.la.el.rotation.set(0, 0, 0); u.arms.ra.el.rotation.set(0, 0, 0); return; }
@@ -5023,7 +5200,7 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
     u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
 let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
 const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'puzzle'), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
-const storeMenu = r => (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
+const storeMenu = r => r.cat === 'froyo' ? 'froyo' : (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
 function atCounter(o){   // the shop whose counter you're standing at (or null)
   if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
   const r = roomAt(s, t, true); return r && (s - r.fs)*r.inw > r.D - 3.9 ? r : null; }
@@ -5035,7 +5212,8 @@ function renderStore(){
   const r = storeAt, menu = storeMenu(r), box = $('storeItems'), cv = $('storeCone'); $('storeName').textContent = r.name; box.innerHTML = '';
   $('storeNote').textContent = `You have ${save.coins || 0} coins.` + (menu === 'scoops' ? ` Pick up to 3 scoops: 1 for ${SCOOP_PRICE[1]}, 2 for ${SCOOP_PRICE[2]}, 3 for ${SCOOP_PRICE[3]} coins.` : '');
   const card = (html, label, onclick, disabled = false, cls = 'primary') => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = html; const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + cls; b.textContent = label; b.disabled = disabled; b.onclick = onclick; d.appendChild(b); box.appendChild(d); return d; };
-  cv.hidden = menu !== 'scoops';
+  cv.hidden = menu !== 'scoops' && menu !== 'froyo';
+  if (menu === 'froyo') return froyoStore(r, card, box, cv);
   if (menu === 'scoops'){ const fl = SCOOPS[r.name] || SCOOPS[''];
     cv.innerHTML = cone.map(i => `<i style="background:${fl[i][1]}"></i>`).reverse().join('') + '<b></b>' + `<p>${cone.length ? cone.map(i => fl[i][0]).join(' + ') : 'Your cone is empty. Pick a flavor!'}</p>`;
     const buy = document.createElement('div'); buy.className = 'row2';
@@ -5062,13 +5240,14 @@ function renderStore(){
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
       if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); banner(`You're wearing the ${it.n.toLowerCase()}!`, 'Looking good'); return; }
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
-      treat = { ...it, bites: it.act === 'drink' ? 4 : 3 }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
+      treat = { ...it, bites: it.bites || (it.act === 'drink' ? 4 : 3) }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
   const slots = [...new Set(list.filter(it => it.act === 'wear').map(it => it.slot))].filter(k => worn[k]);   // take off what you're wearing (for free)
   for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
     const w = { ...save.wear }; delete w[k]; save.wear = w; persist(); flushCloud(); sfx(520, .08, 'triangle', .05); renderStore(); }, false, 'secondary');
 }
 function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it = treat; if (!o || paused) return; if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
+  if (it.act === 'froyo'){ it.licks++; sfx(700 + Math.random()*150, .07, 'sine', .04); if (it.licks % 2 === 0){ it.scoops.pop(); if (!it.scoops.length) return done('All gone! Yum', 'That froyo was delicious'); } return; }
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
   else if (it.act === 'eat' || it.act === 'drink'){ it.bites--; if (it.act === 'eat') sfx(180 + Math.random()*60, .07, 'square', .03); else sfx(500, .15, 'sine', .04, 0, -200);
@@ -5094,11 +5273,12 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
   if (!treatObj){ treatObj = new THREE.Group(); const cn = new THREE.Mesh(new THREE.ConeGeometry(.05, .17, 14), std(0xd9a35b, .8)); cn.rotation.x = Math.PI; cn.position.y = -.07; treatObj.add(cn);
     const sc = [0, 1, 2].map(i => { const s = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), std(0xffffff, .6)); s.position.y = .03 + i*.075; treatObj.add(s); return s; });
-    const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp }; }
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(.068, .048, .09, 16), std(0xf8e1ee, .6)); cup.position.y = -.01; treatObj.add(cup);
+    const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp, cup }; }
   if (treatObj.parent !== oceanScene) oceanScene.add(treatObj);
   const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (!show) return;
-  const { cn, sc, sp } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick';
-  cn.visible = cone3; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
+  const { cn, sc, sp, cup } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick' || treat.act === 'froyo';
+  cn.visible = cone3 && !treat.cup; cup.visible = cone3 && !!treat.cup; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
   if (!cone3){ if (!treatTex[treat.e]) treatTex[treat.e] = canvasTex(96, 96, (c, w, h) => emo(c, treat.e, w/2, h/2 + 4, 76), false); if (sp.material.map !== treatTex[treat.e]){ sp.material.map = treatTex[treat.e]; sp.material.needsUpdate = true; } }
   if (human && !(o.hugT > time) && o.sitting == null){ const a = u.arms.ra; a.sh.rotation.set(0, 0, Math.PI + .6); a.el.rotation.set(0, 0, 1.2); }   // hold it up in front of you
   m.updateMatrixWorld(true);
@@ -5111,7 +5291,7 @@ $('musicClose').onclick = closeMusic; $('gameRoll').onclick = () => { if (game &
 $('gameNew').onclick = () => { if (!game || game.busy) return; Object.assign(game, { pos: [0, 0], turn: 0, die: 0, won: 0, msg: 'New game! You go first.' }); drawGame(); };
 $('bookPrev').onclick = () => turnBook(-1); $('bookNext').onclick = () => turnBook(1); $('bookClose').onclick = closeBook;
 $('buyBtn').onclick = () => doPlace(); $('treatBtn').onclick = () => useTreat(); $('storeClose').onclick = closeStore;
-const BIG_SHOP = { 'Barnes & Noble': { w: 2, half: 7.6, deep: 18, down: true }, 'Holey Moley': { w: 2, half: 7, deep: 15 } };   // (the real one is 21,000 square feet over two floors, in the old Athleta at 1318: a staircase in the middle goes down to the kids' books, toys, games and records)
+const BIG_SHOP = { 'Barnes & Noble': { w: 2, half: 7.6, deep: 18, down: true }, 'Holey Moley': { w: 2, half: 7, deep: 15 }, 'Museum of Illusions': { w: 2, half: 6.5, deep: 16 }, 'PicklePop': { w: 2, half: 7.5, deep: 18 } };   // (the real one is 21,000 square feet over two floors, in the old Athleta at 1318: a staircase in the middle goes down to the kids' books, toys, games and records)
 function promRooms(){   // (worked out once: where each shop's sign, door and room go)
   if (PROM_ROOMS) return PROM_ROOMS; bldIndex(); PROM_ROOMS = [];
   const L = PROM_STORES.map(([side, t, name, kind], i) => ({ i, side, t, name, kind, cat: STORE_KIND[name] || (kind === 1 ? 'food' : kind === 2 ? 'movies' : 'clothes') }));
@@ -5161,6 +5341,8 @@ function roomAt(s, t, inside){   // the shop you're in (or in the doorway of)
     if (!inside && Math.abs(t - r.door) < 1.05 && (r.inw < 0 ? s > r.fs - .5 && s < r.fs + 2.5 : s < r.fs + .5 && s > r.fs - 2.5)) return r; }
   return null; }
 function shopTex(key){   // wood floor, brick, a shelf of books, a reading rug (drawn once)
+  if (key === 'illwall') return canvasTex(1024, 384, drawIllWall, false);
+  if (key === 'checker') return canvasTex(128, 128, (x, w, h) => { x.fillStyle = '#f4f4f0'; x.fillRect(0, 0, w, h); x.fillStyle = '#111'; x.fillRect(0, 0, w/2, h/2); x.fillRect(w/2, h/2, w/2, h/2); });
   return canvasTex(key === 'spines' ? 512 : 256, key === 'spines' ? 160 : key === 'brick' ? 128 : 256, (x, w, h) => { const R = mulberry(key.length*97 + 3), c = (hex, a, b, cw, ch) => { x.fillStyle = hex; x.fillRect(a, b, cw, ch); };
     if (key === 'oak'){ for (let y = 0; y < h; y += 32){ let xx = -((y*37) % 200); while (xx < w){ const L = 120 + R()*140, v = 190 + (R()*30|0); c(`rgb(${v + 10},${v - 30},${v - 95})`, xx, y, L, 32); c('rgba(60,35,10,.35)', xx, y, 2, 32); xx += L; } c('rgba(60,35,10,.3)', 0, y, w, 2); } }
     else if (key === 'brick'){ c('#d9cfc2', 0, 0, w, h); for (let row = 0; row*14 < h; row++) for (let k = -1; k < 7; k++){ const v = R(); c(`rgb(${150 + v*45|0},${70 + v*25|0},${50 + v*20|0})`, k*42.7 + (row % 2)*21 + 2, row*14 + 2, 39, 11); } }
@@ -5170,8 +5352,8 @@ function shopTex(key){   // wood floor, brick, a shelf of books, a reading rug (
     else if (key === 'carpet'){ c('#8f9296', 0, 0, w, h); for (let k = 0; k < 2200; k++){ const v = 120 + (R()*40|0); c(`rgb(${v},${v + 2},${v + 6})`, R()*w, R()*h, 2, 2); } }
     else if (key === 'rug'){ c('#c8a274', 0, 0, w, h); ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa'].forEach((col, i) => { x.fillStyle = col; x.beginPath(); x.arc(w/2, h/2, 124 - i*20, 0, Math.PI*2); x.fill(); }); } }); }
 function shopSignTex(spec){ const [text, asp] = spec.split('|'), H = 128, W = Math.min(2048, H*(+asp || 8));   // a shop's section signs
-  const green = /NEW|DOWNSTAIRS/.test(text), neon = /PUTTS/.test(text);
-  if (neon) return canvasTex(W, H, (x, w, h) => { x.fillStyle = '#111'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '800 80px Nunito, sans-serif'; x.shadowColor = '#ff4fa3'; x.shadowBlur = 18; x.fillStyle = '#ff9ccf'; x.fillText(text, w/2, h/2 + 4); }, false);
+  const green = /NEW|DOWNSTAIRS/.test(text), neon = /PUTTS|PIZZA|ROOM|TUNNEL|GALLERY|PICKLE/.test(text), [nG, nF] = /PIZZA|PICKLE/.test(text) ? ['#2bff6a', '#c2ffd2'] : /PUTTS/.test(text) ? ['#ff4fa3', '#ff9ccf'] : ['#00e5ff', '#c8f9ff'];
+  if (neon) return canvasTex(W, H, (x, w, h) => { x.fillStyle = '#111'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '800 80px Nunito, sans-serif'; x.shadowColor = nG; x.shadowBlur = 18; x.fillStyle = nF; x.fillText(text, w/2, h/2 + 4); }, false);
   return canvasTex(W, H, (x, w, h) => { x.fillStyle = green ? '#2a5934' : text === 'KIDS' ? '#1e88e5' : '#b08a5c'; x.fillRect(0, 0, w, h); x.textAlign = 'center'; x.textBaseline = 'middle';
     let fs = 78; x.font = `800 ${fs}px Nunito, sans-serif`; while (x.measureText(text).width > w*.9 && fs > 20){ fs -= 2; x.font = `800 ${fs}px Nunito, sans-serif`; }
     if (text === 'KIDS'){ const cols = ['#ffd23f', '#ff6b9a', '#7ee081', '#ffffff']; const tw = x.measureText(text).width; let xx = w/2 - tw/2; x.textAlign = 'left'; [...text].forEach((ch, i) => { x.fillStyle = cols[i % 4]; x.fillText(ch, xx, h/2 + 4); xx += x.measureText(ch).width; }); return; }
@@ -5186,11 +5368,11 @@ function buildRooms(g, P3){
     quad(o, p(S0, T0, ya), p(S1, T0, ya), p(S1, T0, yb), p(S0, T0, yb), hex); quad(o, p(S0, T1, ya), p(S0, T1, yb), p(S1, T1, yb), p(S1, T1, ya), hex); };
   const BRIGHT = [0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0x8e24aa, 0xfb8c00, 0x00acc1, 0xd81b60, 0xf4f4f0, 0x222222];
   const TQ = {}, tq = (key, a, b, c, d, u, v, flip) => { const o = TQ[key] || (TQ[key] = { pos: [], uv: [] }); o.pos.push(...a, ...b, ...c, ...a, ...c, ...d); const u0 = flip ? u : 0, u1 = flip ? 0 : u; o.uv.push(u0, 0, u1, 0, u1, v, u0, 0, u1, v, u0, v); };   // (textured: wood floors, brick, rows of books, signs)
-  const FLOOR = { clothes: 0xc9b79c, shoes: 0x9c7f5c, food: 0x8a5a3c, bakery: 0xe8dcc8, icecream: 0xf4c6d6, books: 0x7a5a3c, tech: 0xe8e6e1, toys: 0x6fb7e0, candy: 0xff9ec8, beauty: 0x2a2a2a, shades: 0xd8d4cc, movies: 0x5a1020, gym: 0x3a3a3a, theatre: 0x6b2a2a, gift: 0xc9b79c };
-  const WALL = { tech: 0xf7f7f5, books: 0xe8dcc4, movies: 0x2a1a1e, gym: 0x9aa0a6, beauty: 0xf4f0ee, candy: 0xfff0f6, toys: 0xfff5d6, theatre: 0x3a1a1a };
+  const FLOOR = { illusions: 0x222222, pickle: 0x3f8f4f, froyo: 0xf2f2f2, clothes: 0xc9b79c, shoes: 0x9c7f5c, food: 0x8a5a3c, bakery: 0xe8dcc8, icecream: 0xf4c6d6, books: 0x7a5a3c, tech: 0xe8e6e1, toys: 0x6fb7e0, candy: 0xff9ec8, beauty: 0x2a2a2a, shades: 0xd8d4cc, movies: 0x5a1020, gym: 0x3a3a3a, theatre: 0x6b2a2a, gift: 0xc9b79c };
+  const WALL = { illusions: 0x15121c, pickle: 0xfbe9f1, froyo: 0xfdeaf3, tech: 0xf7f7f5, books: 0xe8dcc4, movies: 0x2a1a1e, gym: 0x9aa0a6, beauty: 0xf4f0ee, candy: 0xfff0f6, toys: 0xfff5d6, theatre: 0x3a1a1a };
   for (const r of rooms){ const R = mulberry(r.i*31 + 7), y0 = r.floor, y1 = y0 + 3.5, inw = r.inw, T0 = r.t0 + .2, T1 = r.t1 - .2, back = r.fs + inw*r.D, front = r.fs + inw*.3, W = T1 - T0;
     const S = d => r.fs + inw*d;   // (meters in from the shopfront)
-    const wall = WALL[r.cat] ?? [0xf4efe6, 0xeae4d8, 0xf1ece2][r.i % 3];
+    const wall = r.name === 'TMNT Pizzeria' ? 0x1c3d27 : WALL[r.cat] ?? [0xf4efe6, 0xeae4d8, 0xf1ece2][r.i % 3];
     // the room: floor, ceiling, back and side walls, and the wall over the shopfront
     if (!r.down) quad(shell, P3(front, T0, y0), P3(back, T0, y0), P3(back, T1, y0), P3(front, T1, y0), FLOOR[r.cat] ?? 0xc9b79c);
     quad(shell, P3(front, T0, y1), P3(front, T1, y1), P3(back, T1, y1), P3(back, T0, y1), 0xf4f2ee);
@@ -5222,7 +5404,14 @@ function buildRooms(g, P3){
         B(r.D - .12, r.D - .05, T0 + .8, T1 - .8, 1.9, 2.9, 0x22303c); for (let k = 0; k < 4; k++) B(r.D - .13, r.D - .12, T0 + 1, T1 - 1, 2.05 + k*.2, 2.12 + k*.2, 0xfff2c4);
         B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
         for (let d = 1.4; d + 1.65 < r.D - 3.3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
-          for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); } break; }
+          for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); }
+        if (r.name === 'TMNT Pizzeria'){ const D = r.D, tt = T1 - .45;   // TMNT Pizzeria (opened June 2026 where Johnny's New York Pizzeria was): green neon, giant lava lamps, New York-style pies
+          for (const [d, hex, blob] of [[1.2, 0x8e24aa, 0xff9100], [2.4, 0x00acc1, 0xffeb3b], [3.6, 0xd81b60, 0x76ff03]]){ B(d, d + .34, tt - .17, tt + .17, 0, .3, 0x333333); B(d + .05, d + .29, tt - .12, tt + .12, .3, 1.5, hex); B(d + .02, d + .32, tt - .15, tt + .15, 1.5, 1.62, 0x333333);
+            quad(glow, P3(S(d + .05), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + 1.5), P3(S(d + .05), tt - .125, y0 + 1.5), hex);
+            for (let k = 0; k < 3; k++){ const h = .45 + k*.33 + (k % 2)*.08, a = d + .09 + (k % 2)*.05; quad(glow, P3(S(a), tt - .13, y0 + h), P3(S(a + .12), tt - .13, y0 + h), P3(S(a + .12), tt - .13, y0 + h + .15), P3(S(a), tt - .13, y0 + h + .15), blob); } }   // (the blobs of lava)
+          for (const t2 of [T0 + .03, T1 - .03]) quad(glow, P3(S(.8), t2, y1 - .3), P3(S(D - .3), t2, y1 - .3), P3(S(D - .3), t2, y1 - .2), P3(S(.8), t2, y1 - .2), 0x39ff6a);   // green neon along the walls
+          const e = Math.min(D - 2.5, 5.5); tq('sign:NEW YORK–STYLE PIZZA|9', P3(S(1), T0 + .04, y0 + 2.45), P3(S(e), T0 + .04, y0 + 2.45), P3(S(e), T0 + .04, y0 + 2.95), P3(S(1), T0 + .04, y0 + 2.95), 1, 1, inw < 0); }
+        break; }
       case 'books': if (r.down){   // Barnes & Noble (from photos of the real store): light oak floors and bookcases with wood headers, an exposed brick wall, black track lights on a white ceiling,
         const St = r.down, yB = St.yB, tm = St.tm, D = r.D, OAK = 0xc8a274, OAK2 = 0xb08a5c, H = St.hw;   //   New & Noteworthy up front, and the stairs down in the middle to the kids' books, toys, games and records
         const G2 = r.gridB = { n: G.n, m: G.m, top: new Float32Array(G.n*G.m) };
@@ -5333,6 +5522,54 @@ function buildRooms(g, P3){
       case 'gacha': for (let d = 1.5; d + .6 < r.D - 3.3; d += 1.1) for (const tm of [T0 + W*.3, T0 + W*.7]) for (const o2 of [-.3, .3]){ B(d, d + .5, tm + o2 - .25, tm + o2 + .25, 0, 1.1, pick()); B(d + .08, d + .42, tm + o2 - .17, tm + o2 + .17, 1.1, 1.45, 0xe0f4ff); }   // capsule machines,
         for (const [ta, tb] of [[T0, T0 + .9], [T1 - .9, T1]]) for (let d = 1.2; d < r.D - 3.5; d += 1.2){ B(d, d + 1, ta, tb, 0, .9, 0xff3e8a); B(d + .05, d + .95, ta + .05, tb - .05, .9, 1.8, 0xd6f0ff); B(d + .3, d + .6, ta + .3, tb - .3, .9, 1.05, pick()); }   //   and claw machines full of plushies
         counter(); break;
+      case 'illusions': { const D = r.D, tm = T0 + W/2, mid = Math.max(5, D*.45), BLK = 0x15121c, MIR = 0x1f1d2b, vbox = (da, db, ta, tb, ha, hb, hex) => box(props, S(da), S(db), ta, tb, y0 + ha, y0 + hb, hex);
+        const ill = r.ill = {}, vc = (tm + T1)/2, R2 = Math.min(1.5, (T1 - tm)/2 - .15), wall = (dd, ta, tb, ya, yb) => [P3(S(dd), ta, y0 + ya), P3(S(dd), tb, y0 + ya), P3(S(dd), tb, y0 + yb), P3(S(dd), ta, y0 + yb)];
+        r.spots = [];   // the Museum of Illusions: black walls and neon, a checkerboard floor, and a different trick in every room
+        tq('checker', P3(front, T0, y0 + .006), P3(back, T0, y0 + .006), P3(back, T1, y0 + .006), P3(front, T1, y0 + .006), (r.D - .3)/1.2, W/1.2);
+        // by the door: the illusion gallery (walk up to it and test your eyes)
+        vbox(1.1, mid - .5, T0, T0 + .06, .9, 2.45, 0x111111); tq('illwall', P3(S(1.2), T0 + .07, y0 + 1), P3(S(mid - .6), T0 + .07, y0 + 1), P3(S(mid - .6), T0 + .07, y0 + 2.35), P3(S(1.2), T0 + .07, y0 + 2.35), 1, 1, inw < 0);
+        tq('sign:ILLUSION GALLERY|7', P3(S(1.6), T0 + .07, y0 + 2.55), P3(S(mid - 1), T0 + .07, y0 + 2.55), P3(S(mid - 1), T0 + .07, y0 + 2.95), P3(S(1.6), T0 + .07, y0 + 2.95), 1, 1, inw < 0);
+        r.spots.push({ k: 'gallery', d: (1.1 + mid - .5)/2, t: T0 + 1.1, rad: 1.7 });
+        // the back half: the Ames room on one side, the vortex tunnel on the other, a black wall between them
+        B(mid, mid + .12, T0, tm - 2.1, 0, 3.5, BLK); B(mid, mid + .12, tm - .7, vc - R2, 0, 3.5, BLK); B(mid, mid + .12, vc + R2, T1, 0, 3.5, BLK); B(mid, D, tm - .1, tm + .1, 0, 3.5, BLK); B(mid, mid + .12, tm - 2.1, tm - .7, 2.3, 3.5, BLK); B(mid, mid + .12, vc - R2, vc + R2, 2.9, 3.5, BLK);   // (and over the doorways)
+        tq('sign:AMES ROOM|5', ...wall(mid - .02, tm - 2.1, tm - .7, 2.55, 2.85), 1, 1, inw < 0);
+        // the Ames room: checkerboard walls, and windows that don't match (a big one in one corner, a little one in the other)
+        tq('checker', ...wall(D - .03, T0, tm - .1, 0, 3.5), (tm - .1 - T0)/1.2, 3.5/1.2, inw < 0); vbox(D - .1, D - .04, T0 + .5, T0 + 1.9, 1, 2.7, 0x9fd3ff); vbox(D - .1, D - .04, tm - 1.2, tm - .6, 1.7, 2.3, 0x9fd3ff);
+        ill.ames = [mid + .15, D - .1, T0 + .15, tm - .15];
+        // the infinity room, up front on the other side: dark mirrors, and a hundred little lights hanging in the air
+        B(2.6, mid, tm + .4, tm + .55, 0, 3.5, MIR); B(1.35, 1.5, tm + 1.7, T1, 0, 3.5, MIR); quad(shell, P3(S(1.5), tm + .55, y0 + .02), P3(S(mid), tm + .55, y0 + .02), P3(S(mid), T1, y0 + .02), P3(S(1.5), T1, y0 + .02), 0x0b0b12);
+        tq('sign:INFINITY ROOM|6', ...wall(1.33, tm + 1.9, Math.min(T1 - .2, tm + 3.6), 2.5, 2.8), 1, 1, inw < 0);
+        { const n = 150, im = new THREE.InstancedMesh(new THREE.SphereGeometry(.035, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), n), M4 = new THREE.Matrix4(), C3 = new THREE.Color(), col = [0xff4fa3, 0x00e5ff, 0xffeb3b, 0x76ff03, 0xb388ff, 0xff9100];
+          for (let k = 0; k < n; k++){ M4.makeTranslation(...P3(S(1.7 + R()*(mid - 1.9)), tm + .7 + R()*(T1 - tm - .9), y0 + .4 + R()*2.9)); im.setMatrixAt(k, M4); im.setColorAt(k, C3.setHex(col[k % col.length])); } g.add(im); }
+        ill.inf = [1.5, mid, tm + .55, T1];
+        // the vortex tunnel, behind the infinity room: a bridge with rails, and the tunnel turning round it
+        B(mid + .12, D - .1, vc - .45, vc + .45, 0, .05, 0x3a3a3a); for (const tt of [vc - .5, vc + .5]) B(mid + .12, D - .1, tt - .03, tt + .03, .05, 1.05, 0xb0b0b0);
+        { const a = new THREE.Vector3(...P3(S(mid + .12), vc, y0 + 1.35)), b = new THREE.Vector3(...P3(S(D - .1), vc, y0 + 1.35)), L = a.distanceTo(b), par = new THREE.Group(), tx = spiralTex();
+          par.position.copy(a).add(b).multiplyScalar(.5); par.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); tx.repeat.set(3, Math.max(1, Math.round(L/1.5)));
+          const cyl = new THREE.Mesh(new THREE.CylinderGeometry(R2*.98, R2*.98, L, 40, 1, true), new THREE.MeshBasicMaterial({ map: tx, side: THREE.DoubleSide })); par.add(cyl); g.add(par); PROM_SPIN.push(cyl); }
+        tq('sign:VORTEX TUNNEL|6', ...wall(mid - .02, vc - 1.4, vc + 1.4, 2.95, 3.3), 1, 1, inw < 0);
+        ill.vortex = [mid + .15, D - .1, vc - R2, vc + R2];
+        break; }
+      case 'pickle': { const D = r.D, tm = T0 + W/2, Lc = Math.min(13.4, D - 2.8), hw = Math.min(3.05, W/2 - .9), cd1 = D - .5, cd0 = cd1 - Lc, cm = (cd0 + cd1)/2, kz = 2.13*Lc/13.4;   // PicklePop (in the old Adidas: courts, a bar and places to chill)
+        const vq = (da, db, ta, tb, h, hex) => quad(shell, P3(S(da), ta, y0 + h), P3(S(db), ta, y0 + h), P3(S(db), tb, y0 + h), P3(S(da), tb, y0 + h), hex);
+        vq(cd0 - 1, D - .1, T0, T1, .01, 0x3f8f4f); vq(cd0, cd1, tm - hw, tm + hw, .015, 0x2f6db5); vq(cm - kz, cm + kz, tm - hw, tm + hw, .018, 0x4f8fd8);   // the court: blue, the kitchen by the net lighter blue, green all round
+        for (const dd of [cd0, cd1, cm - kz, cm + kz]) vq(dd - .025, dd + .025, tm - hw, tm + hw, .022, 0xffffff); for (const tt of [tm - hw, tm + hw]) vq(cd0, cd1, tt - .025, tt + .025, .022, 0xffffff);
+        for (const [da, db] of [[cd0, cm - kz], [cm + kz, cd1]]) vq(da, db, tm - .025, tm + .025, .022, 0xffffff);
+        B(cm - .02, cm + .02, tm - hw - .3, tm + hw + .3, 0, .86, 0x26262b); box(props, S(cm - .03), S(cm + .03), tm - hw - .3, tm + hw + .3, y0 + .84, y0 + .9, 0xf4f4f0);   // the net,
+        for (const tt of [tm - hw - .35, tm + hw + .35]) B(cm - .05, cm + .05, tt - .05, tt + .05, 0, .95, 0x333333);   //   and its posts
+        if (cd0 > 3) for (const [tt, hex] of [[T0 + .5, 0xff5aa5], [T0 + 1.2, 0xffd23f], [T1 - .5, 0x00acc1]]) B(.9, 1.5, tt - .25, tt + .25, 0, .45, hex);   // comfy seats up front
+        for (const [tt, hex] of [[T0 + .03, 0xff5aa5], [T1 - .03, 0x76ff03]]) quad(glow, P3(S(.8), tt, y1 - .3), P3(S(D - .3), tt, y1 - .3), P3(S(D - .3), tt, y1 - .2), P3(S(.8), tt, y1 - .2), hex);
+        tq('sign:PICKLEPOP|6', P3(S(D - .05), tm - 2, y0 + 2.4), P3(S(D - .05), tm + 2, y0 + 2.4), P3(S(D - .05), tm + 2, y0 + 3.05), P3(S(D - .05), tm - 2, y0 + 3.05), 1, 1, inw < 0);
+        r.pk = { cd0, cd1, cm, tm, hw, kz }; r.spots = [{ k: 'pickle', d: cd0 + .3, t: tm, rad: 2.2, ed: Math.max(1, cd0 - 1), et: tm }]; break; }
+      case 'froyo': { const D = r.D, vbox = (da, db, ta, tb, ha, hb, hex) => box(props, S(da), S(db), ta, tb, y0 + ha, y0 + hb, hex); r.spots = [];   // Yogurtland: the wall of yogurt machines, the toppings bar, and the scale at the register
+        let k = 0; for (let d = 1.3; d + .85 < D - 2.8; d += 1, k++){ B(d, d + .85, T0, T0 + .55, 0, 1, 0xd9dde1); B(d + .03, d + .82, T0, T0 + .5, 1, 1.8, 0xc4c9ce);
+          for (const [o2, j] of [[.1, 0], [.48, 1]]){ vbox(d + o2, d + o2 + .27, T0 + .5, T0 + .56, 1.42, 1.66, parseInt(FROYO[(k*2 + j) % FROYO.length][1].slice(1), 16)); vbox(d + o2 + .1, d + o2 + .17, T0 + .5, T0 + .72, 1, 1.06, 0x222222); }   // the flavors, and the handles
+          vbox(d + .1, d + .75, T0 + .4, T0 + .62, .62, .66, 0x9aa0a6); if (k % 2 === 0 && d + .9 < D - 4) r.spots.push({ k: 'froyo', d: d + .9, t: T0 + 1.15, rad: 1.3 }); }
+        B(1.8, D - 3.2, T1 - .75, T1, 0, .9, 0xf4f4f0); for (let d = 1.9; d < D - 3.3; d += .32) B(d, d + .26, T1 - .68, T1 - .42, .9, .96, pick()); vbox(1.8, D - 3.2, T1 - .8, T1 - .76, 1.2, 1.45, 0xd6f0ff);   // the toppings, behind glass
+        r.spots.push({ k: 'froyo', d: (1.8 + D - 3.2)/2, t: T1 - 1.3, rad: 1.6 });
+        counter(0xf4f4f0); vbox(D - 2.35, D - 1.95, T0 + 1, T0 + 1.5, 1.05, 1.12, 0x9aa0a6);   // the register, with its scale
+        for (const [tt, hex] of [[T0 + .03, 0xe4007c], [T1 - .03, 0x8bc34a]]) quad(glow, P3(S(.8), tt, y1 - .3), P3(S(D - .3), tt, y1 - .3), P3(S(D - .3), tt, y1 - .2), P3(S(.8), tt, y1 - .2), hex);
+        break; }
       case 'vacant': break;   // (empty: for lease)
       case 'gym': { r.spots = []; const tl = T0 + 1, tr = T1 - 1, tm = T0 + W/2, D = r.D;   // JOHN REED: cardio, free weights, stretching, live DJs, art and plants (the real club has three floors; this is one)
         for (const tt of [T0 + .45, T1 - .45]){ B(.5, .95, tt - .2, tt + .2, 0, .45, 0x8a6a48); B(.45, 1, tt - .3, tt + .3, .45, 1.25, 0x2e7d4f); B(.55, .9, tt - .18, tt + .18, 1.25, 1.65, 0x43a047); }   // plants in the window
@@ -5364,7 +5601,7 @@ function buildRooms(g, P3){
 }
 function buildPromenade(g, P3, at, instanceOf){
   // the real shops and restaurants (OpenStreetMap), each with its sign where it really is: glass shopfronts all along, awnings where they serve food, marquees at the two movie theaters
-  const BRAND = { 'Apple Store': ['#f5f5f7', '#1d1d1f', 'Apple'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'], 'For Lease': ['#e8e4dc', '#6a6a6a', 'FOR LEASE'], 'MINISO': ['#e60012', '#ffffff'], 'Wilson': ['#c8102e', '#ffffff'], 'Beyond Yoga': ['#f4efe6', '#3a3a3a'], 'Culto': ['#111111', '#ffffff'], 'Gacha & Catch': ['#ff3e8a', '#ffffff'], 'Holey Moley': ['#111111', '#ff4fa3', 'HOLEY MOLEY'], 'El Husuba': ['#7a3e1d', '#f4efe2'], 'Ugo': ['#2e5d3a', '#f4efe2'],
+  const BRAND = { 'Apple Store': ['#f5f5f7', '#1d1d1f', 'Apple'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'], 'For Lease': ['#e8e4dc', '#6a6a6a', 'FOR LEASE'], 'MINISO': ['#e60012', '#ffffff'], 'Wilson': ['#c8102e', '#ffffff'], 'Beyond Yoga': ['#f4efe6', '#3a3a3a'], 'Culto': ['#111111', '#ffffff'], 'Gacha & Catch': ['#ff3e8a', '#ffffff'], 'Holey Moley': ['#111111', '#ff4fa3', 'HOLEY MOLEY'], 'Museum of Illusions': ['#111111', '#ffffff', 'MUSEUM OF ILLUSIONS'], 'PicklePop': ['#ff5aa5', '#ffffff', 'PICKLEPOP'], 'Yogurtland': ['#e4007c', '#ffffff', 'yogurtland'], 'TMNT Pizzeria': ['#1f8a3b', '#ffffff', 'TMNT PIZZERIA'], 'El Husuba': ['#7a3e1d', '#f4efe2'], 'Ugo': ['#2e5d3a', '#f4efe2'],
     'Starbucks': ['#00704a', '#ffffff'], 'Lululemon': ['#d22030', '#ffffff', 'lululemon'], "Levi's": ['#ffffff', '#c41230'], 'Johnny Rockets': ['#d0021b', '#ffffff'], 'Puzzle Zoo': ['#5b2c83', '#ffd23f'],
     "Raising Cane's": ['#c8102e', '#ffffff'], "Wetzel's Pretzels": ['#ffd23f', '#c8102e'], 'AMC Santa Monica 7': ['#a0101e', '#ffe9a8'], 'AMC Broadway 4': ['#a0101e', '#ffe9a8'], 'Google Store': ['#ffffff', '#4285f4'],
     'Chipotle': ['#451400', '#f4efe2'], 'Patagonia': ['#1d2b44', '#ffffff'], 'Adidas': ['#111111', '#ffffff'], 'Foot Locker': ['#111111', '#ffffff'], 'Sunglass Hut': ['#c8102e', '#ffffff'], "IT'SUGAR": ['#ff3e8a', '#ffffff'],
@@ -5644,7 +5881,7 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    partyStep(dt, o);
+    partyStep(dt, o); kidStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)
@@ -7332,7 +7569,7 @@ function render3D(dt){
       m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
-    drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
+    amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
     fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? (ocean.workout?.pier ? ocean.workout.py + .6 : landY(ocean) + .6 + (ocean.climb?.h || 0)) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
@@ -7469,7 +7706,7 @@ function limbsNow(){ return mode === 'race' ? race && race.limbs : mode === 'poo
 
 /* ---------- Keyboard menus: up/down to choose, Space or Enter to press ---------- */
 let pick = 0;
-function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','musicPanel','gamePanel','puzzlePanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
+function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','musicPanel','gamePanel','puzzlePanel','illPanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
 function menuBtns(){ const el = menuEl(); return el ? [...el.querySelectorAll('.btn')].filter(b => !b.disabled) : []; }
 function showPick(){ const bs = menuBtns(); bs.forEach((b,i) => b.classList.toggle('picked', i === pick)); }
 function resetPick(){ pick = 0; showPick(); }

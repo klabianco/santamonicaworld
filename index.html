@@ -2876,6 +2876,11 @@ function roadIndex(){
     for (let q = 0; q < r.p.length - 1; q++){ const [a, b] = r.p[q], [c, d] = r.p[q + 1];
       for (let i = Math.floor((Math.min(a, c) - w)/BLD_CELL); i <= Math.floor((Math.max(a, c) + w)/BLD_CELL); i++) for (let j = Math.floor((Math.min(b, d) - w)/BLD_CELL); j <= Math.floor((Math.max(b, d) + w)/BLD_CELL); j++){
         const k = bldKey(i, j), L = roadCells.get(k) || roadCells.set(k, []).get(k); L.push([n, q]); } } }); }
+function footLift(o){   // (streets, sidewalks and the Promenade's pavers are drawn a few cm above the ground: stand on top of them, not in them)
+  if (!o.onLand || o.onShip || o.onBoat || o.car || o.x < coastX(o.y)) return 0; const [s, t] = landST(o.x, o.y);
+  if (s > ICE.site[0] && s < ICE.site[1] && t > ICE.site[2] && t < ICE.site[3]) return inRink(s, t) ? .07 : .04;   // (the rink's deck and ice)
+  if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)) return 0;   // (inside a shop)
+  return (s > PROM.s0 - 1 && s < PROM.s1 + 1 && t > PROM.t0 && t < PROM.t1) || roadAt(s, t) ? .06 : 0; }
 function roadAt(s, t){   // the named street (or path) you're on, if any
   roadIndex(); const L = roadCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return null; let best = null, bd = 1e9;
   for (const [n, q] of L){ const r = CITY.roads[n], [ax, ay] = r.p[q], [bx, by] = r.p[q + 1], dx = bx - ax, dy = by - ay, l2 = dx*dx + dy*dy || 1, f = clamp(((s - ax)*dx + (t - ay)*dy)/l2, 0, 1), d = Math.hypot(s - ax - dx*f, t - ay - dy*f) - ROAD_W[r.c]/2;
@@ -3916,7 +3921,7 @@ function buildSwimmer(){
     const kn = new THREE.Group(); kn.position.x = -.44; hp.add(kn);
     kn.add(caps(.054, .3, SKIN, -.2));
     const ft = ellip(.06, 1.6, .42, .8, SKIN); ft.position.x = -.43; kn.add(ft);
-    legs[id] = { hp, kn };
+    legs[id] = { hp, kn, ft };
   }
   // gear (shown only when owned): fins, mask & snorkel, scuba tank, golden cap
   const yellow = std(0xffc21a, .4), dark = std(0x10161c, .3), glass = new THREE.MeshPhysicalMaterial({ color: 0x223a55, roughness: .05, metalness: .2, transparent: true, opacity: .7 });
@@ -3943,7 +3948,7 @@ function buildSwimmer(){
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .014, 20), wearM.hat); brim.scale.set(1, 1, .95); brim.rotation.z = Math.PI/2 - .15; brim.position.set(.735, -.1, 0); body.add(brim); wear.hat.push(brim); }
   for (const s of [-1, 1]){ const l = ellip(.034, .8, .55, 1.1, wearM.shades, 14); l.position.set(.7, -.093, s*.045); body.add(l); wear.shades.push(l); }
   { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
-  for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); }
+  for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); legs[id].sh = sh; }
   for (const k in wear) for (const o of wear[k]) o.visible = false;
   root.userData = { kind:'swimmer', body, arms, legs, torso, tee, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
@@ -4019,9 +4024,12 @@ function poseClimb(m, ph){
   u.legs.ll.hp.rotation.z = .5 + sw*.3; u.legs.rl.hp.rotation.z = .5 - sw*.3; u.legs.ll.kn.rotation.z = -.9; u.legs.rl.kn.rotation.z = -.9;
 }
 // walking on land: the swimmer stands and swings arms and legs; animals just scuttle
+function footFlex(u, on){ if (u.footOn === on) return; u.footOn = on;   // feet: pointed for swimming, turned forward to stand and walk on
+  for (const id of ['ll', 'rl']){ const L = u.legs[id]; for (const f of [L.ft, L.sh]) if (f){ f.rotation.z = on ? Math.PI/2 : 0; f.position.set(-.43, on ? -.05 : f === L.sh ? -.004 : 0, 0); } } }
 function poseWalk(m, ph, moving){
   const u = m.userData;
   if (u.kind !== 'swimmer'){ poseModel(m, null, moving ? ph*.3 : 0); return; }
+  footFlex(u, true);
   const sw = moving ? Math.sin(ph) : 0;
   u.body.rotation.set(0, 0, 0);
   u.arms.la.sh.rotation.set(0, 0, Math.PI - sw*.55); u.arms.ra.sh.rotation.set(0, 0, Math.PI + sw*.55);
@@ -4076,7 +4084,7 @@ function showGear(m, has, dry = false, wear = null){   // (dry: walking around o
   if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry;
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
   if (g.wear){ const w = (dry && wear) || {}; if (g.shirtM.userData.c !== (w.shirt || '#3f9fd2')){ g.shirtM.userData.c = w.shirt || '#3f9fd2'; g.shirtM.color.set(g.shirtM.userData.c); }   // what you bought on the Promenade (on land only)
-    for (const k in g.wear){ const on = !!w[k]; for (const o of g.wear[k]) o.visible = on; if (on) g.wearM[k].color.set(w[k]); } }
+    for (const k in g.wear){ const on = !!w[k] || (k === 'shoes' && dry); for (const o of g.wear[k]) o.visible = on; if (on) g.wearM[k].color.set(w[k] || '#f4f4f0'); } }   // (on land you always have sneakers on: white ones, till you buy some)
 }
 function updateGearLook(m, dry){ showGear(m, hasGear, dry, save.wear); }
 let diveLight = null;
@@ -4140,7 +4148,7 @@ function poseModel(m, L, t){
   if (u.kind === 'manta'){ const p = u.wing.geometry.attributes.position, base = u.wing.userData.base || (u.wing.userData.base = Float32Array.from(p.array));
     for (let i=0;i<p.count;i++){ const z = base[i*3 + 2]; p.setY(i, base[i*3 + 1] + Math.sin(t*1.6 - Math.abs(z)*.5)*.32*Math.pow(Math.abs(z)/2.4, 1.6)); } p.needsUpdate = true; return; }
   if (u.kind === 'whale'){ u.tail.rotation.z = Math.sin(t*.9)*.25; for (const id of ['la','ra']) u.limbs[id].rotation.x = (id === 'la' ? -1 : 1)*Math.sin(t*.5)*.15; return; }
-  if (u.kind === 'swimmer'){
+  if (u.kind === 'swimmer'){ footFlex(u, false);
     let roll = 0;
     for (const id of ['la','ra']){ const s = id === 'la' ? -1 : 1, p = limbPhase(L, id, t*.55, s > 0 ? .5 : 0), a = u.arms[id];
       if (p == null){ a.sh.rotation.set(0, 0, 0); a.el.rotation.set(0, 0, 0); continue; }
@@ -4859,7 +4867,7 @@ function setMuscle(m, mu){ const u = m.userData; if (u.kind !== 'swimmer' || u.m
   for (const c of [u.torso, u.tee]) if (c) c.scale.set(1, 1 + .25*mu, 1 + .32*mu); }                                                                   //  and a bigger chest)
 function flex(){ const o = ocean; if (!o) return; o.flexT = time + 2.2; heartsAt = time; [392, 523, 659].forEach((f, i) => sfx(f, .14, 'square', .03, i*.08));
   const n = save.lifts || 0; banner(`💪 Strength ${strengthLv()}`, n ? `${n} lifts so far. ${n < 200 ? 'Keep lifting to get even bigger!' : 'Maximum muscles!'}` : 'Lift weights to grow your muscles!'); }
-function poseFlex(m, px, gy, pz, human){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false); if (!human) return;
+function poseFlex(m, px, gy, pz, human){ m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false); if (!human) return;
   const u = m.userData, sq = Math.sin(time*9)*.08; u.arms.la.sh.rotation.set(0, Math.PI/2, 0); u.arms.la.el.rotation.set(0, -1.9 - sq, 0); u.arms.ra.sh.rotation.set(0, -Math.PI/2, 0); u.arms.ra.el.rotation.set(0, 1.9 + sq, 0); }
 // ---- Pacific Park on the pier: the Pacific Wheel and the West Coaster you can ride, and the Route 66 "End of the Trail" sign.
 //      (The real wheel and coaster stand on the part of the pier out over the water; here they're on the end of the deck, where the pier meets the sea.) ----
@@ -5308,11 +5316,11 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
   if (w.pier){ m.position.set(px, (w.py ?? gy) + (k === 'wheel' ? .73 : .35) + (human ? 0 : -.4), pz); poseWalk(m, 0, false); if (!human) return;   // riding: sitting down
     for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.5; u.legs[l].kn.rotation.z = -1.5; }
     if (k === 'coaster' && (time - w.tapT < 2 || (pacPark?.tv > 9))){ u.arms.la.sh.rotation.set(0, 0, .2); u.arms.ra.sh.rotation.set(0, 0, -.2); } return; }
-  if (k === 'tread'){ const f = [0, 8, 12, 16][w.lvl]; m.position.set(px, gy + (human ? 1.13 : .12) + Math.abs(Math.sin(time*f))*.03*w.lvl, pz); poseWalk(m, time*f, true); return; }
+  if (k === 'tread'){ const f = [0, 8, 12, 16][w.lvl]; m.position.set(px, gy + (human ? 1.2 : .12) + Math.abs(Math.sin(time*f))*.03*w.lvl, pz); poseWalk(m, time*f, true); return; }
   if (k === 'bike'){ m.position.set(px, w.r.floor + (human ? 1.15 : .9), pz); poseWalk(m, 0, false); if (!human) return; const ph = time*[0, 6, 10, 15][w.lvl];
     for (const [l, sg] of [['ll', 1], ['rl', -1]]){ u.legs[l].hp.rotation.z = 1.05 + sg*Math.sin(ph)*.45; u.legs[l].kn.rotation.z = -1.1 - sg*Math.cos(ph)*.45; }
     for (const a of ['la', 'ra']){ u.arms[a].sh.rotation.set(0, 0, Math.PI + 1.05); u.arms[a].el.rotation.set(0, 0, .25); } m.rotation.z -= .25; return; }
-  m.position.set(px, gy + (human ? 1.13 : .12), pz); poseWalk(m, 0, false);
+  m.position.set(px, gy + (human ? 1.2 : .12), pz); poseWalk(m, 0, false);
   if (k === 'weights'){ if (ocean.flexT > time) return poseFlex(m, px, gy, pz, human); const f = clamp((time - w.tapT)/.8, 0, 1), c = Math.sin(f*Math.PI)*2.3; if (!human) return;
     for (const a of ['la', 'ra']){ u.arms[a].sh.rotation.set(0, 0, Math.PI + .15); u.arms[a].el.rotation.set(0, 0, .1 + c); }
     if (!bells){ bells = new THREE.Group(); for (let i = 0; i < 2; i++){ const g = new THREE.Group(), mat = std(0x222222, .5); for (const z of [-.07, .07]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .04, 12), mat); p.rotation.x = Math.PI/2; p.position.z = z; g.add(p); }
@@ -7378,7 +7386,7 @@ function updOceanWorld(o){
       const walking = !!p.pace, yawTo = near && !walking ? Math.atan2(plx - x, plz - z) : walking ? (Math.cos(time*.35) > 0 ? Math.PI/2 : -Math.PI/2) : Math.PI/2;
       p.yaw = p.yaw == null ? yawTo : lerpAngle(p.yaw, yawTo, .12);
       const recoil = p.role === 'gunner' ? Math.max(0, (p.kick || 0) - time)*.6 : 0;
-      m.position.set(x - Math.sin(p.yaw)*recoil, h + 1.13, z - Math.cos(p.yaw)*recoil); m.rotation.set(0, p.yaw - Math.PI/2, Math.PI/2);
+      m.position.set(x - Math.sin(p.yaw)*recoil, h + 1.2, z - Math.cos(p.yaw)*recoil); m.rotation.set(0, p.yaw - Math.PI/2, Math.PI/2);
       poseWalk(m, walking ? time*3 : 0, walking); } }
   { const balls = (o.balls || []).filter(b => !b.done);   // cannonballs in flight
     balls.forEach((b, i) => { let m = ballPool[i]; if (!m){ m = new THREE.Mesh(new THREE.SphereGeometry(.22, 12, 10), std(0x1b1b1b, .4, .6)); m.castShadow = true; ballPool.push(m); oceanWorld.add(m); }
@@ -7671,31 +7679,31 @@ function render3D(dt){
         u.legs.ll.kn.rotation.z=-.3; u.legs.rl.kn.rotation.z=-.3;
         u.arms.la.sh.rotation.set(0,1.35,Math.PI); u.arms.ra.sh.rotation.set(0,-1.35,Math.PI); }
     } else if (ocean.onLand){   // standing on the island
-      const gy = landY(ocean), human = m.userData.kind === 'swimmer';
+      const gy = landY(ocean) + footLift(ocean), human = m.userData.kind === 'swimmer';
       if (ocean.sleeping){ m.position.set(px, gy + ({ swimmer:.62, turtle:.6, otter:.64, dolphin:.76 }[m.userData.kind] || .6), pz);   // lying in bed, the swimmer on their back
         m.rotation.order = 'YXZ'; m.rotation.set(human ? Math.PI : 0, -ocean.ang, 0); poseWalk(m, 0, false); }
       else if (ocean.sitting != null){ m.position.set(px, gy + (human ? .78 : .5), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // sitting on the chair
         if (human) for (const l of ['ll', 'rl']){ m.userData.legs[l].hp.rotation.z = 1.5; m.userData.legs[l].kn.rotation.z = -1.5; } }
       else if (ocean.workout) poseWork(m, px, gy, pz, human);   // working out, DJing, on stage
       else if (ocean.flexT > time && !ocean.walking) poseFlex(m, px, gy, pz, human);   // showing off your muscles
-      else if (ocean.hugT > time && (heldItem === 'teddy' || treat?.act === 'hug')){ m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
+      else if (ocean.hugT > time && (heldItem === 'teddy' || treat?.act === 'hug')){ m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang + Math.sin(time*5)*.15, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // hugging the teddy
         if (human){ const u = m.userData; u.arms.la.sh.rotation.set(HUG.sx, HUG.sy, HUG.sz); u.arms.ra.sh.rotation.set(-HUG.sx, -HUG.sy, HUG.sz); u.arms.la.el.rotation.set(HUG.ex, HUG.ey, HUG.ez); u.arms.ra.el.rotation.set(-HUG.ex, -HUG.ey, HUG.ez); }
         drawHearts(px, gy + 2, pz, dt); }
       else if (ocean.skating){ const v = Math.hypot(ocean.vx, ocean.vy)/METERS, sp = time - (ocean.spinT || -9) < 1.2 ? (time - ocean.spinT)/1.2 : -1;   // skating: gliding along, arms out for balance (and twirling)
-        m.position.set(px, gy + (human ? 1.13 : .12) + .05, pz); m.rotation.set(0, -ocean.ang - (sp >= 0 ? (1 - Math.cos(sp*Math.PI))*TAU : 0), human ? Math.PI/2 : 0);
+        m.position.set(px, gy + (human ? 1.2 : .12) + .05, pz); m.rotation.set(0, -ocean.ang - (sp >= 0 ? (1 - Math.cos(sp*Math.PI))*TAU : 0), human ? Math.PI/2 : 0);
         ocean.skatePh = (ocean.skatePh || 0) + dt*Math.min(4.5, v*1.3); poseWalk(m, ocean.skatePh, v > .4 && sp < 0);
         if (human){ const u = m.userData, up = sp >= 0 ? Math.sin(sp*Math.PI)*.6 : 0; u.arms.la.sh.rotation.set(0, 1.3 - up, up*2); u.arms.ra.sh.rotation.set(0, -1.3 + up, up*2); u.arms.la.el.rotation.set(0, 0, 0); u.arms.ra.el.rotation.set(0, 0, 0); } }
-      else if (ocean.dancing && !ocean.walking){ m.position.set(px, gy + (human ? 1.13 : .12) + Math.abs(Math.sin(time*6.5))*.08, pz); m.rotation.set(0, -ocean.ang + Math.sin(time*2)*.6, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // dancing
+      else if (ocean.dancing && !ocean.walking){ m.position.set(px, gy + (human ? 1.2 : .12) + Math.abs(Math.sin(time*6.5))*.08, pz); m.rotation.set(0, -ocean.ang + Math.sin(time*2)*.6, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // dancing
         if (human){ const u = m.userData, a = Math.sin(time*6.5); u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
       else if (ocean.bison){ const bb = ocean.bison; m.position.set(px, bb.position.y + (human ? 1.55 : 1.2), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);   // riding the bison
         if (human) for (const l of ['ll', 'rl']){ m.userData.legs[l].hp.rotation.z = 1.1; m.userData.legs[l].kn.rotation.z = -1.3; } m.position.y += ocean.walking ? Math.abs(Math.sin(ocean.walkPh))*.12 : 0; }
-      else if (ocean.climb){ m.position.set(px, gy + 1.13 + ocean.climb.h, pz); m.rotation.set(0, -ocean.ang, Math.PI/2); if (ocean.climb.h >= ocean.climb.top) poseWalk(m, 0, false); else poseClimb(m, ocean.climb.ph); }   // on the rope ladder, standing up in the lookout at the top
-      else { m.position.set(px, gy + (human ? 1.13 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0);
+      else if (ocean.climb){ m.position.set(px, gy + 1.2 + ocean.climb.h, pz); m.rotation.set(0, -ocean.ang, Math.PI/2); if (ocean.climb.h >= ocean.climb.top) poseWalk(m, 0, false); else poseClimb(m, ocean.climb.ph); }   // on the rope ladder, standing up in the lookout at the top
+      else { m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0);
       poseWalk(m, ocean.walkPh || 0, ocean.walking); }
     } else if (ocean.vehicle){   // sitting in your boat (inside the submarine you're hidden)
       const V = VEH[ocean.vehicle], human = m.userData.kind === 'swimmer';
       const at = (V.at || 0)*Math.cos(ocean.ang), atz = (V.at || 0)*Math.sin(ocean.ang);
-      m.position.set(px + at, (V.sub ? -dep : wy) + V.seat + (human ? (V.sit ? .3 : 1.13) : .05), pz + atz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);
+      m.position.set(px + at, (V.sub ? -dep : wy) + V.seat + (human ? (V.sit ? .3 : 1.2) : .05), pz + atz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); poseWalk(m, 0, false);
       if (human && V.sit){ const u = m.userData; for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.45; u.legs[l].kn.rotation.z = 0; }   // sitting, legs out in front
         u.arms.la.sh.rotation.set(0, 0, 1.9 + Math.sin(ocean.swimPh*2)*.3); u.arms.ra.sh.rotation.set(0, 0, -1.9 + Math.sin(ocean.swimPh*2)*.3); }   // hands on the paddle
     } else if (ocean.ride && rideModel){   // holding the dorsal fin, lying along the dolphin's back

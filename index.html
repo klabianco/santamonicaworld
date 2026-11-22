@@ -724,6 +724,7 @@
       <button id="resumeBtn" class="btn primary" type="button">Keep swimming</button>
       <button id="shopBtn" class="btn primary" type="button">Dive Shop</button>
       <button id="homeBtn" class="btn primary" type="button" hidden>Go to my island</button>
+      <button id="promBtn" class="btn primary" type="button" hidden>Back to the Promenade</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
       <button id="switchBtn" class="btn secondary" type="button" hidden>Switch swimmer</button>
@@ -2427,6 +2428,11 @@ $('bZoomOut').onclick = () => { buildZoom = Math.min(30, buildZoom + 3); };
 // Menu: jump straight to your island once you've found it
 $('homeBtn').onclick = () => { const o = ocean; if (!o) return; closePanel(); o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.x = HOUSE.x; o.y = HOUSE.y + (HOUSE.r - 110); o.vx = o.vy = 0; o.depth = 0; o.onLand = true; o.homeDone = true;
   o.onShip = false; o.onBoat = null; o.ride = null; o.ang = -Math.PI/2; camInit = false; banner('Welcome home!', 'Press Build to build around your house'); };
+$('promBtn').onclick = () => { const o = ocean; if (!o) return; closePanel();   // lost out at sea? straight back to where every trip starts (the boat waits for you at sea)
+  if (o.car){ const c = o.car; parkCar({ x: c.x, y: c.y, ang: c.ang, h: c.h, color: c.color }); o.car = null; myCar.visible = false; }   // (your car stays parked where you left it)
+  o.vehicle = null; o.sitting = null; o.sleeping = null; o.bison = null; o.workout = null; o.skates = false; o.onShip = false; o.onBoat = null; o.ride = null; o.climb = null; o.jumpY = 0; o.jumpV = 0; o.glide = false;
+  const [s, t] = PROM_START, [x, y] = landXY(s, t), [dx, dy] = landXY(PROM_DINOS[1][0], PROM_DINOS[1][1]); Object.assign(o, { x, y, vx: 0, vy: 0, depth: 0, onLand: true, gh: landH(s, t), ang: Math.atan2(dy - y, dx - x) });
+  walkRef = landH(s, t) + .5; camHead = o.ang; camInit = false; banner('Back on the Promenade!', 'Santa Monica Blvd and the 3rd Street Promenade'); };
 function landY(o){ if (o.onBoat){ const bt = o.onBoat; return waveH(bt.x*U, bt.y*U, OC.amp) - .15 + .27; }
   if (o.onShip){ const [lx, lz] = shipLocal(o.x, o.y); return SHIP.keelY + (shipDeckH(lx, lz) ?? 3); } return groundAt(o.x, o.y) + (o.onLand ? o.blockShow || 0 : 0); }   // standing on your blocks
 function chestsNear(o){ const out = [], cx = Math.floor(o.x/CH), cy = Math.floor(o.y/CH);
@@ -7903,7 +7909,7 @@ function renderPanel(){
     ? ZONES.map((z,i) => save.worlds.includes(i)
       ? `<span class="wchip on" style="background:rgb(${z.water.join(',')})">${z.name}</span>` : `<span class="wchip">??? world</span>`).join('')
     : `<span class="wchip">7 ocean worlds are waiting past the gate</span>`;
-  $('homeBtn').hidden = !(mode === 'ocean' && (save.houseFound || save.homeRuns));
+  $('homeBtn').hidden = !(mode === 'ocean' && (save.houseFound || save.homeRuns)); $('promBtn').hidden = mode !== 'ocean';
   $('logoutBtn').hidden = !(STANDALONE && fbAuth && account); $('switchBtn').hidden = $('shareBtn').hidden = !(STANDALONE && fbAuth && account && save.sid); $('moveBtn').hidden = STANDALONE;
   $('saveInfo').textContent = STANDALONE ? (fbAuth && account ? `Logged in as ${fbAuth.name}. Your swimmer saves to your account.` : 'Not logged in. Progress saves on this device only.') : account ? 'Progress saves to your account, so you can continue on any device.'
     : 'Progress saves on this device. Use Continue on the title screen to log in and keep it on your account.';

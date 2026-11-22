@@ -259,8 +259,14 @@
   .item .lvl i.legend.on{background:var(--gold)}
   .item .lvl span{margin-left:4px}
   .item p.next{color:var(--deep)}
-  #mapCanvas,#worldCanvas{width:100%;max-width:100%;height:auto;border-radius:14px;background:#e9d8b0}
-  #worldCanvas{background:#bfe0ee;max-width:420px;display:block;margin:0 auto}
+  .panel.mappanel{max-width:940px;width:calc(100vw - 24px);padding:12px 14px}
+  .maphead{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.maphead h2{margin:0}
+  #mapFind{flex:1;min-width:180px;font:inherit;font-size:16px;padding:8px 12px;border-radius:12px;border:2px solid rgba(8,43,69,.18)}
+  .mapwrap{position:relative;margin-top:8px}
+  #mapCanvas{display:block;width:100%;height:min(58vh,560px);border-radius:14px;background:#9fd3ea;touch-action:none;cursor:grab}
+  .mapzoom{position:absolute;right:8px;top:8px;display:grid;gap:6px}.mapzoom button{width:40px;height:40px;border-radius:12px;border:0;background:#fff;font:900 22px Nunito,sans-serif;box-shadow:0 2px 8px rgba(8,43,69,.25);cursor:pointer}
+  .mappick{position:absolute;left:8px;right:56px;bottom:8px;display:flex;gap:10px;align-items:center;justify-content:space-between;background:rgba(255,255,255,.96);border-radius:14px;padding:8px 10px;box-shadow:0 2px 10px rgba(8,43,69,.25)}
+  .maplist{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:thin}.maplist button{flex:none;border:0;border-radius:999px;background:#eef6fa;padding:6px 11px;font:700 14px Nunito,sans-serif;cursor:pointer;white-space:nowrap}
   .ridebtn small{font-family:var(--body);font-weight:900;font-size:12px;background:#fff;border-radius:8px;padding:2px 7px}
   .banner{position:fixed;left:50%;top:22%;transform:translate(-50%,0);text-align:center;pointer-events:none;
     color:var(--foam);text-shadow:0 3px 0 rgba(8,43,69,.55);width:min(92vw,560px)}
@@ -683,15 +689,15 @@
 </div>
 
 <div id="mapPanel" class="overlay" hidden>
-  <div class="panel small">
-    <h2>Your sea map</h2>
-    <canvas id="mapCanvas" width="600" height="420" aria-label="Pieces of the map to your house"></canvas>
-    <h2>Where these places really are in Santa Monica Bay</h2>
-    <canvas id="worldCanvas" width="520" height="640" aria-label="Map of Santa Monica Bay with the places you have found"></canvas>
-    <p id="worldNote" class="explain"></p>
-    <p class="res-line">Santa Monica's streets and buildings © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · ground heights from the USGS</p>
+  <div class="panel mappanel">
+    <div class="maphead"><h2>Map</h2><input id="mapFind" type="search" placeholder="Find a place: Barnes, ice rink, home..." autocomplete="off" aria-label="Find a place"></div>
+    <div class="mapwrap"><canvas id="mapCanvas" aria-label="Map of Santa Monica: drag to move, pinch or + and − to zoom, tap a place"></canvas>
+      <div class="mapzoom"><button id="mapIn" type="button" aria-label="Zoom in">+</button><button id="mapOut" type="button" aria-label="Zoom out">−</button><button id="mapMe" type="button" aria-label="Show where I am">📍</button></div>
+      <div id="mapPick" class="mappick" hidden><b id="mapPickName"></b><button id="mapGo" class="btn primary" type="button">➡️ Take me there</button></div></div>
+    <div id="mapList" class="maplist"></div>
     <p class="res-line" id="mapNote"></p>
-    <div class="row2"><button id="mapClose" class="btn primary" type="button">Back to swimming</button></div>
+    <p class="res-line">Streets and buildings © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors · ground heights from the USGS</p>
+    <div class="row2"><button id="mapClose" class="btn primary" type="button">Close the map</button></div>
   </div>
 </div>
 
@@ -2311,6 +2317,7 @@ const GUIDE_HERE = { grotto: [8, 'Look for the door deep under water'], eagleroc
 // what the gold arrow points at: home (after someone gives you directions), else the league goal you picked, else the quest the quest chip shows
 let homeGuide = false;
 function drawGuideArrow(o){
+  if (mapGuide){ if (Math.hypot(mapGuide.x - o.x, mapGuide.y - o.y) < 5*METERS){ banner("You're here!", mapGuide.name); mapGuide = null; return; } return arrowTo(o, mapGuide.x, mapGuide.y, mapGuide.name); }
   if (aptGuide){ const [x, y] = landXY(HOME_APT.front - 3, HOME_APT.mid); if (Math.hypot(x - o.x, y - o.y) < 6*METERS || inHomeBuilding(o)){ aptGuide = false; banner("You're home! 🏠", 'Up the steps to apartment 303'); return; } return arrowTo(o, x, y, 'Home'); }
   if (homeGuide){ if (Math.hypot(HOUSE.x - o.x, HOUSE.y - o.y) < 20*METERS || o.onLand && onHome(o)){ homeGuide = false; return; } return arrowTo(o, HOUSE.x, HOUSE.y, 'Your house'); }
   if (!leagueGuide || !leagueTrack){ const qt = save.board?.[questPick] && questTarget(save.board[questPick]); if (qt) arrowTo(o, qt.x, qt.y, qt.label); return; }   // otherwise: the quest you're on
@@ -2630,7 +2637,78 @@ function drawWorldMap(){   // (the bay map: the real places, at their real spots
   g.textBaseline = 'alphabetic';
   $('worldNote').textContent = `${save.worlds.length} of 7 places found. They're all real places in Santa Monica Bay. In Santa Monica World they're squeezed close together so you can swim from one to the next.`;
 }
-function openMap(){ if (mode !== 'ocean') return; paused = true; drawSeaMap(); drawWorldMap(); $('mapPanel').hidden = false; resetPick(); }
+/* The map (on the phone and in the menu): one real map of Santa Monica and the bay. Drag to move, pinch / + / − to zoom,
+   📍 to find yourself. Every place you can go is on it; tap one (or search for it) and the gold arrow takes you there. */
+let mapV = null, mapSel = null, mapGuide = null;
+const MAP_CAT_E = { food: '🍔', icecream: '🍦', froyo: '🍦', candy: '🍬', bakery: '🥐', clothes: '👕', shoes: '👟', books: '📚', toys: '🧸', tech: '📱', gym: '💪', movies: '🎬', theatre: '🎭', beauty: '💄', gift: '🎁', gacha: '🥚', golf: '⛳', illusions: '🌀', pickle: '🏓', shades: '🕶️', tattoo: '🐉', vr: '🥽', gallery: '🖼️', star: '⭐' };
+function mapPlaces(){ if (mapPlaces.L) return mapPlaces.L; const L = [], add = (name, e, s, t, big = 1, more = '') => { const [x, y] = landXY(s, t); L.push({ name, e, x, y, big, more }); };
+  add('Santa Monica Pier', '🎡', 330, 0, 3); add('Pacific Park (Ferris wheel, roller coaster)', '🎢', -38, 64, 2); add('End of the pier', '🎣', -225, 0, 1);
+  add('3rd Street Promenade', '🛍️', AVES.third, (PROM.t0 + PROM.t1)/2, 3); add('Home: 1045 3rd Street', '🏠', HOME_APT.front - 3, HOME_APT.mid, 3);
+  add('Frost on 5th ice rink', '⛸️', (ICE.site[0] + ICE.site[1])/2, (ICE.site[2] + ICE.site[3])/2, 2); add('Dive Shop (on the beach)', '🤿', ...DIVE_SHOP, 2);
+  add('Santa Monica Place (mall)', '🏬', 700, -105, 2); add('Palisades Park', '🌴', 385, -900, 2); add('California Incline', '🛣️', 360, -1250, 1); add('Santa Monica Beach', '🏖️', 120, -300, 2);
+  if (typeof PHONE_BOOTHS !== 'undefined') for (const b of PHONE_BOOTHS) add(`☎️ Phone booth: ${b.name}`, '☎️', b.s, b.t, 2, 'teleport');
+  for (const r of promRooms()){ if (!r.name || r.cat === 'vacant' || r.cat === 'soon' || /For Lease/.test(r.name)) continue; add(r.name, MAP_CAT_E[r.cat] || '🏬', r.fs + r.inw*Math.min(4, r.D/2), (r.t0 + r.t1)/2, 0); }
+  for (const Lm of LANDMARKS) L.push({ name: Lm.name, e: '⭐', x: Lm.x, y: Lm.y, big: 1, sea: true });
+  return mapPlaces.L = L; }
+function mapSize(){ const cv = $('mapCanvas'), r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); const W = Math.max(200, r.width), H = Math.max(200, r.height); if (cv.width !== Math.round(W*dpr)){ cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr); } return [W, H, dpr]; }
+function drawMap(){ const cv = $('mapCanvas'), g = cv.getContext('2d'), [W, H, dpr] = mapSize(), v = mapV, sc = v.sc;   // sc: pixels per meter
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); const X = x => (x - v.x)/METERS*sc + W/2, Y = y => (y - v.y)/METERS*sc + H/2, ux = px => v.x + (px - W/2)/sc*METERS, uy = py => v.y + (py - H/2)/sc*METERS;
+  g.fillStyle = '#9fd3ea'; g.fillRect(0, 0, W, H);
+  { const y0 = uy(-20), y1 = uy(H + 20), n = 80; g.beginPath(); g.moveTo(W + 10, Y(y0)); for (let k = 0; k <= n; k++){ const y = lerp(y0, y1, k/n); g.lineTo(Math.min(W + 10, X(coastX(y))), Y(y)); } g.lineTo(W + 10, Y(y1)); g.closePath(); g.fillStyle = '#f1e3b8'; g.fill(); }   // the beach
+  // the city: land behind the beach, the streets, then the buildings
+  const P = (s, t) => { const [x, y] = landXY(s, t); return [X(x), Y(y)]; };
+  if (sc > .12){ g.fillStyle = '#ebe6da'; g.beginPath(); for (let t = -4000; t <= 4000; t += 100){ const [a, b] = P(330, t); t === -4000 ? g.moveTo(a, b) : g.lineTo(a, b); } for (let t = 4000; t >= -4000; t -= 100){ const [a, b] = P(4000, t); g.lineTo(a, b); } g.closePath(); g.fill(); }
+  if (sc > .9){ g.fillStyle = '#d6cfc0'; g.strokeStyle = '#c4bba8'; g.lineWidth = 1; for (const b of CITY.bldgs){ const c = b.box; if (!c) continue; const [x0, y0] = P(c[0], c[1]); if (x0 < -300 || x0 > W + 300 || y0 < -300 || y0 > H + 300) continue; g.beginPath(); b.p.forEach(([s, t], i) => { const [x, y] = P(s, t); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath(); g.fill(); } }
+  const RW = [0, 22, 16, 13, 10, 8, 14, 3, 7, 3, 3];
+  for (const pass of [0, 1]) for (const r of CITY.roads){ if (r.c >= 9 && sc < 1.5) continue; if (r.c === 7 && sc < 1) continue; const w = Math.max(r.c <= 2 ? 2.4 : 1.2, (RW[r.c] || 6)*sc*.7);
+    g.lineWidth = pass ? w : w + 2; g.strokeStyle = pass ? (r.c === 6 ? '#f3c7a8' : r.c >= 9 ? '#efe7d2' : '#ffffff') : 'rgba(120,110,95,.35)'; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath(); let vis = false; r.p.forEach(([s, t], i) => { const [x, y] = P(s, t); if (x > -50 && x < W + 50 && y > -50 && y < H + 50) vis = true; i ? g.lineTo(x, y) : g.moveTo(x, y); }); if (vis) g.stroke(); }
+  // the pier
+  { g.strokeStyle = '#8d6e63'; g.lineWidth = Math.max(3, 14*sc); g.lineCap = 'butt'; g.beginPath(); const [a, b] = P(PIER_L.s2, 0), [c, d] = P(PIER_L.s0, 0); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); }
+  // street names, along the streets (once each, where there's room)
+  const used = [], free = (x, y, w, h) => { if (x < 0 || y < 0 || x + w > W || y + h > H) return false; for (const u of used) if (x < u[0] + u[2] && x + w > u[0] && y < u[1] + u[3] && y + h > u[1]) return false; used.push([x, y, w, h]); return true; };
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (sc > .45){ g.font = `800 ${sc > 2 ? 13 : 11}px Nunito, sans-serif`; const done = new Set();
+    for (const r of CITY.roads){ if (!r.name || r.c > 6 || done.has(r.name) && sc < 2) continue; const n = r.p.length; if (n < 2) continue; const i = n >> 1, [a, b] = P(...r.p[Math.max(0, i - 1)]), [c, d] = P(...r.p[i]); const L = Math.hypot(c - a, d - b); if (L < 4) continue;
+      const mx = (a + c)/2, my = (b + d)/2, tw = g.measureText(r.name).width; if (!free(mx - tw/2 - 4, my - 9, tw + 8, 18)) continue; done.add(r.name); let ang = Math.atan2(d - b, c - a); if (ang > Math.PI/2) ang -= Math.PI; if (ang < -Math.PI/2) ang += Math.PI;
+      g.save(); g.translate(mx, my); g.rotate(ang); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(r.name, 0, 0); g.fillStyle = '#5b5446'; g.fillText(r.name, 0, 0); g.restore(); } }
+  // places: the big ones always, shops when you're zoomed in
+  const sel = mapSel; let hits = []; for (const pl of mapPlaces()){ if (pl.sea && sc > 1.5) continue; const x = X(pl.x), y = Y(pl.y); if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+    const show = pl === sel || pl.big >= 3 || (pl.big === 2 && sc > .35) || (pl.big === 1 && sc > .7) || (pl.big === 0 && sc > 2.2); if (!show) continue;
+    const fs = pl.big >= 2 ? 15 : 13; g.font = `${fs + 3}px sans-serif`; g.fillText(pl.e, x, y); hits.push([x, y, pl]);
+    g.font = `800 ${fs}px Nunito, sans-serif`; const tw = g.measureText(pl.name).width; if (pl === sel || free(x - tw/2 - 3, y + 9, tw + 6, fs + 4)){ g.lineWidth = 4; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(pl.name, x, y + 10 + fs/2); g.fillStyle = pl === sel ? '#c2185b' : '#082b45'; g.fillText(pl.name, x, y + 10 + fs/2); } }
+  mapV.hits = hits;
+  if (sel){ const x = X(sel.x), y = Y(sel.y); g.strokeStyle = '#c2185b'; g.lineWidth = 3; g.beginPath(); g.arc(x, y, 16, 0, TAU); g.stroke(); }
+  // you are here (pointing the way you're facing)
+  if (ocean){ const x = X(ocean.x), y = Y(ocean.y), a = ocean.ang; g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = 'rgba(30,136,229,.22)'; g.beginPath(); g.arc(0, 0, 22, 0, TAU); g.fill(); g.fillStyle = '#1e88e5'; g.strokeStyle = '#fff'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(13, 0); g.lineTo(-8, 8); g.lineTo(-4, 0); g.lineTo(-8, -8); g.closePath(); g.fill(); g.stroke(); g.restore(); g.font = "900 13px Nunito, sans-serif"; g.lineWidth = 4; g.strokeStyle = '#fff'; g.strokeText('YOU', x, y - 22); g.fillStyle = '#1e88e5'; g.fillText('YOU', x, y - 22); }
+  // north, and a scale bar
+  g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.arc(26, 26, 17, 0, TAU); g.fill(); g.fillStyle = '#082b45'; g.font = "900 18px Nunito, sans-serif"; g.fillText('N', 26, 27);
+  { const m = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].find(m => m*sc > 70) || 10000, w = m*sc; g.fillStyle = '#082b45'; g.fillRect(14, H - 18, w, 4); g.font = "800 12px Nunito, sans-serif"; g.textAlign = 'left'; g.fillText(m >= 1000 ? `${m/1000} km` : `${m} m`, 14, H - 28); g.textAlign = 'center'; }
+  g.textBaseline = 'alphabetic'; }
+function mapListRender(){ const q = $('mapFind').value.trim().toLowerCase(), box = $('mapList'); box.innerHTML = '';
+  const L = mapPlaces().filter(p => !q ? p.big >= 2 : p.name.toLowerCase().includes(q)).slice(0, 40);
+  for (const pl of L){ const b = document.createElement('button'); b.type = 'button'; b.textContent = `${pl.e} ${pl.name}`; b.onclick = () => mapSelect(pl, true); box.appendChild(b); }
+  if (!L.length){ const s = document.createElement('span'); s.className = 'res-line'; s.textContent = 'Nothing by that name yet'; box.appendChild(s); } }
+function mapSelect(pl, center){ mapSel = pl; if (center){ mapV.x = pl.x; mapV.y = pl.y; mapV.sc = Math.max(mapV.sc, pl.big === 0 ? 2.6 : 1); }
+  $('mapPick').hidden = !pl; if (pl){ const d = ocean ? Math.round(Math.hypot(pl.x - ocean.x, pl.y - ocean.y)/METERS) : 0; $('mapPickName').textContent = `${pl.e} ${pl.name} · ${d >= 1000 ? (d/1000).toFixed(1) + ' km' : d + ' m'} away`; } drawMap(); }
+$('mapGo').onclick = () => { if (!mapSel) return; mapGuide = { x: mapSel.x, y: mapSel.y, name: mapSel.name }; aptGuide = false; leagueGuide = false; homeGuide = false; closeMap(); sfx(700, .08, 'triangle', .05); banner('Follow the gold arrow!', `It points to ${mapSel.name}`); };
+$('mapIn').onclick = () => { mapV.sc = Math.min(12, mapV.sc*1.6); drawMap(); }; $('mapOut').onclick = () => { mapV.sc = Math.max(.02, mapV.sc/1.6); drawMap(); };
+$('mapMe').onclick = () => { if (ocean){ mapV.x = ocean.x; mapV.y = ocean.y; mapV.sc = Math.max(mapV.sc, 1.2); } drawMap(); };
+$('mapFind').oninput = () => { mapListRender(); const q = $('mapFind').value.trim().toLowerCase(); const hit = q && mapPlaces().find(p => p.name.toLowerCase().includes(q)); if (hit) mapSelect(hit, true); };
+{ const cv = $('mapCanvas'), pts = new Map(); let moved = 0, pinch = 0;
+  cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; if (pts.size === 2){ const [a, b] = [...pts.values()]; pinch = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
+  cv.addEventListener('pointermove', e => { const p0 = pts.get(e.pointerId); if (!p0 || !mapV) return; const dx = e.clientX - p0[0], dy = e.clientY - p0[1]; pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size === 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) mapV.sc = clamp(mapV.sc*d/pinch, .02, 12); pinch = d; moved = 99; drawMap(); return; }
+    moved += Math.abs(dx) + Math.abs(dy); mapV.x -= dx/mapV.sc*METERS; mapV.y -= dy/mapV.sc*METERS; drawMap(); });
+  const up = e => { const had = pts.has(e.pointerId); pts.delete(e.pointerId); pinch = 0; if (!had || moved > 8 || !mapV?.hits) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    let best = null, bd = 26; for (const [hx, hy, pl] of mapV.hits){ const d = Math.hypot(hx - x, hy - y); if (d < bd){ bd = d; best = pl; } } mapSelect(best, false); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = 0; });
+  cv.addEventListener('wheel', e => { e.preventDefault(); if (!mapV) return; mapV.sc = clamp(mapV.sc*(e.deltaY < 0 ? 1.15 : 1/1.15), .02, 12); drawMap(); }, { passive: false }); }
+function openMap(){ if (mode !== 'ocean') return; paused = true; $('mapPanel').hidden = false; resetPick();
+  if (!mapV && ocean) mapV = { x: ocean.x, y: ocean.y, sc: ocean.x > coastX(ocean.y) - 2000 ? 1.3 : .08 }; else if (ocean){ mapV.x = ocean.x; mapV.y = ocean.y; }
+  mapSel = null; $('mapPick').hidden = true; $('mapFind').value = ''; mapListRender(); requestAnimationFrame(drawMap);
+  const have = (save.mapPieces || []).length; $('mapNote').textContent = `The blue arrow is you. Drag to look around, pinch or + / − to zoom, tap a place for the way there.${have ? ` Sea map pieces: ${have} of ${MAP_N}.` : ''}`; }
 function closeMap(){ $('mapPanel').hidden = true; paused = false; graceAfterPause(); }
 $('mapClose').onclick = closeMap;
 

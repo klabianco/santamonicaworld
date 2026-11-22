@@ -150,6 +150,17 @@
   .cone b{width:0;height:0;border-left:28px solid transparent;border-right:28px solid transparent;border-top:64px solid #d9a35b}
   .cone p{margin:6px 0 0;font-weight:800;font-size:14px;text-align:center}
   #bookPanel .panel{max-width:860px;width:calc(100% - 32px)}
+  .discrow{display:flex;align-items:center;gap:16px}
+  .disc{width:84px;height:84px;flex:none;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.3);background:radial-gradient(circle,var(--c,#555) 0 17%,#f4f4f0 17.5% 19%,transparent 19.5%),conic-gradient(rgba(255,255,255,.2),transparent 15%,transparent 50%,rgba(255,255,255,.14) 60%,transparent 72%),repeating-radial-gradient(circle,#111 0 2px,#2a2a2a 2px 4px)}
+  .disc.spin{animation:discspin 1.8s linear infinite}
+  @keyframes discspin{to{transform:rotate(360deg)}}
+  #gamePanel .panel{max-width:820px;width:calc(100% - 32px)}
+  .gamewrap{display:flex;gap:18px;align-items:center}
+  #gameBoard{width:100%;max-width:440px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .gameside{flex:1;text-align:center;min-width:150px}
+  #gameDie{font-size:84px;line-height:1}
+  #gameMsg{font-weight:800;margin:10px 0 0}
+  @media (max-width:640px){.gamewrap{flex-direction:column}#gameDie{font-size:56px}}
   .bk{display:flex;border-radius:12px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.3),inset 0 0 0 1px #e2d6bb;background:#fbf6ea;min-height:320px;color:#2b2218}
   .bk .pg{flex:1;padding:24px 28px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
   .bk .l{border-right:2px solid #e2d6bb;background:linear-gradient(90deg,#fbf6ea 60%,#efe5cf)}
@@ -560,6 +571,25 @@
   </div>
 </div>
 
+<div id="musicPanel" class="overlay" hidden>
+  <div class="panel">
+    <div><p class="kicker">Barnes &amp; Noble · Vinyl</p><h2>Listening station</h2></div>
+    <div class="discrow"><div id="musicDisc" class="disc"></div><p class="savechip" id="musicNow"></p></div>
+    <div class="shop" id="musicItems"></div>
+    <div class="row2"><button id="musicClose" class="btn secondary" type="button">Back to the store</button></div>
+  </div>
+</div>
+
+<div id="gamePanel" class="overlay" hidden>
+  <div class="panel">
+    <div><p class="kicker">Board game</p><h2>Snakes &amp; Ladders</h2></div>
+    <p class="savechip">🙂 You vs 🦭 Sammy the Seal. Ladders take you up, snakes slide you down. First to 100 wins!</p>
+    <div class="gamewrap"><canvas id="gameBoard" width="440" height="440"></canvas><div class="gameside"><div id="gameDie">🎲</div><p id="gameMsg"></p></div></div>
+    <div class="row2"><button id="gameRoll" class="btn primary" type="button">🎲 Roll the dice</button><button id="gameNew" class="btn secondary" type="button">New game</button></div>
+    <div class="row2"><button id="gameClose" class="btn secondary" type="button">Put the game away</button></div>
+  </div>
+</div>
+
 <div id="bookPanel" class="overlay" hidden>
   <div class="panel">
     <div class="bk" id="bookPages"><div class="pg l" id="bookL"></div><div class="pg r" id="bookR"></div></div>
@@ -799,6 +829,8 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
 function closeTopWindow(){
   if (!$('shopPanel').hidden) closeShop();
   else if (!$('bookPanel').hidden) closeBook();
+  else if (!$('musicPanel').hidden) closeMusic();
+  else if (!$('gamePanel').hidden) closeGame();
   else if (!$('storePanel').hidden) closeStore();
   else if (!$('leaguePanel').hidden) closeLeague();
   else if (!$('questPanel').hidden) closeQuests();
@@ -4415,7 +4447,7 @@ const STORE_MENU = {
   shoes: [['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h })),
   shades: [['Black', '#111111'], ['Pink', '#f06292'], ['Gold', '#d4a020'], ['Blue mirror', '#2f80ed'], ['Red', '#e53935']].map(([c, h]) => M('🕶️', `${c} sunglasses`, 30, 'wear', { slot: 'shades', col: h })),
   books: 'books',   // (bookshops: read any book for free, or buy one to take with you; see BOOKS)
-  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
+  toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('🪁', 'Kite', 20, 'play', { say: 'Up, up and away!' })],
   tech: [M('📱', 'Phone', 150, 'selfie'), M('🎧', 'Headphones', 80, 'tune'), M('⌚', 'Watch', 100, 'time')],
   beauty: [M('🌸', 'Perfume', 25, 'spritz'), M('💅', 'Nail polish', 15, 'play', { say: 'Your nails look amazing!' }), M('💄', 'Lip gloss', 15, 'play', { say: 'So shiny!' })],
   gift: [M('🔮', 'Snow globe', 20, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('🐚', 'Shell necklace', 15, 'play', { say: 'So pretty!' }), M('🔑', 'Keychain', 8, 'play', { say: 'Jingle jingle!' }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
@@ -4439,8 +4471,8 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
   'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
   'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')] };
-const ACT_DO = { lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
-const ACT_SAY = { eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
+const ACT_DO = { game: 'Play', lick: 'Lick', eat: 'Eat', drink: 'Drink', hug: 'Hug', read: 'Read', play: 'Play', selfie: 'Take a selfie', tune: 'Play music', time: 'Check the time', spritz: 'Spritz' };
+const ACT_SAY = { game: 'Tap Play to play it', eat: 'Tap Eat to eat it', drink: 'Tap Drink to drink it', hug: 'Tap Hug for a big hug', read: 'Tap Read to read it', play: 'Tap Play to play with it', selfie: 'Tap Take a selfie', tune: 'Tap Play music', time: 'Tap Check the time', spritz: 'Tap Spritz' };
 const JOKES = ['Why did the fish blush? Because it saw the ocean\'s bottom!', 'What do you call a dinosaur that is sleeping? A dino-snore!', 'Why don\'t crabs share? Because they\'re shellfish!', 'What did the ocean say to the beach? Nothing, it just waved.',
   'What do you call a fish with no eyes? A fsh!', 'Why did the cookie go to the doctor? It was feeling crummy.', 'What\'s an ice cream\'s favorite day? Sundae!', 'How do you make an octopus laugh? With ten-tickles!'];
 const DINO_FACTS = ['Triceratops had three horns and a big bony frill.', 'Stegosaurus had a brain about the size of a lime!', 'T. rex had teeth as long as bananas.', 'Some dinosaurs had feathers, just like birds. Birds ARE dinosaurs!', 'The biggest dinosaurs were as long as three school buses.'];
@@ -4523,6 +4555,83 @@ function closeBook(){ if (!bookOpen) return; const { id, page, from } = bookOpen
   if (from === 'store' && storeAt){ renderStore(); $('storePanel').hidden = false; pick = 0; showPick(); return; }
   paused = false; graceAfterPause(); showPick(); }
 // ---- doing the real thing in each place: work out at JOHN REED (treadmills, bikes, weights, stretching, the DJ booth), get up on the stage at the theater, try the phones at the tech stores ----
+// ---- real music: famous songs old enough to belong to everyone, played on a little synth (melody, bass and chords) ----
+const noteHz = n => { const m = /^([A-G])(#|b)?(\d)$/.exec(n), i = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (+m[3] + 1)*12; return 440*Math.pow(2, (i - 69)/12); };
+const SONGS = [
+  { title: 'Twinkle, Twinkle, Little Star', by: 'French folk tune (Mozart wrote variations on it)', e: '⭐', c: '#1e3a8a', bpm: 110,
+    mel: 'C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2',
+    ch: 'C C F C F C G C C F C G C F C G C C F C F C G C', cb: 2 },
+  { title: 'Ode to Joy', by: 'Ludwig van Beethoven, 1824', e: '🎻', c: '#7a1f2b', bpm: 120,
+    mel: 'E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 E4:1.5 D4:.5 D4:2 E4 E4 F4 G4 G4 F4 E4 D4 C4 C4 D4 E4 D4:1.5 C4:.5 C4:2',
+    ch: 'C C G G C C G G C C G G C C G C', cb: 2 },
+  { title: 'Für Elise', by: 'Ludwig van Beethoven, 1810', e: '🎹', c: '#2a5934', bpm: 330,
+    mel: 'E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 R C4 E4 A4 B4:2 R E4 G#4 B4 C5:2 R E4 E5 D#5 E5 D#5 E5 B4 D5 C5 A4:2 R C4 E4 A4 B4:2 R E4 C5 B4 A4:6',
+    ch: '- Am E Am - Am E Am', cb: 6, cs: 2 },
+  { title: 'Jingle Bells', by: 'James Lord Pierpont, 1857', e: '🔔', c: '#b71c1c', bpm: 160,
+    mel: 'E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4 D4 E4:4 F4 F4 F4 F4 F4 E4 E4 E4 E4 D4 D4 E4 D4:2 G4:2 E4 E4 E4:2 E4 E4 E4:2 E4 G4 C4 D4 E4:4 F4 F4 F4 F4 F4 E4 E4 E4 G4 G4 F4 D4 C4:4',
+    ch: 'C C C C F C G G C C C C F C G C', cb: 4 },
+  { title: 'Happy Birthday', by: 'Mildred and Patty Hill, 1893', e: '🎂', c: '#d81b60', bpm: 100,
+    mel: 'G4:.75 G4:.25 A4 G4 C5 B4:2 G4:.75 G4:.25 A4 G4 D5 C5:2 G4:.75 G4:.25 G5 E5 C5 B4 A4 F5:.75 F5:.25 E5 C5 D5 C5:3',
+    ch: 'C G G C C F C C', cb: 3, cs: 1 },
+  { title: 'In the Hall of the Mountain King', by: 'Edvard Grieg, 1875', e: '⛰️', c: '#3e2723', bpm: 200, rep: 3, accel: 1.35,
+    mel: 'A3 B3 C4 D4 E4 C4 E4:2 D#4 B3 D#4:2 D4 A#3 D4:2 A3 B3 C4 D4 E4 C4 E4 A4 G4 E4 C4 E4 G4:4',
+    ch: 'Am Am B Bb Am Am C C', cb: 4 },
+  { title: 'The Entertainer', by: 'Scott Joplin, 1902', e: '🎩', c: '#4a148c', bpm: 210,
+    mel: 'D4 D#4 E4 C5:2 E4 C5:2 E4 C5:6 C5 D5 D#5 E5 C5 D5 E5:2 B4 D5:2 C5:6 D4 D#4 E4 C5:2 E4 C5:2 E4 C5:6 A4 G4 F#4 A4 C5 E5:2 D5 C5 A4 D5:6',
+    ch: 'C C C G7 C C D7 G7', cb: 8, cs: 2 } ];
+const chordNotes = c => { const m = /^([A-G][#b]?)(m(?!aj))?(7)?$/.exec(c); if (!m) return null; const r = noteHz(m[1] + '3'), k = [0, m[2] ? 3 : 4, 7, ...(m[3] ? [10] : [])]; return k.map(x => r*Math.pow(2, x/12)); };
+let song = null;   // { g, i, end, from }
+function playSong(i, from = 'store'){ initAudio(); if (!ac) return; stopSong(); if (ac.state === 'suspended') ac.resume();
+  const S = SONGS[i], g = ac.createGain(); g.gain.value = 1; g.connect(ac.destination); const t0 = ac.currentTime + .15;
+  const tone = (f, at, dur, type, vol) => { const o = ac.createOscillator(), e = ac.createGain(); o.type = type; o.frequency.value = f; e.gain.setValueAtTime(.0001, at); e.gain.linearRampToValueAtTime(vol, at + .012);
+    e.gain.exponentialRampToValueAtTime(.0005, at + Math.max(.1, dur)); o.connect(e).connect(g); o.start(at); o.stop(at + dur + .05); };
+  let at = t0; for (let rep = 0; rep < (S.rep || 1); rep++){ const sec = 60/(S.bpm*Math.pow(S.accel || 1, rep)), base = at;
+    let beat = 0; for (const tok of S.mel.split(/\s+/)){ const [n, d] = tok.split(':'), len = +(d || 1); if (n !== 'R'){ const f = noteHz(n); tone(f, base + beat*sec, len*sec*.92, 'triangle', .12); tone(f*2, base + beat*sec, len*sec*.5, 'sine', .025); } beat += len; }
+    if (S.ch){ let b = S.cs || 0; for (const c of S.ch.split(' ')){ const N = chordNotes(c); if (N){ const st = base + b*sec, L = S.cb*sec;
+        tone(N[0]/2, st, Math.min(L, sec*2)*.9, 'triangle', .1); if (S.cb >= 4) tone(N[0]/2, st + L/2, Math.min(L/2, sec*2)*.9, 'triangle', .08);   // the bass
+        for (const f of N) tone(f, st, L*.95, 'sine', .018); }   // and the chord
+      b += S.cb; } }
+    at = base + beat*sec + .25; }
+  song = { g, i, end: at, from }; }
+function stopSong(){ if (!song) return; const g = song.g; song = null; try { g.gain.setTargetAtTime(0, ac.currentTime, .04); setTimeout(() => g.disconnect(), 400); } catch(e){} }
+function openMusic(){ if (paused) return; initAudio(); paused = true; ptr.down = false; renderMusic(); $('musicPanel').hidden = false; pick = 0; showPick(); }
+function closeMusic(){ $('musicPanel').hidden = true; paused = false; graceAfterPause(); showPick(); }
+function renderMusic(){ const box = $('musicItems'); box.innerHTML = ''; const now = song && ac && ac.currentTime < song.end ? SONGS[song.i] : null;
+  $('musicNow').textContent = now ? `Now playing: ${now.title}` : 'Pick a record to play'; $('musicDisc').classList.toggle('spin', !!now); $('musicDisc').style.setProperty('--c', now ? now.c : '#555');
+  SONGS.forEach((S, i) => { const d = document.createElement('div'); d.className = 'item'; d.innerHTML = `<div class="em">${S.e}</div><h3>${htmlText(S.title)}</h3><p>${htmlText(S.by)}</p>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (song?.i === i ? 'secondary' : 'primary'); b.textContent = song?.i === i ? '⏹ Stop' : '▶ Play'; b.onclick = () => { if (song?.i === i) stopSong(); else playSong(i, 'store'); renderMusic(); }; d.appendChild(b); box.appendChild(d); }); }
+// ---- a board game you really play: Snakes & Ladders against Sammy the Seal ----
+const SNL = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 99, 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
+let game = null;   // { pos: [you, Sammy], turn, busy, die, from, msg, won }
+function openGame(from = 'hand'){ if (paused && from !== 'store2') return; initAudio(); game = { pos: [0, 0], turn: 0, busy: false, die: 0, from, msg: 'You go first. Roll the dice!' }; paused = true; ptr.down = false; $('gamePanel').hidden = false; drawGame(); pick = 0; showPick(); }
+function closeGame(){ $('gamePanel').hidden = true; game = null; paused = false; graceAfterPause(); showPick(); }
+const cellXY = (n, cs) => { const r = Math.floor((n - 1)/10), c = (n - 1) % 10, col = r % 2 ? 9 - c : c; return [col*cs + cs/2, (9 - r)*cs + cs/2]; };
+function drawGame(){ const cv = $('gameBoard'), x = cv.getContext('2d'), W = cv.width, cs = W/10;
+  for (let n = 1; n <= 100; n++){ const [cx, cy] = cellXY(n, cs); x.fillStyle = ['#fff3c4', '#c8e6c9', '#bbdefb', '#ffcdd2'][(Math.floor((n - 1)/10) + (n - 1)) % 4]; x.fillRect(cx - cs/2, cy - cs/2, cs, cs);
+    x.fillStyle = '#5a4a36'; x.font = `700 ${cs*.26}px Nunito, sans-serif`; x.textAlign = 'left'; x.textBaseline = 'top'; x.fillText(n === 100 ? '🏁100' : n, cx - cs/2 + 3, cy - cs/2 + 2); }
+  for (const [a, b] of Object.entries(SNL)){ const [x1, y1] = cellXY(+a, cs), [x2, y2] = cellXY(b, cs);
+    if (b > +a){ const ang = Math.atan2(y2 - y1, x2 - x1), ox = Math.sin(ang)*cs*.16, oy = -Math.cos(ang)*cs*.16; x.strokeStyle = '#8d5a3b'; x.lineWidth = cs*.07; x.lineCap = 'round';   // a ladder
+      for (const s of [-1, 1]){ x.beginPath(); x.moveTo(x1 + ox*s, y1 + oy*s); x.lineTo(x2 + ox*s, y2 + oy*s); x.stroke(); }
+      const L = Math.hypot(x2 - x1, y2 - y1), k = Math.max(2, Math.floor(L/(cs*.4))); x.lineWidth = cs*.05; for (let i = 1; i < k; i++){ const f = i/k; x.beginPath(); x.moveTo(x1 + (x2 - x1)*f - ox, y1 + (y2 - y1)*f - oy); x.lineTo(x1 + (x2 - x1)*f + ox, y1 + (y2 - y1)*f + oy); x.stroke(); } }
+    else { x.strokeStyle = '#2e7d32'; x.lineWidth = cs*.16; x.lineCap = 'round'; x.beginPath(); x.moveTo(x1, y1); const mx = (x1 + x2)/2, my = (y1 + y2)/2, nx = -(y2 - y1)*.25, ny = (x2 - x1)*.25;   // a snake
+      x.bezierCurveTo(x1 + (mx - x1)*.5 + nx, y1 + (my - y1)*.5 + ny, mx + (x2 - mx)*.5 - nx, my + (y2 - my)*.5 - ny, x2, y2); x.stroke(); x.strokeStyle = '#a5d6a7'; x.lineWidth = cs*.05; x.setLineDash([cs*.12, cs*.12]); x.stroke(); x.setLineDash([]);
+      x.fillStyle = '#1b5e20'; x.beginPath(); x.arc(x1, y1, cs*.17, 0, Math.PI*2); x.fill(); x.fillStyle = '#fff'; for (const s of [-1, 1]){ x.beginPath(); x.arc(x1 + s*cs*.07, y1 - cs*.04, cs*.04, 0, Math.PI*2); x.fill(); } } }
+  game.pos.forEach((p, i) => { if (!p) return; const [cx, cy] = cellXY(p, cs); x.fillStyle = i ? '#e53935' : '#1e88e5'; x.strokeStyle = '#fff'; x.lineWidth = 3; x.beginPath(); x.arc(cx + (i ? 9 : -9), cy + 6, cs*.2, 0, Math.PI*2); x.fill(); x.stroke();
+    x.font = `${cs*.24}px sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(i ? '🦭' : '🙂', cx + (i ? 9 : -9), cy + 6); });
+  $('gameDie').textContent = game.die ? '⚀⚁⚂⚃⚄⚅'[game.die - 1] : '🎲'; $('gameMsg').textContent = game.msg;
+  $('gameRoll').disabled = game.busy || game.turn !== 0 || !!game.won; $('gameRoll').textContent = game.won ? (game.won === 1 ? '🏆 You won!' : 'Sammy won!') : game.turn ? "Sammy's turn..." : '🎲 Roll the dice'; }
+function rollGame(){ if (!game || game.busy || game.won) return; const who = game.turn; game.busy = true; let k = 0;
+  const spin = setInterval(() => { if (!game){ clearInterval(spin); return; } game.die = 1 + (Math.random()*6|0); sfx(300 + Math.random()*300, .03, 'square', .02); drawGame();
+    if (++k < 9) return; clearInterval(spin); const v = game.die, start = game.pos[who], name = who ? 'Sammy' : 'You';
+    if (start + v > 100){ game.msg = `${name} rolled ${v}. You need exactly ${100 - start} to finish!`; return endTurn(); }
+    let s = 0; const step = setInterval(() => { if (!game){ clearInterval(step); return; } game.pos[who]++; sfx(500 + game.pos[who]*4, .05, 'triangle', .03); drawGame();
+      if (++s < v) return; clearInterval(step); const at = game.pos[who], to = SNL[at];
+      game.msg = `${name} rolled ${v}.`; if (to){ setTimeout(() => { if (!game) return; game.pos[who] = to; if (to > at){ game.msg += ` A ladder! Up to ${to}! 🪜`; [523, 659, 784, 1046].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.06)); }
+          else { game.msg += ` Oh no, a snake! Down to ${to}. 🐍`; sfx(700, .5, 'sawtooth', .03, 0, -500); } drawGame(); setTimeout(endTurn, 500); }, 350); }
+      else endTurn(); }, 230); }, 70); }
+function endTurn(){ if (!game) return; const who = game.turn;
+  if (game.pos[who] === 100){ game.won = who ? 2 : 1; game.busy = false; game.msg = who ? 'Sammy the Seal got to 100 first. Arf! Play again?' : 'You got to 100 first. You win! 🏆'; if (!who){ heartsAt = time; [523, 659, 784, 1046, 1318].forEach((f, i) => sfx(f, .15, 'triangle', .05, i*.1)); } drawGame(); return; }
+  game.turn = 1 - who; game.busy = false; drawGame(); if (game.turn === 1){ game.busy = true; drawGame(); setTimeout(() => { if (!game) return; game.busy = false; rollGame(); }, 900); } }
 // ---- getting stronger at the gym: every lift counts (save.lifts), your arms, shoulders and chest grow, and you can flex ----
 const muscleNow = () => Math.min(1, (save.lifts || 0)/200), strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
 function setMuscle(m, mu){ const u = m.userData; if (u.kind !== 'swimmer' || u.mu === mu) return; u.mu = mu; const a = 1 + 1.3*mu, f = 1 + .6*mu;
@@ -4550,7 +4659,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
-const SPOT = { tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
+const SPOT = { records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
@@ -4559,8 +4668,8 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (o.workout) return { label: o.workout.k === 'stage' ? '⏹ Get off the stage' : o.workout.k === 'dj' ? '⏹ Stop the music' : '⏹ Stop', go: stopWorkout };
   const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
   const r = roomAt(s, t, true); if (!r) return null; const d = (s - r.fs)*r.inw;
-  let best = null, bd = 9; for (const sp of r.spots || []){ const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
-  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'phone' ? tryPhone() : startWorkout(r, best) };
+  let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
+  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
   if (r.cat === 'gym') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
@@ -4618,7 +4727,7 @@ function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData
     const a = Math.sin(time*6.5); m.position.y += Math.abs(a)*.08; m.rotation.y += Math.sin(time*2)*.6; if (!human) return;
     u.arms.la.sh.rotation.set(0, 0, .4 + a*.5); u.arms.ra.sh.rotation.set(0, 0, -.4 + a*.5); u.legs.ll.hp.rotation.z = a*.3; u.legs.rl.hp.rotation.z = -a*.3; } }
 let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
-const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Board game', 25, 'play', { say: 'You won the game!' }), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
+const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'play', { say: 'You finished the puzzle!' }), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
 const storeMenu = r => (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
 function atCounter(o){   // the shop whose counter you're standing at (or null)
   if (!o || !o.onLand || o.car || mode !== 'ocean') return null; const [s, t] = landST(o.x, o.y); if (s < PROM.s0 - 25 || s > PROM.s1 + 25) return null;
@@ -4665,9 +4774,10 @@ function useTreat(){ const o = ocean; if (o?.workout) return workTap(); const it
     if (it.bites <= 0) done(it.act === 'eat' ? 'Yum! All gone' : 'Ahh! All gone', `That ${it.n.toLowerCase()} was so good`); }
   else if (it.act === 'hug'){ o.hugT = time + 2.6; heartsAt = time; banner('Big hug!', 'Your teddy bear loves you'); [784, 988, 1175].forEach((f, i) => sfx(f, .15, 'sine', .04, i*.1)); }
   else if (it.act === 'read') openBook(it.book || 'ocean', 'hand');
+  else if (it.act === 'game') openGame('hand');
   else if (it.act === 'play'){ banner(it.e + ' ' + it.n, it.say || 'Fun!'); [660, 880, 990].forEach((f, i) => sfx(f, .08, 'triangle', .04, i*.08)); }
   else if (it.act === 'selfie') takePhoto();
-  else if (it.act === 'tune'){ [523, 659, 784, 659, 880, 784, 659, 523].forEach((f, i) => sfx(f, .22, 'triangle', .04, i*.2)); banner('🎶 Music!', 'You love this song'); }
+  else if (it.act === 'tune'){ if (song?.from === 'hand'){ stopSong(); banner('Music off', ''); } else { const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner(`🎶 ${SONGS[i].title}`, SONGS[i].by); } }
   else if (it.act === 'time'){ banner(new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'is the time right now'); sfx(1200, .05, 'square', .03); }
   else if (it.act === 'spritz'){ heartsAt = time; banner('Spritz!', 'Mmm, smells lovely'); sfx(3000, .2, 'sawtooth', .01, 0, -1500); } }
 const treatTex = {};
@@ -4675,7 +4785,7 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
   const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : treat ? `${treat.e} ${ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
-  placeNow = paused ? null : placeAction(o); const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
+  placeNow = paused ? null : placeAction(o); if (song && ac && ac.currentTime > song.end){ song = null; if (!$('musicPanel').hidden) renderMusic(); } const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
   if (!treatObj){ treatObj = new THREE.Group(); const cn = new THREE.Mesh(new THREE.ConeGeometry(.05, .17, 14), std(0xd9a35b, .8)); cn.rotation.x = Math.PI; cn.position.y = -.07; treatObj.add(cn);
     const sc = [0, 1, 2].map(i => { const s = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), std(0xffffff, .6)); s.position.y = .03 + i*.075; treatObj.add(s); return s; });
@@ -4690,6 +4800,8 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
   if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
   treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }
+$('musicClose').onclick = closeMusic; $('gameRoll').onclick = () => { if (game && game.turn === 0) rollGame(); }; $('gameClose').onclick = closeGame;
+$('gameNew').onclick = () => { if (!game || game.busy) return; Object.assign(game, { pos: [0, 0], turn: 0, die: 0, won: 0, msg: 'New game! You go first.' }); drawGame(); };
 $('bookPrev').onclick = () => turnBook(-1); $('bookNext').onclick = () => turnBook(1); $('bookClose').onclick = closeBook;
 $('buyBtn').onclick = () => doPlace(); $('treatBtn').onclick = () => useTreat(); $('storeClose').onclick = closeStore;
 const BIG_SHOP = { 'Barnes & Noble': { w: 2, half: 7.6, deep: 18, down: true } };   // (the real one is 21,000 square feet over two floors, in the old Athleta at 1318: a staircase in the middle goes down to the kids' books, toys, games and records)
@@ -4843,6 +4955,8 @@ function buildRooms(g, P3){
         low(T0, 1, 1, 5.5, 'TOYS & GAMES'); low(T0, 1, 5.8, D - .6, "KIDS' BOOKS"); low(T1, -1, D/2 + 1, D - .6, "KIDS' BOOKS");
         for (let d = 1.1; d < 5.3; d += .38) for (let k = 0; k < 3; k++) B2(d, d + .3, T0 + .45, T0 + .62, .12 + k*.42 + .02, .12 + k*.42 + .3, pick());   // board games and toys on the shelves
         for (const d0 of [1.3, 3.1]){ B2(d0, d0 + 1.4, T1 - 1.5, T1 - .7, 0, .8, 0x2d2d2d); for (let d = d0 + .08; d < d0 + 1.35; d += .07) B2(d, d + .015, T1 - 1.42, T1 - .78, .8, 1.08, [0x111111, 0xd81b60, 0x1e88e5, 0xfdd835, 0x222222][((d*29)|0) % 5]); }   // record bins
+        B2(2.75, 3.05, T1 - 1.45, T1 - .75, 0, .95, 0x1d1d1f); box(props, S(2.78), S(3.02), T1 - 1.4, T1 - 1.05, yB + .95, yB + .98, 0x333333); box(props, S(2.85), S(2.95), T1 - 1.3, T1 - 1.15, yB + .98, yB + .99, 0xd81b60);   // the listening station (a record player)
+        r.spots = [{ k: 'records', d: 2.9, t: T1 - 1.9, rad: 1.8, down: true }, { k: 'boardgame', d: D - 2.9, t: tm + 1.3, rad: 1.4, down: true }];
         across('sign:VINYL & DVDS|6', .32, T1 - 2.4, T1 - .3, yB + 2.3, yB + 2.65, 1, 1, inw > 0);
         flat('rug', D - 4.6, D - 1.2, tm - 1.7, tm + 1.7, yB + .012, 1, 1);   // the reading rug, a little table, and big soft toys
         B2(D - 3.3, D - 2.5, tm + .9, tm + 1.7, 0, .5, 0xfdd835); for (const [dd, tt] of [[D - 3.6, tm + 1.3], [D - 2.2, tm + 1.3]]) B2(dd - .15, dd + .15, tt - .15, tt + .15, 0, .3, 0x1e88e5);
@@ -5173,7 +5287,7 @@ function updCoast(o){
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
-  { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
+  { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
     const dn = !!(r?.down && downIn(o)); if (dn !== !!updCoast.down){ updCoast.down = dn; if (dn) banner('Downstairs', "Kids' books, toys, games and records"); else if (r?.down) banner('Upstairs', 'Fiction, mysteries, sci-fi and New & Noteworthy'); } }   //   (and going downstairs)
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
@@ -7003,7 +7117,7 @@ function limbsNow(){ return mode === 'race' ? race && race.limbs : mode === 'poo
 
 /* ---------- Keyboard menus: up/down to choose, Space or Enter to press ---------- */
 let pick = 0;
-function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
+function menuEl(){ for (const id of ['loginPanel','gatePanel','movePanel','shopPanel','bookPanel','musicPanel','gamePanel','storePanel','leaguePanel','questPanel','mapPanel','panel','results','choose','title']) if (!$(id).hidden) return $(id); return null; }
 function menuBtns(){ const el = menuEl(); return el ? [...el.querySelectorAll('.btn')].filter(b => !b.disabled) : []; }
 function showPick(){ const bs = menuBtns(); bs.forEach((b,i) => b.classList.toggle('picked', i === pick)); }
 function resetPick(){ pick = 0; showPick(); }

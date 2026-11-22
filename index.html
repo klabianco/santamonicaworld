@@ -5651,7 +5651,7 @@ const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landS
 /* Phone booths: step inside one and dial another, and you're zapped there. San Francisco's is coming next. */
 const PHONE_BOOTHS = [
   { id: 'prom', name: '3rd Street Promenade', s: 645.4, t: -458, face: 1, more: 'at Santa Monica Boulevard' },
-  { id: 'pier', name: 'Santa Monica Pier', s: 87.5, t: -3.4, face: 0, more: "at Route 66's End of the Trail sign", deck: true },
+  { id: 'pier', name: 'Santa Monica Pier', s: 85, t: 5.2, face: 0, more: "at Route 66's End of the Trail sign", deck: true },
   { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
   { id: 'sf', name: "San Francisco: Fisherman's Wharf", soon: true, more: 'Being built next! Drive or zap there soon' } ];
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };

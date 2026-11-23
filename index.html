@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7032,7 +7032,8 @@ const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 &&
    between, a tall strip of dark glass by the corner over the entrance, the black SHANGRI-LA marquee, and the top floor set back behind rails. */
 const OCEAN_HOTELS = [{ name: 'georgian', box: [424.6, -352.0, 455.6, -333.6], c: 0x5ebcc5 }, { name: 'shangrila', box: [422.0, -609.6, 467.2, -564.8], c: 0xf3f3ef, round: [422.0, -609.6, 6] },
   { name: 'pacific', box: [420.6, -320.2, 458.4, -273.8], c: 0xf4f4f0 }, { name: 'oceanview', box: [420.8, -265.4, 467.0, -233.4], c: 0xe8d8b8 },
-  { name: 'clocktower', box: [594.0, -457.8, 610.4, -426.8], c: 0xefeadf, ht: 32 }];   // (the Clock Tower Building on Santa Monica Blvd: see buildClockTower)   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
+  { name: 'clocktower', box: [594.0, -457.8, 610.4, -426.8], c: 0xefeadf, ht: 32 },
+  { name: 'shoepalace', box: [558.4, -404.4, 589.0, -357.4], c: 0xe3d2b2 }, { name: 'britannia', box: [716.8, -404.2, 735.2, -372.0], c: 0x7a6658 }];   // (Santa Monica Blvd: Shoe Palace's Spanish Baroque front and the Britannia pub: see buildSMBlvd)   // (the Clock Tower Building on Santa Monica Blvd: see buildClockTower)   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
 function buildOceanHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const txt = (text, w, h, fg, font, bg) => new THREE.MeshBasicMaterial({ transparent: !bg, map: canvasTex(1024, Math.round(1024*h/w), x => { const H = Math.round(1024*h/w); if (bg){ x.fillStyle = bg; x.fillRect(0, 0, 1024, H); } x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(text, 512, H/2 + 4); }, false) });
@@ -7096,6 +7097,39 @@ function buildClockTower(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
   { const bl = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 6.6), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: canvasTex(128, 768, x => { x.fillStyle = '#6e1f2a'; x.fillRect(0, 0, 128, 768); x.textAlign = 'center'; x.fillStyle = '#ffd36b'; x.font = 'italic bold 44px Georgia, serif'; x.fillText('The', 64, 70); x.font = 'bold 70px Georgia, serif'; [...'MISFIT'].forEach((ch, i) => x.fillText(ch, 64, 160 + i*78)); x.fillStyle = '#ff3a3a'; x.font = 'bold 26px sans-serif'; x.fillText('GOOD FOOD', 64, 670); x.fillText('FULLY', 64, 702); x.fillText('LICENSED', 64, 734); }, false) }));
     bl.position.set(...P3(s1 - .6, f1 + 1.1, base + 7.6)); bl.rotation.y = Math.PI/2; grp.add(bl); bx(s1 - .65, s1 - .55, f1, f1 + .6, 7, 7.1, 0x333333); }
   for (const [a, c] of [[s0 + 1, s0 + 6], [s0 + 7.5, s0 + 12.5]]){ const aw = new THREE.Mesh(new THREE.BoxGeometry(c - a, .08, 1.4), mat(0x151515, .7)); aw.position.set(...P3((a + c)/2, f1 + .75, base + 3.6)); aw.rotation.x = -.35; grp.add(aw); }
+  g.add(grp); mergeStatic(grp); }
+/* Santa Monica Blvd by the Promenade, from photos (Wikimedia Commons, Sept 2022):
+   Shoe Palace (between 2nd and 3rd, south side): a cream Spanish Baroque front, its tall middle bay heaped with carved ornament round a
+   big round-headed window over an iron balcony, a red tile roof, painted tiles at the foot, the red SHOE PALACE blade and the black
+   marquee; next to it a plain stepped-parapet front over the adidas shop.
+   The Britannia pub (east of 3rd): painted brick with its white name board, a red awning, yellow umbrellas and a white picket patio. */
+function buildSMBlvd(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), H = n => OCEAN_HOTELS.find(h => h.name === n);
+  const bx = (a0, a1, c0, c1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m || mat(hex)); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const sign = (w, h, draw, s, t, y, ry, double) => { const me = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ side: double ? THREE.DoubleSide : THREE.FrontSide, map: canvasTex(512, Math.round(512*h/w), draw, false) })); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
+  { const [s0, , s1] = H('shoepalace').box, f = -404.5, base = landH(570, f - 2), C = 0xe9dcc0, C2 = 0xd9c7a2, O = 0xcfb98f, a = 562.5, b = 575;   // (its front faces the street, toward smaller t)
+    bx(a, b, f - .3, f, 0, 15.6, C, base); for (const s of [a, b - .9]) bx(s, s + .9, f - .7, f, 0, 16.4, O, base);   // the tall ornate bay, framed in carved pilasters
+    for (let k = 0; k < 6; k++) bx(a + 1 + k*1.95, a + 1.7 + k*1.95, f - .55, f - .3, 13.6, 15.6 + (k % 2)*.6, O, base);   // (a crest of ornament along its top)
+    for (const s of [a + .3, b - .6]) { const fn = new THREE.Mesh(new THREE.ConeGeometry(.28, 1.4, 6), mat(O)); fn.position.set(...P3(s + .15, f - .4, base + 17.1)); grp.add(fn); }
+    const c = (a + b)/2; bx(c - 2, c + 2, f - .5, f - .3, 6.3, 12.4, O, base); bx(c - 1.5, c + 1.5, f - .55, f - .45, 6.6, 10.6, 0x31404a, base, mat(0x31404a, .3, .3));   // the big window and its carved surround
+    { const ar = new THREE.Mesh(new THREE.CircleGeometry(1.5, 16, 0, Math.PI), mat(0x31404a, .3, .3)); ar.position.set(...P3(c, f - .56, base + 10.6)); ar.rotation.y = Math.PI; grp.add(ar); }
+    bx(c - 2, c + 2, f - 1.3, f - .3, 6.2, 6.35, 0x262626, base); for (let s = c - 1.9; s <= c + 1.9; s += .32) bx(s, s + .04, f - 1.3, f - 1.26, 6.35, 7.2, 0x262626, base); bx(c - 2, c + 2, f - 1.32, f - 1.26, 7.15, 7.22, 0x262626, base);   // the iron balcony
+    for (const s of [a + 1.5, b - 2.7]) bx(s, s + 1.2, f - .45, f - .3, 7, 9.2, 0x31404a, base, mat(0x31404a, .3, .3));
+    for (let y = 5; y < 15; y += .9) for (const s of [a + .2, b - .7]){ bx(s - .1, s + .6, f - .95, f - .7, y, y + .45, 0xd8c39a, base); }   // (the carved blocks stacked up the pilasters)
+    for (let s = c - 2.3; s <= c + 1.9; s += .6){ bx(s, s + .4, f - .75, f - .5, 12.4, 12.9, 0xd8c39a, base); bx(s + .1, s + .3, f - .75, f - .5, 5.6, 6.1, 0xd8c39a, base); }   // (and round the big window)
+    for (const s of [c - 2.6, c + 2.1]) bx(s, s + .5, f - .8, f - .3, 6.2, 12.9, 0xd8c39a, base);
+    const tile = canvasTex(64, 64, x => { const C = ['#2f6f9f', '#e8c34a', '#2f8f6f', '#f4efe2']; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++){ x.fillStyle = C[(i + j) % 4]; x.fillRect(i*16, j*16, 16, 16); x.fillStyle = '#b8452f'; x.beginPath(); x.arc(i*16 + 8, j*16 + 8, 3, 0, TAU); x.fill(); } });
+    tile.wrapS = tile.wrapT = THREE.RepeatWrapping; tile.repeat.set(3, 1); bx(a + .9, a + 3.2, f - .36, f - .3, 0, 2.4, 0, base, new THREE.MeshStandardMaterial({ map: tile, roughness: .4 })); bx(b - 3.2, b - .9, f - .36, f - .3, 0, 2.4, 0, base, new THREE.MeshStandardMaterial({ map: tile, roughness: .4 }));   // painted tiles at the foot
+    bx(a - 6, a, f + .2, f + 7, 12.3, 12.5, 0xb5532f, base); { const r = new THREE.Mesh(new THREE.BoxGeometry(6, .2, 7), mat(0xb5532f)); r.position.set(...P3(a - 3, f + 3.5, base + 13.4)); r.rotation.x = .3; grp.add(r); }   // the red tile roof over the side bay
+    bx(c - 3.5, c + 3.5, f - 1.8, f - .3, 3.5, 4.4, 0x151515, base); sign(6.6, .62, x => { x.fillStyle = '#151515'; x.fillRect(0, 0, 512, 48); x.fillStyle = '#ff2a3a'; x.font = 'bold 34px sans-serif'; x.textAlign = 'center'; x.fillText('SP  SHOE PALACE', 256, 36); }, c, f - 1.82, base + 3.95, Math.PI);   // the black marquee
+    sign(.9, 5.6, x => { x.fillStyle = '#1c1c1c'; x.fillRect(0, 0, 512, 3186); x.fillStyle = '#ff2a3a'; x.font = 'bold 300px sans-serif'; x.textAlign = 'center'; [...'SHOE'].forEach((ch, i) => x.fillText(ch, 256, 380 + i*330)); x.font = 'bold 190px sans-serif'; [...'PALACE'].forEach((ch, i) => x.fillText(ch, 256, 1760 + i*230)); }, a - .2, f - .8, base + 8.6, Math.PI/2, true);   // the red blade sign, out from the corner
+    for (let s = b + .5; s < s1 - .5; s += 2.8) bx(s, s + 1.6, f - .12, f + .05, 6.5, 8.6, 0x31404a, base, mat(0x31404a, .3, .3));   // the plain front next door: windows, a stepped parapet, the adidas band
+    for (const [s, w, h] of [[b + 3, 3, 15], [b + 6, 3, 15.8], [b + 9, 3, 15]]) bx(s, s + w, f - .2, f, 13, h, C2, base); bx(b, s1, f - .25, f, 3.6, 4.5, 0x111111, base); }
+  { const [s0, , s1] = H('britannia').box, f = -403.6, base = landH((s0 + s1)/2, f - 2), B = 0x7a6658;
+    sign(7, 1.1, x => { x.fillStyle = '#eef0ee'; x.fillRect(0, 0, 512, 80); x.strokeStyle = '#2b3a67'; x.lineWidth = 4; x.strokeRect(4, 4, 504, 72); x.fillStyle = '#2b3a67'; x.font = 'bold 38px Georgia, serif'; x.textAlign = 'center'; x.fillText('Britannia', 256, 38); x.font = '18px Georgia, serif'; x.fillText('British Pub & Restaurant', 256, 64); }, (s0 + s1)/2 + 2, f - .12, base + 5.1, Math.PI);
+    { const aw = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0 - 3, .1, 2.2), mat(0xb51f2a, .7)); aw.position.set(...P3((s0 + s1)/2 + 1, f - 1.1, base + 3.5)); aw.rotation.x = .3; grp.add(aw); }   // the red awning
+    sign(8, .4, x => { x.fillStyle = '#b51f2a'; x.fillRect(0, 0, 512, 26); x.fillStyle = '#fff'; x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; x.fillText('BRITANNIA BRITISH PUB', 256, 20); }, (s0 + s1)/2 + 1, f - 2.25, base + 3.05, Math.PI);
+    for (let s = s0 + .5; s <= s1 - .5; s += 1.1){ bx(s, s + .1, f - 4.6, f - 4.5, 0, .95, 0xf7f7f5, base); } bx(s0 + .5, s1 - .4, f - 4.62, f - 4.48, .7, .82, 0xf7f7f5, base); bx(s0 + .5, s1 - .4, f - 4.62, f - 4.48, .25, .37, 0xf7f7f5, base);   // the white picket patio fence
+    for (const s of [s0 + 4, s0 + 10]){ const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .55, 8), mat(0xf2d230, .7)); u.position.set(...P3(s, f - 2.9, base + 2.6)); grp.add(u); bx(s - .03, s + .03, f - 2.93, f - 2.87, 0, 2.4, 0xdddddd, base); } }
   g.add(grp); mergeStatic(grp); }
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right

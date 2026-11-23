@@ -5013,6 +5013,7 @@ function mtDofT(T, t){ const R = T.rows; let lo = 0, hi = R.length - 1; if (t >=
 function buildMatter(pk, g, W3){ const b = pk.blds.find(b => b.n === 'Matterhorn Bobsleds'); if (!b) return; MATTER.pk = pk;
   const rails = [], ties = [], posts = [], ice = [], R5 = mulberry(12), cx = (b.box[0] + b.box[2])/2, cy = (b.box[1] + b.box[3])/2, R0 = Math.min(b.box[2] - b.box[0], b.box[3] - b.box[1])/2*1.05;
   for (const key of ['L', 'R']){ const T = { ...MATTER_TRACKS[key], key }; T.gr = T.rows.map(r => packGround(pk, r[0], r[1])); MATTER.tracks[key] = T;
+    { const R = T.rows, n = R.length - 1, yw = i => { const p = R[clamp(i - 2, 0, n)], q = R[clamp(i + 3, 0, n)]; return Math.atan2(q[1] - p[1], q[0] - p[0]); }; T.kap = R.map((_, i) => { const d = yw(i + 1) - yw(i); return Math.atan2(Math.sin(d), Math.cos(d)); }); }   // (how sharply it turns, per metre)
     // the track: two steel rails on ties, white supports where it runs out beyond the mountain's foot
     for (let d = 1; d < T.rows.length - 1; d++){ const A = mtAt(T, d - 1), B = mtAt(T, d), a = Math.atan2(B.y - A.y, B.x - A.x), Ls = Math.hypot(B.x - A.x, B.y - A.y), pitch = Math.atan2(B.h - A.h, Ls), nx = -Math.sin(a), ny = Math.cos(a);
       for (const sd of [-.45, .45]){ const q = new THREE.BoxGeometry(Math.hypot(Ls, B.h - A.h) + .05, .12, .1); q.rotateZ(pitch); q.rotateY(a); q.translate(...W3((A.x + B.x)/2 + nx*sd, (A.y + B.y)/2 + ny*sd, (A.h + B.h)/2)); rails.push(q); }
@@ -5065,6 +5066,16 @@ function buildMatter(pk, g, W3){ const b = pk.blds.find(b => b.n === 'Matterhorn
   MATTER.sled = mkSled(0xc8202e); MATTER.sled.visible = false; MATTER.idle = [{ m: mkSled(0x2b5fb8), T: 0, key: 'L' }, { m: mkSled(0x2f8f4a), T: 40, key: 'R' }];
   matterStep(0); }
 function placeSled(m, T, d){ const P = MATTER.pk.place, A = mtAt(T, d); m.position.set(P.X + A.x, A.h + .05, P.Z - A.y); m.rotation.set(0, A.yaw, A.pitch); return A; }
+/* The ride's sound: wind that rises with speed, the rumble of the wheels on the rails, and inside the mountain an echo on all of it */
+function mtAudioStart(){ if (!ac || MATTER.au) return; const n = ac.createBuffer(1, ac.sampleRate*2, ac.sampleRate), d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
+  const src = ac.createBufferSource(); src.buffer = n; src.loop = true; const filt = ac.createBiquadFilter(); filt.type = 'bandpass'; filt.Q.value = .7; const wg = ac.createGain(); wg.gain.value = 0;
+  const rum = ac.createOscillator(); rum.type = 'sawtooth'; rum.frequency.value = 45; const rf = ac.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 160; const rg = ac.createGain(); rg.gain.value = 0;
+  const mix = ac.createGain(), dl = ac.createDelay(1), fb = ac.createGain(), wet = ac.createGain(); dl.delayTime.value = .19; fb.gain.value = .45; wet.gain.value = 0;
+  src.connect(filt).connect(wg).connect(mix); rum.connect(rf).connect(rg).connect(mix); mix.connect(ac.destination); mix.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(ac.destination);
+  src.start(); rum.start(); MATTER.au = { src, rum, filt, wg, rg, wet }; }
+function mtAudioSet(v, dark){ const A = MATTER.au; if (!A) return; const t = ac.currentTime, sp = clamp((v - 1.5)/10, 0, 1);
+  A.wg.gain.setTargetAtTime(.002 + .16*sp**1.4, t, .15); A.filt.frequency.setTargetAtTime(300 + v*160, t, .2); A.rg.gain.setTargetAtTime(v > .3 ? .02 + .05*sp : 0, t, .1); A.rum.frequency.setTargetAtTime(38 + v*4, t, .2); A.wet.gain.setTargetAtTime(.5*dark, t, .3); }
+function mtAudioStop(){ const A = MATTER.au; if (!A) return; MATTER.au = null; const t = ac.currentTime; for (const g of [A.wg, A.rg, A.wet]) g.gain.setTargetAtTime(0, t, .2); setTimeout(() => { try { A.src.stop(); A.rum.stop(); } catch(e){} }, 1500); }
 function matterStep(dt){ if (!MATTER.pk) return; if (MATTER.fallTex) MATTER.fallTex.offset.y += dt*1.4; for (const s of MATTER.idle){ const T = MATTER.tracks[s.key]; s.T += dt; if (s.T > T.time + 12) s.T = 0; placeSled(s.m, T, mtDofT(T, Math.min(s.T, T.time))); } }
 function openMatterChoice(o){ paused = true; const P = $('boothPanel'); P.querySelector('.kicker').textContent = '🏔️ Matterhorn Bobsleds'; P.querySelector('h2').textContent = 'Which side?'; P.querySelector('.explain').textContent = 'Two tracks wind round each other through the mountain. 42 in (107 cm) to ride; usually a 40 to 70 minute wait.';
   $('boothQ').hidden = true; $('boothClose').textContent = 'Not now'; const box = $('boothList'); box.innerHTML = '';
@@ -7887,7 +7898,7 @@ const RIDES = {
     if (T < 7) return { A: 376.6, off: -26, y: lerp(6.8, 2.5, (T - 6)), arms: true };
     return { A: 376.6, off: -26, y: 2.5 + Math.abs(Math.sin((T - 7)*6))*.7*Math.max(0, 1 - (T - 7)/2.2) }; } } };
 function startRide2(o, key, track){ const R = RIDES[key]; initAudio(); o.workout = { k: 'ride2', key, T: 0, t0: time, tapT: -9, py: o.gh ?? 0 }; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.08));
-  if (key === 'matter'){ const w = ocean.workout, T = MATTER.tracks[track || 'R']; w.track = T.key; w.d = 0; MATTER.sled.visible = true; elineCam = camMode; camMode = 'first'; camInit = false; return banner(`🎢 Matterhorn Bobsleds · ${T.name}`, 'Through the base tunnel to the lift. Hold on!'); }
+  if (key === 'matter'){ mtAudioStart(); const w = ocean.workout, T = MATTER.tracks[track || 'R']; w.track = T.key; w.d = 0; MATTER.sled.visible = true; elineCam = camMode; camMode = 'first'; camInit = false; return banner(`🎢 Matterhorn Bobsleds · ${T.name}`, 'Through the base tunnel to the lift. Hold on!'); }
   if (key === 'gtram'){ elineCam = camMode; camMode = 'first'; camInit = false; return banner('🚡 All aboard the Getty tram!', GTRAM.d > GTRAM.L/2 ? 'Down to the parking structure on Sepulveda' : 'Up the hill to the museum. Look out the windows at the 405'); }
   if (key === 'eline' || key === 'bbb'){ elineCam = camMode; camMode = 'first'; camInit = false; }   // (on the train or the city bus you look out of the windows)
   if (key === 'bbb') return banner('🚌 Big Blue Bus', 'Downtown loop: 4th St, Santa Monica Blvd, 2nd St, Broadway. Get off at any blue stop');
@@ -7899,6 +7910,9 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
   const p = w.T < R.dur ? R.f(w.T) : null; if (!p) return stopWorkout();
   if (w.key === 'matter' && MATTER.pk){ const M = MATTER, T = M.tracks[w.track], d0 = w.d || 0; if (w.T >= T.time){ w.done = true; return stopWorkout(); } w.d = mtDofT(T, w.T); w.v = (w.d - d0)/Math.max(dt, 1e-3);   // (timed like the real ride, moment by moment)
     const A = placeSled(M.sled, T, w.d); M.dark = lerp(M.dark || 0, A.dark, Math.min(1, dt*4));
+    { const i = Math.min(Math.floor(w.d), T.kap.length - 2), f = w.d - i, lat = (w.vs ?? w.v)**2*lerp(T.kap[i], T.kap[i + 1], f); M.roll = lerp(M.roll || 0, clamp(lat*.09, -.45, .45), Math.min(1, dt*4)); M.pitch = lerp(M.pitch || 0, A.pitch, Math.min(1, dt*6)); M.sled.rotation.x = -M.roll; }   // (leaning into the turns, tipping over the drops)
+    w.vs = lerp(w.vs ?? 0, w.v, Math.min(1, dt*3)); mtAudioSet(w.vs, M.dark); if (w.vs > 6 && Math.random() < dt*w.vs*.15) camShake = Math.max(camShake || 0, .05 + w.vs*.008);   // (wind and rumble; little shakes when it's fast)
+    if (!w.braked && w.T > T.time - 10){ w.braked = true; camShake = Math.max(camShake || 0, .7); sfx(900, .9, 'sawtooth', .02, 0, -700); sfx(70, .25, 'square', .06); }   // (the brakes grab: a jolt and a hiss)
     if (w.d > T.liftStart && w.d < T.liftEnd && (w.clk = (w.clk ?? 0) - dt) <= 0){ w.clk = .16; sfx(95 + Math.random()*20, .05, 'square', .035); sfx(1400, .015, 'square', .012); }   // (the lift chain: clack-clack-clack)
     if (d0 < T.liftEnd && w.d >= T.liftEnd) sfx(500, .4, 'sawtooth', .03, 0, 300);
     if (!w.splash && w.d >= T.splash - 1){ w.splash = true; sfx(140, .7, 'sine', .09, 0, -90); sfx(3000, .5, 'sawtooth', .015, 0, -2500); camShake = Math.max(camShake || 0, .6); heartsAt = time; }
@@ -7919,7 +7933,7 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
   if (w.key === 'trapeze' && w.T > 6 && !w.yelled){ w.yelled = true; sfx(700, .5, 'sine', .05, 0, -400); } if (w.key === 'trapeze' && w.T > 7 && !w.netT){ w.netT = 1; sfx(160, .15, 'triangle', .05); heartsAt = time; }
   if (w.key === 'bumper' && (w.bumpT = (w.bumpT || 0) - dt) <= 0){ w.bumpT = 1.4 + Math.random()*1.6; sfx(120, .12, 'square', .05); camShake = Math.max(camShake || 0, .25); } }
 function endRide2(o, w){ if (w.key === 'matter' || w.key === 'gtram'){ const pk = w.key === 'matter' ? MATTER.pk : GTRAM.pk, P = pk.place, [ex, ey] = w.key === 'matter' ? MATTER.exit : (() => { const [sx, sy, , a] = gtramAt(GTRAM.d - 14); return [sx - Math.sin(a)*4, sy + Math.cos(a)*4]; })();
-    if (MATTER.sled) MATTER.sled.visible = false; o.x = (P.X + ex)/U; o.y = (P.Z - ey)/U; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3;
+    if (MATTER.sled) MATTER.sled.visible = false; if (w.key === 'matter'){ mtAudioStop(); MATTER.roll = MATTER.pitch = 0; } o.x = (P.X + ex)/U; o.y = (P.Z - ey)/U; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3;
     return w.key === 'matter' && w.done ? banner('🏔️ What a ride!', 'The Matterhorn Bobsleds: the usual wait is 40 to 70 minutes, so ride it early or late') : null; }
   const R = RIDES[w.key], [x, y] = landXY(390 - R.exit[0], -R.exit[1]); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3;
   if (PARK_ANIM.dragon) PARK_ANIM.dragon.rotation.z = 0; if (PARK_ANIM.plunge) PARK_ANIM.plunge.position.y = .6;
@@ -10683,8 +10697,8 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
   const boom = (d, h) => { const L = Math.hypot(d, h)*camZoom, a = clamp(Math.atan2(h, d) + camPitch, .04, 1.35); return [L*Math.cos(a), L*Math.sin(a)]; };   // (tilted and zoomed the way you set it)
   const fx = Math.cos(camHead), fz = Math.sin(camHead);
   if (kind !== 'title' && camMode === 'first'){   // through your own eyes
-    const p = fpPitch, eye = _tp.set(px + fx*.62, py + fpEye, pz + fz*.62);
-    camera.position.copy(eye); camera.lookAt(eye.x + fx*Math.cos(p)*4, eye.y + Math.sin(p)*4 - (fpEye < .5 ? .5 : 0), eye.z + fz*Math.cos(p)*4);
+    const onMt = ocean?.workout?.key === 'matter', p = fpPitch + (onMt ? MATTER.pitch || 0 : 0), eye = _tp.set(px + fx*.62, py + fpEye, pz + fz*.62);
+    camera.position.copy(eye); camera.lookAt(eye.x + fx*Math.cos(p)*4, eye.y + Math.sin(p)*4 - (fpEye < .5 ? .5 : 0), eye.z + fz*Math.cos(p)*4); if (onMt) camera.rotateZ(MATTER.roll || 0);   // (on the bobsleds you lean and tip with the sled)
     camPos.copy(camera.position); camInit = true; return; }
   if (kind === 'title'){ const a = Math.sin(time*.15); _tp.set(px + 2.6 + a*1.2, 1.5, pz - 4.4); _tl.set(px - .3, -.15, pz + .4); }
   else if (camMode === 'top' && sub > 0){ _tp.set(px, py + 6, pz + 2); _tl.set(px, py, pz - .5); }

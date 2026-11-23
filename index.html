@@ -3117,7 +3117,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
 function landName(x, y){
   if (inSFu(x)) return sfPlaceName(x*U, y*U);
   const [s, t] = landST(x, y);
-  if (t < -2500) return 'Malibu'; if (s > 2600) return 'Bergamot Station'; if (t > 5100) return 'Palos Verdes'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
+  if (t < -2500) return 'Malibu'; if (s > 2600) return 'Bergamot Station'; if (s > 1260 && s < 2600) return 'the E Line'; if (t > 5100) return 'Palos Verdes'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
   if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return '3rd Street';
   if (onPierDeck(s, t)) return s > PIER_L.s1 ? 'The Pier Bridge' : 'Santa Monica Pier';
   if (s > PIER_L.s2 - 1 && s < AVES.ocean - 9 && Math.abs(t) < 9) return 'The Pier Bridge';
@@ -4830,9 +4830,62 @@ function buildBergamot(g, P3){ const B = SOUTHP.box; if (!B) return; const c = n
     for (const x of [-3.8, 3.8]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 4, 8), std(0x333333, .5)); post.position.set(x, 2, 0); grp.add(post); }
     const p = bergFree(s, t, 3); grp.position.set(...P3(p[0], p[1], landH(...p))); g.add(grp); BERG.signAt = p; } }
 function bergAt(d){ const P = BERG.path, L = P.L; d = clamp(d, 0, L); let i = 0; while (i < P.cum.length - 2 && P.cum[i + 1] < d) i++; const a = P.p[i], b = P.p[i + 1], f = (d - P.cum[i])/(P.cum[i + 1] - P.cum[i] || 1); return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), Math.atan2(b[1] - a[1], b[0] - a[0])]; }
-function bergStep(dt){ const T = BERG.train; if (!T || !BERG.path) return;   // the train pulls in, waits, pulls out, and the next one comes
+function bergStep(dt){ const T = BERG.train; if (!T || !BERG.path) return; if (ELINE.cars.length){ T.visible = false; return; }   // (the E Line's own train runs here now)
+    // the train pulls in, waits, pulls out, and the next one comes
   if (BERG.wait > 0) BERG.wait -= dt; else { const prev = BERG.d; BERG.d += dt*(Math.abs(BERG.d - BERG.stopD) < 60 ? 5 : 11); if (prev < BERG.stopD && BERG.d >= BERG.stopD){ BERG.d = BERG.stopD; BERG.wait = 25; } if (BERG.d > BERG.path.L + 90) BERG.d = -10; }
   const d = BERG.d, [s, t, ang] = bergAt(d), h = landH(s, t), [x, y] = landXY(s, t); T.visible = d > 0 && d < BERG.path.L + 80; T.position.set(x*U, h + .1, y*U); T.rotation.y = -ang; }
+/* The E Line (Metro light rail) from Downtown Santa Monica (4th & Colorado) to 26th St/Bergamot: the real track from OpenStreetMap
+   (2.7 km, every 10 m, with the ground's height from the USGS survey), down the middle of Colorado Ave and then on its own tracks.
+   One train shuttles back and forth, stopping at 17th St/SMC; ride it from either end. Speeds are a guess: about 25 km/h on the
+   street, 55 km/h on its own tracks, so the trip takes about 5 minutes (the real timetable says about 6). */
+const ELINE = (() => { const raw = [804.5,29.6,22.3,814.7,26.8,22.4,824.9,24.1,22.4,835.0,21.3,22.4,845.2,18.6,22.3,855.4,15.8,22.4,865.5,13.1,22.4,875.7,10.4,22.4,885.9,7.6,22.4,896.1,4.9,22.6,900.1,4.1,22.6,903.9,3.5,22.7,907.1,3.1,22.8,913.9,2.4,22.9,920.7,2.0,23.0,932.1,2.1,23.3,943.6,2.2,23.5,955.1,2.3,23.7,966.6,2.3,23.9,981.3,2.3,24.2,996.1,2.4,24.5,1006.4,2.0,24.7,1017.3,2.1,24.9,1027.8,2.1,25.1,1043.5,2.4,25.2,1054.1,2.4,25.4,1064.6,2.4,25.5,1075.1,2.3,25.7,1085.7,2.3,25.8,1096.2,2.3,25.9,1106.7,2.2,26.0,1117.2,2.2,26.2,1127.8,2.2,26.3,1140.7,2.2,26.5,1150.8,2.3,26.6,1161.6,2.2,26.6,1172.4,2.2,26.7,1183.2,2.1,26.8,1194.0,2.1,26.9,1204.8,2.0,27.0,1215.6,1.9,27.1,1226.4,1.9,27.1,1237.2,1.8,27.2,1248.1,1.8,27.4,1262.3,1.7,27.5,1273.5,1.6,27.5,1283.5,1.6,27.5,1293.5,1.6,27.6,1303.6,1.6,27.6,1313.6,1.6,27.7,1323.6,1.6,27.7,1333.6,1.7,27.8,1343.7,1.7,27.8,1353.7,1.7,27.9,1363.7,1.7,28.0,1373.7,1.7,28.0,1383.8,1.7,28.1,1393.8,1.7,28.2,1403.8,1.7,28.2,1413.8,1.7,28.2,1423.9,1.7,28.3,1433.9,1.7,28.3,1443.9,1.7,28.4,1453.9,1.7,28.5,1464.0,1.7,28.6,1474.0,1.8,28.6,1484.0,1.8,28.7,1494.0,1.8,28.8,1504.1,1.8,28.8,1514.1,1.8,29.0,1524.1,1.8,29.1,1534.1,1.8,29.3,1544.2,1.8,29.4,1554.2,1.8,29.6,1564.2,1.8,29.8,1574.2,1.8,30.0,1584.3,1.8,30.2,1594.3,1.8,30.4,1604.3,1.8,30.6,1614.3,1.9,30.7,1627.4,2.1,30.9,1638.5,2.2,30.9,1648.6,2.2,31.0,1658.6,2.2,31.0,1668.6,2.2,31.1,1678.7,2.2,31.1,1688.7,2.2,31.2,1698.8,2.2,31.3,1708.8,2.2,31.4,1718.8,2.2,31.5,1728.9,2.3,31.6,1738.9,2.3,31.6,1748.9,2.3,31.7,1759.0,2.3,31.8,1769.0,2.3,31.9,1779.1,2.3,32.0,1789.1,2.3,32.1,1799.1,2.3,32.1,1809.2,2.3,32.2,1819.2,2.3,32.3,1829.3,2.3,32.5,1839.3,2.3,32.5,1849.3,2.3,32.6,1859.4,2.4,32.7,1869.4,2.4,32.7,1879.5,2.4,32.8,1889.5,2.4,32.9,1899.5,2.4,33.0,1909.6,2.4,33.1,1919.6,2.4,33.1,1929.7,2.4,33.2,1939.7,2.4,33.3,1949.7,2.4,33.4,1959.8,2.4,33.5,1969.8,2.4,33.5,1979.9,2.4,33.6,1992.5,2.5,33.7,2004.3,2.4,33.8,2016.6,2.5,33.9,2028.9,2.6,34.0,2041.3,2.7,34.1,2053.6,2.8,34.2,2064.4,3.2,34.4,2075.3,3.6,34.5,2086.1,4.0,34.6,2096.9,4.4,34.7,2107.8,4.9,34.8,2118.6,5.3,34.9,2129.5,5.7,34.9,2140.3,6.1,35.0,2151.1,6.6,35.1,2163.7,6.6,35.1,2176.2,6.7,35.2,2188.8,6.7,35.3,2200.9,6.6,35.4,2213.1,6.6,35.6,2225.2,6.5,35.7,2237.4,6.4,35.8,2249.0,6.4,35.9,2260.5,6.4,36.0,2272.1,6.4,36.1,2283.7,6.4,36.2,2295.3,6.4,36.3,2306.9,6.4,36.5,2317.5,6.4,36.6,2328.1,6.4,36.7,2338.7,6.4,36.8,2347.6,6.5,36.9,2358.5,7.5,37.0,2363.7,8.1,37.0,2371.2,9.4,37.1,2381.1,11.7,37.2,2391.5,15.5,37.3,2401.8,20.4,37.4,2412.1,26.0,37.6,2422.7,32.4,37.7,2433.3,38.8,37.9,2443.9,45.2,37.9,2456.4,52.6,38.2,2468.9,59.9,38.4,2480.4,65.6,38.6,2492.1,70.9,38.8,2503.7,75.2,39.0,2515.0,78.7,39.2,2526.0,81.5,39.4,2536.9,84.0,39.5,2548.5,86.0,39.7,2560.0,88.1,40.0,2571.5,90.1,40.0,2583.1,92.2,40.3,2594.6,94.3,40.6,2598.4,94.9,40.7,2605.2,96.3,40.8,2607.9,96.8,40.8,2617.8,98.8,40.8,2627.7,100.7,40.8,2639.0,102.7,41.0,2650.2,104.7,41.2,2661.5,106.8,41.4,2672.8,108.8,41.5,2684.0,110.8,41.6,2695.3,112.8,41.8,2711.1,115.8,42.2,2723.5,118.1,42.4,2735.5,120.4,42.6,2749.1,123.0,42.8,2762.6,125.5,43.2,2781.3,129.2,43.7,2795.9,131.9,43.9,2807.0,134.7,43.9,2818.2,137.4,44.0,2829.4,140.1,44.2,2840.6,142.9,44.2,2858.7,147.9,44.6,2877.3,153.4,45.0,2888.6,156.9,45.0,2899.8,160.3,45.2,2911.1,163.8,45.4,2920.6,167.2,45.6,2930.2,170.5,45.5,2939.8,173.8,45.4,2949.4,177.1,45.3,2959.0,180.4,45.3,2968.5,183.8,45.3,2978.1,187.1,45.4,2987.7,190.4,45.5,2997.3,193.7,45.6,3006.9,197.1,45.8,3016.4,200.4,45.9,3026.0,203.7,46.0,3035.6,207.0,46.1,3045.2,210.3,46.2,3054.8,213.7,46.3,3064.9,217.2,46.4,3075.1,220.7,46.5,3085.2,224.2,46.6,3095.4,227.7,46.6,3107.8,232.3,46.5,3120.3,236.9,46.6,3132.8,241.5,46.8,3143.2,245.6,47.0,3153.6,249.7,46.9,3164.0,253.8,47.0,3174.4,257.9,47.0,3184.3,261.8,47.1,3194.2,265.8,47.3,3204.1,269.7,47.3,3214.0,273.6,47.4,3223.9,277.5,47.4,3233.8,281.4,47.6,3243.7,285.3,47.7,3253.6,289.2,47.7,3263.5,293.1,48.0,3272.9,296.9,48.0,3282.2,300.7,47.9,3291.5,304.5,47.7,3300.8,308.3,47.8,3312.2,312.9,47.8,3321.5,316.8,47.8,3330.7,320.6,47.8,3340.0,324.4,47.7,3349.3,328.3,47.7,3358.6,332.1,47.8,3367.9,335.9,47.7,3377.2,339.8,47.9,3386.4,343.6,47.9,3395.7,347.4,47.9,3405.0,351.3,48.0,3414.3,355.1,48.0,3423.6,358.9,48.0], p = []; for (let i = 0; i < raw.length; i += 3) p.push([raw[i], raw[i + 1], raw[i + 2]]);
+  const cum = [0]; for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  const L = cum[cum.length - 1], near = (s, t) => { let bd = 1e9, bi = 0; p.forEach((q, i) => { const d = Math.hypot(q[0] - s, q[1] - t); if (d < bd){ bd = d; bi = i; } }); return cum[bi]; };
+  const stations = [{ name: 'Downtown Santa Monica', d: 14, end: true }, { name: '17th St/SMC', d: near(2273, 3) }, { name: '26th St/Bergamot', d: L - 30, end: true }];
+  return { p, cum, L, stations, d: 14, dir: 1, v: 0, wait: 30, at: stations[0], cars: [], tr: null }; })();
+function elineAt(d){ const E = ELINE; d = clamp(d, 0, E.L); let i = 0, j = E.p.length - 1; while (j - i > 1){ const m = (i + j) >> 1; if (E.cum[m] <= d) i = m; else j = m; }
+  const a = E.p[i], b = E.p[j], f = (d - E.cum[i])/(E.cum[j] - E.cum[i] || 1), s = lerp(a[0], b[0], f), t = lerp(a[1], b[1], f);
+  const inCity = s < 1240 || (SOUTHP.box && s > SOUTHP.box[0] + 5), h = inCity ? landH(s, t) : lerp(a[2], b[2], f);
+  return [s, t, Math.atan2(b[1] - a[1], b[0] - a[0]), h]; }
+function buildEline(g, P3){ const E = ELINE, rails = [], bal = [], road = [], poles = [], ground = [];
+  for (let i = 0; i < E.p.length - 1; i++){ const d0 = E.cum[i], d1 = E.cum[i + 1], [s0, t0, a0, h0] = elineAt(d0), [s1, t1, , h1] = elineAt(d1), L = Math.hypot(s1 - s0, t1 - t0); if (L < .1) continue;
+    const ns = -Math.sin(a0), nt = Math.cos(a0), ms = (s0 + s1)/2, mt = (t0 + t1)/2, h = (h0 + h1)/2, ang = -a0, street = ms < 2212;
+    for (const off of [-2, 2]){ for (const sg of [-.72, .72]){ const r = new THREE.BoxGeometry(L, .14, .08); r.rotateY(ang); r.translate(...P3(ms + ns*(off + sg), mt + nt*(off + sg), h + .1)); rails.push(r); }
+      if (!street){ const b = new THREE.BoxGeometry(L, .12, 3); b.rotateY(ang); b.translate(...P3(ms + ns*off, mt + nt*off, h + .03)); bal.push(b); } }
+    if (ms > 1240 && ms < 2750){ const w = street ? 24 : 9, q = new THREE.BoxGeometry(L + .2, .1, w); q.rotateY(ang); q.translate(...P3(ms, mt, h - .02)); (street ? road : bal).push(q);   // (Colorado Ave out here, past the edge of the map)
+      const gq = new THREE.BoxGeometry(L + .4, .1, 150); gq.rotateY(ang); gq.translate(...P3(ms, mt, h - .12)); ground.push(gq); }
+    if (i % 5 === 0){ const pole = new THREE.CylinderGeometry(.09, .09, 7, 6); pole.translate(...P3(ms + ns*(street ? 0 : 4.2), mt + nt*(street ? 0 : 4.2), h + 3.5)); poles.push(pole); } }   // (the poles that hold up the overhead wire)
+  const M = (arr, m) => { if (arr.length) g.add(new THREE.Mesh(mergeGeometries(arr), m)); };
+  M(rails, std(0x9aa0a6, .35, .8)); M(bal, std(0x6f6a62, .95)); M(road, std(0x3c3f44, .9)); M(poles, std(0x6d7176, .5, .5)); M(ground, std(0x8f8e86, .95));
+  { const R = mulberry(17), geos = [], cc = new THREE.Color();   // stand-in blocks along the line, out past the edge of the map
+    for (let d = 0; d < E.L; d += 26){ const [s, t, a, h] = elineAt(d); if (s < 1300 || s > 2700) continue; const ns = -Math.sin(a), nt = Math.cos(a);
+      for (const side of [-1, 1]) for (const off of [20, 48]){ if (R() < .25) continue; const w = 14 + R()*8, dd = 16 + R()*10, hh = 5 + R()*R()*16, cs = s + ns*side*(off + dd/2), ct = t + nt*side*(off + dd/2), box = new THREE.BoxGeometry(w, hh, dd); box.rotateY(-a); box.translate(...P3(cs, ct, h - .1 + hh/2));
+        cc.setHex([0xe8dcc8, 0xd9d4ca, 0xc9cfd2, 0xe3cdb5, 0xf2ede2, 0xcfc3b0][(R()*6)|0]); const n = box.attributes.position.count, cols = new Float32Array(n*3); for (let k = 0; k < n; k++){ const f = box.attributes.normal.getY(k) > .5 ? .8 : 1; cols[k*3] = cc.r*f; cols[k*3 + 1] = cc.g*f; cols[k*3 + 2] = cc.b*f; } box.setAttribute('color', new THREE.BufferAttribute(cols, 3)); box.deleteAttribute('uv'); geos.push(box); } }
+    M(geos, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9 })); }
+  for (const S of E.stations){ if (S.name === '26th St/Bergamot') continue; const [s, t, a, h] = elineAt(S.d + (S.end ? 30 : 0)), plat = new THREE.Group();   // the platforms (Bergamot's is built with the island)
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(80, .9, 4), std(0xb9b4aa, .9)); slab.position.set(0, .45, 0); plat.add(slab); const canopy = new THREE.Mesh(new THREE.BoxGeometry(30, .2, 4.4), std(0xdfe3e6, .5)); canopy.position.set(0, 4.3, 0); plat.add(canopy);
+    for (const x of [-12, 0, 12]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 3.4, 8), std(0x777777, .5)); col.position.set(x, 2.6, 0); plat.add(col); }
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.3), new THREE.MeshBasicMaterial({ map: labelTex('Ⓔ ' + S.name, '#2b2b2b', '#fdb913', 1024, 300, 110), side: THREE.DoubleSide })); sg.position.set(-20, 3, 0); plat.add(sg);
+    const [x, y] = landXY(s - Math.sin(a)*4.3, t + Math.cos(a)*4.3); plat.position.set(x*U, h, y*U); plat.rotation.y = -a; g.add(plat); S.plat = [s - Math.sin(a)*4.3, t + Math.cos(a)*4.3]; }
+  { const body = std(0xd9dcdf, .35, .4), glass = new THREE.MeshStandardMaterial({ color: 0x2a3640, roughness: .1, metalness: .2, transparent: true, opacity: .35, depthWrite: false }), gold = std(0xfdb913, .5), dark = std(0x23272b, .3, .3);   // the train: 3 cars, each following the track on its own (silver, glass, a gold stripe: the look is a guess)
+    for (let k = 0; k < 3; k++){ const car = new THREE.Group(), lo = new THREE.Mesh(new THREE.BoxGeometry(26.5, 1.2, 2.65), body); lo.position.y = 1.25; car.add(lo);
+      for (const z of [-1.3, 1.3]){ const gl = new THREE.Mesh(new THREE.BoxGeometry(26.5, 1.3, .05), glass); gl.position.set(0, 2.5, z); car.add(gl); }
+      for (const x of [-13.2, 13.2]){ const en = new THREE.Mesh(new THREE.BoxGeometry(.1, 1.3, 2.65), glass); en.position.set(x, 2.5, 0); car.add(en); }
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(26.5, .5, 2.65), body); roof.position.y = 3.4; car.add(roof); const st2 = new THREE.Mesh(new THREE.BoxGeometry(26.55, .2, 2.7), gold); st2.position.y = 1.75; car.add(st2);
+      const flo = new THREE.Mesh(new THREE.BoxGeometry(26.3, .05, 2.5), dark); flo.position.y = 1.86; car.add(flo); for (let x = -11; x <= 11; x += 2.2) for (const z of [-.8, .8]){ const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .45, .9), std(0x1f3a63, .7)); seat.position.set(x, 2.1, z); car.add(seat); }
+      const pan = new THREE.Mesh(new THREE.BoxGeometry(2, .1, .1), dark); pan.position.set(0, 4.1, 0); pan.rotation.z = .5; car.add(pan); g.add(car); E.cars.push(car); } }
+  elineStep(0); }
+let elineCam = null;
+function elineStep(dt){ const E = ELINE; if (!E.cars.length) return; if (elineCam && ocean?.workout?.key !== 'eline'){ camMode = elineCam; elineCam = null; camInit = false; }   // (off the train: your view back)
+  if (E.wait > 0){ E.wait -= dt; E.v = 0; if (E.wait <= 0 && E.at?.end && ((E.dir > 0 && E.at.d > E.L/2) || (E.dir < 0 && E.at.d < E.L/2))) E.dir = -E.dir; if (E.wait <= 0) E.left = E.at; }
+  else { const nxt = E.stations.filter(S => S !== E.left && (S.d - E.d)*E.dir > -.5).sort((a, b) => Math.abs(a.d - E.d) - Math.abs(b.d - E.d))[0], [s] = elineAt(E.d), top = s < 1000 ? 5 : s < 2212 ? 7 : 15, toGo = nxt ? Math.abs(nxt.d - E.d) : 1e9;
+    E.v = Math.min(top, E.v + dt*1.1, Math.sqrt(2*1.1*Math.max(0, toGo)) + .3); E.d += E.v*dt*E.dir;
+    if (nxt && (nxt.d - E.d)*E.dir <= 0){ E.d = nxt.d; E.at = nxt; E.wait = nxt.end ? 40 : 20; E.left = null; sfx(700, .12, 'sine', .03);
+      if (ocean?.workout?.key === 'eline') banner(`🚉 ${nxt.name}`, nxt.end ? 'End of the line. Tap Get off' : 'Doors open… next stop: ' + (E.dir > 0 ? '26th St/Bergamot' : 'Downtown Santa Monica')); } else E.at = null; }
+  E.cars.forEach((car, k) => { const [s, t, a, h] = elineAt(E.d - E.dir*(13.5 + k*27.6)), [x, y] = landXY(s, t); car.position.set(x*U, h + .05, y*U); car.rotation.y = -a; }); }
+function elineStationNear(o){ const [s, t] = landST(o.x, o.y); return ELINE.stations.find(S => S.end && S.plat && Math.hypot(S.plat[0] - s, S.plat[1] - t) < 45) || ELINE.stations.find(S => S.end && S.name === '26th St/Bergamot' && Math.hypot(BERG.station[0] - s, BERG.station[1] - t) < 45 && (S.plat = S.plat || BERG.station)); }
+function elineOff(o){ const S = ELINE.at; if (!S) return; o.workout = null; const [s, t] = bergFreeAny(S.plat || BERG.station), [x, y] = landXY(s, t); o.x = x; o.y = y; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner(`🚉 ${S.name}`, S.name === '26th St/Bergamot' ? 'Bergamot Station\'s galleries are right here' : '3rd Street Promenade is two blocks up 4th St'); }
+const bergFreeAny = p => (p[0] > 2600 ? bergFree(p[0], p[1], 1.5) : p);
 let bergArt = -1;
 function buildSouth(g){ const geos = [], col = new THREE.Color(), road = [];
   for (const B of SOUTH.list){ const sc = (B.s0 + B.s1)/2, tc = (B.t0 + B.t1)/2, base = Math.min(landH(B.s0, B.t0), landH(B.s1, B.t1)) - .3; B.base = base;
@@ -5265,7 +5318,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? buildVenice(g, P3) : buildSouth(g)); buildAnnenberg(g, P3); buildBergamot(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? buildVenice(g, P3) : buildSouth(g)); buildAnnenberg(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -6686,6 +6739,7 @@ const RIDES = {
   scrambler: { name: "Inkie's Scrambler", exit: [436, -46.5], dur: 16, f: T => { const sp = Math.min(1, T/3)*Math.min(1, Math.max(0, (16 - T)/3)), a = T*1.3*sp, b = T*3.4*sp; return { sit: true, arms: sp > .9, sp }; } },
   bumper: { name: 'Sig Alert bumper cars', exit: [356, -68.5], dur: 15, f: T => ({ A: 356 + 5*Math.sin(T*.9), off: -75 + 3*Math.sin(T*1.3 + 1), y: .1, sit: true, car: true, ang: Math.atan2(3*1.3*Math.cos(T*1.3 + 1), -5*.9*Math.cos(T*.9)) }) },
   bus: { name: 'the sightseeing bus', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
+  eline: { name: 'the E Line', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
   carousel: { name: 'the carousel', exit: [171.5, -18], dur: 32, f: T => ({ sit: true, arms: false }) },
   trapeze: { name: 'the trapeze', exit: [372, -18.5], dur: 9.5, f: T => {   // up the ladder, swing out, let go, drop into the net, bounce
     if (T < 2.5) return { A: 362, off: -26, y: T/2.5*6.6, climb: true };
@@ -6694,11 +6748,14 @@ const RIDES = {
     if (T < 7) return { A: 376.6, off: -26, y: lerp(6.8, 2.5, (T - 6)), arms: true };
     return { A: 376.6, off: -26, y: 2.5 + Math.abs(Math.sin((T - 7)*6))*.7*Math.max(0, 1 - (T - 7)/2.2) }; } } };
 function startRide2(o, key){ const R = RIDES[key]; initAudio(); o.workout = { k: 'ride2', key, T: 0, t0: time, tapT: -9, py: o.gh ?? 0 }; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.08));
+  if (key === 'eline'){ elineCam = camMode; camMode = 'first'; camInit = false; }   // (on the train you look out of the windows)
+  if (key === 'eline') return banner('🚆 All aboard the E Line!', ELINE.at?.d < ELINE.L/2 ? 'To 26th St/Bergamot, with a stop at 17th St/SMC. About 5 minutes' : 'To Downtown Santa Monica, with a stop at 17th St/SMC. About 5 minutes');
   if (key === 'bus') return banner('🚌 All aboard the sightseeing bus!', 'Sit up top and look around. Hop off at any tour stop');
   if (key === 'carousel') return banner('🎠 The Santa Monica Pier carousel!', 'Hand-carved horses from 1922, going round and round');
   banner(`🎢 ${R.name}!`, key === 'trapeze' ? 'Up the ladder... swing... and let go!' : 'Hold on tight! (Tap Wheee! to scream)'); }
 function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0; o.walking = false; o.air = airMax(); o.idle = 0;
   const p = w.T < R.dur ? R.f(w.T) : null; if (!p) return stopWorkout();
+  if (w.key === 'eline' && ELINE.cars.length){ const car = ELINE.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(-4, 1.9, .8).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (ELINE.dir < 0 ? Math.PI : 0); return; }   // (in a seat in the front car)
   if (w.key === 'bus' && BUS.mesh){ BUS.mesh.updateMatrixWorld(); const c = new THREE.Vector3(-2.2, 2.85, .6).applyMatrix4(BUS.mesh.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -BUS.ang; return; }   // (up top, on the open deck)
   if (w.key === 'dragon' && PARK_ANIM.dragon){ PARK_ANIM.dragon.rotation.z = p.swing; PARK_ANIM.dragon.updateWorldMatrix(true, false); const c = PARK_ANIM.dragonSeat.clone().applyMatrix4(PARK_ANIM.dragon.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p;   // (in the boat's end seat, swinging with it)
     const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(PARK_ANIM.dragon.parent.quaternion); o.ang = Math.atan2(fw.z, fw.x); return; }
@@ -6912,6 +6969,11 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
   if (!o.workout && nearMichaels(o)) return { label: "🍽️ Eat at Michael's", go: () => openPlaceMenu("Michael's", 'food') };
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y); return s > 657 && s < 666 && t > -890.4 && t < -877.6; })()) return { label: '☕ Demitasse coffee', go: () => openPlaceMenu('Demitasse', 'food') };
+  if (o.workout?.key === 'eline') return ELINE.wait > 1 && ELINE.at?.end ? { label: '🚉 Get off at ' + ELINE.at.name, go: () => elineOff(o) } : null;
+  if (!o.workout && ELINE.cars.length){ const S = elineStationNear(o); if (S){ const E = ELINE, there = E.at === S && E.wait > 2;
+    if (there) return { label: '🚆 Ride the E Line to ' + (S.d < E.L/2 ? '26th St/Bergamot' : 'Downtown Santa Monica'), go: () => startRide2(o, 'eline') };
+    const ahead = (S.d - E.d)*E.dir >= 0, eta = Math.round((ahead ? Math.abs(S.d - E.d) : (S.d < E.L/2 ? E.d + S.d : 2*E.L - E.d - S.d))/9 + Math.max(0, E.wait) + 20 + (ahead ? 0 : 40));
+    return { label: `🚉 E Line · next train in ${Math.max(1, Math.round(eta/60))} min`, go: () => banner('🚉 ' + S.name, `The next train comes in about ${eta} seconds. Wait on the platform`) }; } }
   if (o.workout?.key === 'bus') return BUS.stopAt ? { label: '🚏 Hop off', go: () => hopOff(o) } : null;
   if (!o.workout){ const S = busStopNear(o); if (S) return BUS.stopAt === S ? { label: '🚌 Hop on the sightseeing bus', go: () => startRide2(o, 'bus') } : { label: `🚏 Tour bus stop · next bus in ${Math.max(1, Math.round(busETA(S)/60))} min`, go: () => banner('🚏 ' + S.name, `The next bus comes in about ${busETA(S)} seconds. Wait here, then hop on!`) }; }
   if (o.workout?.pier || o.workout?.k === 'ride2') return null;   // (no getting off a ride halfway)
@@ -7845,7 +7907,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); vrStep(o, dt);   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); elineStep(dt); vrStep(o, dt);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop

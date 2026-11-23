@@ -5465,6 +5465,7 @@ function buildCoast(){
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
+    { const H = OCEAN_HOTELS.find(H => Math.abs(s0 - H.box[0]) < 1.5 && Math.abs(t0 - H.box[1]) < 1.5); if (H){ extrude(H.round ? roundCorner(b.p, H.round) : b.p, b.base, b.top, H.c, H.c, true); continue; } }   // (the Georgian and the Shangri-La: see buildOceanHotels)
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
@@ -5690,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -6995,6 +6996,45 @@ function buildSauro(d, dir, ivy, ivy2, E){ const curb = std(0xb9b6ae, .85), gras
   for (const z of [.2, -.2]){ const ey = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 5), std(0x111111, .3)); ey.position.set(5.75, 4.93, z); s.add(ey); } }
 // a table at Michael's: walk up to the porch to eat
 const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 && s < MICHAELS.s + .5 && t > MICHAELS.t0 + .5 && t < MICHAELS.t1 - .5; };
+/* Two hotels on Ocean Ave, from photos (Wikimedia Commons, 2012-2019):
+   The Georgian (1933, 1415 Ocean): turquoise with a gold band over the second floor and gold up the crown, white-framed windows, a strip of
+   terracotta grilles in cream frames up the middle, THE GEORGIAN HOTEL in bronze letters, the veranda under navy-and-white striped awnings
+   with yellow umbrellas, and THE GEORGIAN in red neon on the roof.
+   Hotel Shangri-La (1939, 1301 Ocean at Arizona): white streamline moderne, its round corner at Arizona, rows of windows with speed lines
+   between, a tall strip of dark glass by the corner over the entrance, the black SHANGRI-LA marquee, and the top floor set back behind rails. */
+const OCEAN_HOTELS = [{ name: 'georgian', box: [424.6, -352.0, 455.6, -333.6], c: 0x5ebcc5 }, { name: 'shangrila', box: [422.0, -609.6, 467.2, -564.8], c: 0xf3f3ef, round: [422.0, -609.6, 6] }];
+function buildOceanHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const txt = (text, w, h, fg, font, bg) => new THREE.MeshBasicMaterial({ transparent: !bg, map: canvasTex(1024, Math.round(1024*h/w), x => { const H = Math.round(1024*h/w); if (bg){ x.fillStyle = bg; x.fillRect(0, 0, 1024, H); } x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(text, 512, H/2 + 4); }, false) });
+  const plane = (w, h, m, s, t, y, ry) => { const me = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
+  const H = n => OCEAN_HOTELS.find(h => h.name === n), FACE = -Math.PI/2;   // (a plane facing Ocean Ave, toward smaller s)
+  { const [s0, t0, s1, t1] = H('georgian').box, base = landH(s0 - 1, (t0 + t1)/2), tc = (t0 + t1)/2, Wf = 0xf6f6f2, GL = 0x3b4f5c, GOLD = 0xe2b93b, TC = 0x8a4b2c, CR = 0xeadcc6;
+    const win = (s, t, y, w = 1.3, h = 1.6, side = 0) => { if (side){ bx(s - .65, s + .65, t - .08 * side, t, y - .08, y + h + .08, Wf, base); bx(s - .55, s + .55, t - .1*side, t - .02*side, y, y + h, GL, base); } else { bx(s - .08, s, t - w/2 - .08, t + w/2 + .08, y - .08, y + h + .08, Wf, base); bx(s - .1, s - .02, t - w/2, t + w/2, y, y + h, GL, base); } };
+    const rows = [5.4]; for (let y = 9.2; y < 30; y += 3.2) rows.push(y);
+    for (const y of rows){ for (const d of [-7.6, -5.2, -2.6, 2.6, 5.2, 7.6]) win(s0, tc + d, y);   // the front: three windows each side of the middle strip
+      bx(s0 - .14, s0, tc - .95, tc + .95, y - .2, y + 1.9, CR, base); bx(s0 - .2, s0 - .1, tc - .7, tc + .7, y, y + 1.6, TC, base);   // the terracotta grille in its cream frame
+      for (let s = s0 + 3; s < s1 - 2; s += 3.3){ win(s, t0, y, 1.3, 1.6, -1); win(s, t1, y, 1.3, 1.6, 1); } }
+    bx(s0 - .3, s1 + .3, t0 - .3, t1 + .3, 8.1, 8.55, GOLD, base);   // the gold band over the second floor
+    bx(s0 - .25, s1 + .25, t0 - .25, t1 + .25, 30.9, 32.9, GOLD, base); bx(s0 - .3, s0 + 5, tc - 3.2, tc + 3.2, 32.9, 34.6, GOLD, base); bx(s0 - .3, s0 + 3, tc - 1.4, tc + 1.4, 34.6, 35.6, GOLD, base);   // the gold crown, stepped up in the middle
+    for (const d of [-4.4, -1.6, 1.6, 4.4]) bx(s0 - .3, s0, tc + d - .4, tc + d + .4, 27.5, 33.6, 0x87cfd6, base);   // (the paler fluted strips up into the crown)
+    { const fp = new THREE.Mesh(new THREE.CylinderGeometry(.04, .05, 6, 6), mat(0xdddddd, .4, .6)); fp.position.set(...P3(s0 + 1.5, tc, base + 38.6)); grp.add(fp); const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .9), std(0xb22234, .7)); fl.material.side = THREE.DoubleSide; fl.position.set(...P3(s0 + 1.5, tc + .8, base + 41)); grp.add(fl); }
+    plane(9.5, .75, txt('THE GEORGIAN HOTEL', 9.5, .75, '#9a6a3a', "bold 74px Georgia, 'Times New Roman', serif"), s0 - .12, tc, base + 7.5, FACE);
+    const neon = plane(10, 3.4, txt('', 10, 3.4, '#fff'), s0 + 14, tc, base + 34.8, FACE); neon.material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, map: canvasTex(1024, 348, x => { x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 10; x.strokeStyle = '#fff'; x.fillStyle = '#e0283a'; x.font = "bold 120px Georgia, serif"; x.strokeText('THE', 512, 80); x.fillText('THE', 512, 80); x.font = "bold 150px Georgia, serif"; x.strokeText('GEORGIAN', 512, 250); x.fillText('GEORGIAN', 512, 250); }, false) });   // the red neon sign on the roof
+    for (const d of [-4.2, 0, 4.2]) bx(s0 + 13.9, s0 + 14.1, tc + d - .05, tc + d + .05, 32.7, 36.6, 0x666a6e, base);
+    const stripe = canvasTex(64, 64, x => { for (let k = 0; k < 4; k++){ x.fillStyle = k % 2 ? '#f4f2ea' : '#1f2a44'; x.fillRect(k*16, 0, 16, 64); } }), aw = new THREE.MeshStandardMaterial({ map: stripe, roughness: .8, side: THREE.DoubleSide }); stripe.wrapS = stripe.wrapT = THREE.RepeatWrapping; stripe.repeat.set(9, 1);
+    { const ge = new THREE.PlaneGeometry(t1 - t0, 3.2), me = new THREE.Mesh(ge, aw); me.position.set(...P3(s0 - 1.45, tc, base + 3.7)); me.rotation.set(0, FACE, 0); me.rotateX(-1.05); grp.add(me); }   // the striped awnings over the veranda
+    for (const d of [-6, -2, 2, 6]){ const u = new THREE.Mesh(new THREE.ConeGeometry(1.4, .6, 10), mat(0xf2c230, .7)); u.position.set(...P3(s0 - 4.8, tc + d, base + 2.5)); grp.add(u); bx(s0 - 4.83, s0 - 4.77, tc + d - .03, tc + d + .03, 0, 2.3, 0xeeeeee, base); }   // yellow umbrellas out on the terrace
+    bx(s0 - 6.5, s0 - 6.3, t0 + .5, t1 - .5, 0, .9, 0x3e8f8f, base); }
+  { const h = H('shangrila'), [s0, t0, s1, t1] = h.box, r = h.round[2], base = landH(s0 - 1, t0 + 8), W = 0xf3f3ef, G = 0xc9c9c3, GL = 0x2c3c48, F = 3.25, top = 26.3 - 3.4, cs = s0 + r, ct = t0 + r;
+    for (let y = 4.2; y < top - 1; y += F){
+      for (let t = ct + 6; t < t1 - 1.5; t += 2.9) bx(s0 - .1, s0 - .02, t, t + 2, y, y + 1.6, GL, base);   // windows along Ocean Ave
+      for (let s = cs + 1; s < s1 - 1.5; s += 2.9) bx(s, s + 2, t0 - .1, t0 - .02, y, y + 1.6, GL, base);   // and along Arizona
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(r + .06, r + .06, 1.6, 20, 1, true, Math.PI, Math.PI/2), mat(GL, .3, .3)); c.position.set(...P3(cs, ct, base + y + .8)); grp.add(c);   // the window band round the corner
+      for (const dy of [-.45, -.75]){ bx(s0 - .06, s0, ct, t1, y + dy, y + dy + .08, G, base); bx(cs, s1, t0 - .06, t0, y + dy, y + dy + .08, G, base); } }   // speed lines
+    bx(s0 - .3, s0 + .1, ct + 1.2, ct + 4.4, 4.2, top + 2.5, null, base, mat(0x223240, .25, .4)); for (let y = 4.6; y < top + 2.5; y += .6) bx(s0 - .34, s0 - .28, ct + 1.2, ct + 4.4, y, y + .05, 0x9aa6ad, base);   // the tall dark glass strip
+    bx(s0 - 2.2, s0, ct + .2, ct + 5.4, 3.1, 3.9, 0x151515, base); plane(4.8, .62, txt('SHANGRI-LA', 4.8, .62, '#f4f4f0', "bold 80px 'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif", '#151515'), s0 - 2.22, ct + 2.8, base + 3.5, FACE);   // the black marquee over the door
+    bx(s0 + 3, s1 - 3, t0 + 3, t1 - 3, top, top + 3.4, W, base); for (const y of [.5, 1]) { bx(s0 - .05, s0 + .05, ct, t1 - 1, top + y, top + y + .05, 0xffffff, base); bx(cs, s1 - 1, t0 - .05, t0 + .05, top + y, top + y + .05, 0xffffff, base); } }   // the top floor set back, behind white pipe rails
+  g.add(grp); mergeStatic(grp); }
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right
    round the building, round its rounded corners; the wing stands on white piers over a glass lobby. box: the OSM footprint [s0, t0, s1, t1] */

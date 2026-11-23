@@ -2520,10 +2520,10 @@ function startOcean(){
   { const today = new Date().toDateString(); let got = 0, why = ''; if (!save.giftNov26){ save.giftNov26 = true; got += 250; why = 'A gift to spend on the Promenade'; } if (save.allowDay !== today){ save.allowDay = today; got += 50; why = why || 'Your daily allowance'; }   // (coins to spend: a one-time gift, and 50 every day you play)
     if (got){ save.coins = (save.coins || 0) + got; persist(); flushCloud(); setTimeout(() => banner(`💰 +${got} coins!`, why), 2500); } }
   ocean.teach = !save.tutorialDone;
-  if (!ocean.teach) coach(OCEAN_HELLO, 10);
+  if (!ocean.teach) coach(OCEAN_HELLO, 4);
   visitArrive();   // (came from a trip link: go to that place)
 }
-const OCEAN_HELLO = 'You\'re on the 3rd Street Promenade at Wilshire, right by the triceratops fountain, and everything here is real size! Shops and dinosaur fountains run three blocks down to Broadway. For the beach, walk down California Avenue to the cliffs and take the California Incline down (hold Run to go faster). Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
+const OCEAN_HELLO = 'Real-size Santa Monica. Go explore!';
 // Waves and currents: the pool is calm, the ocean pushes you around.
 const CURRENT = [45, 60, 95, 70, 85, 55, 75];     // strength per world
 function currentAt(x, y, t){
@@ -3681,7 +3681,7 @@ function updOcean(dt){
   o.dx = (o.dx || 0) + cur[0]*dt*1.6; o.dy = (o.dy || 0) + cur[1]*dt*1.6;
   if (o.teach && !o.onLand && time > sayUntil){
     if ((o.swimPh || 0) < 3) coach('Swim with the joystick (or W A S D). Push the way you want to go. Drag the screen to turn the camera, and pinch to zoom.');
-    else { o.teach = false; save.tutorialDone = true; persist(); coach(OCEAN_HELLO, 10); }
+    else { o.teach = false; save.tutorialDone = true; persist(); coach(OCEAN_HELLO, 4); }
   } else if (coachTimer > 0){ coachTimer -= dt; if (coachTimer <= 0) coach(''); }
   let d = Math.hypot(o.x,o.y);
   // animals are solid: you bump off whales, sharks, dolphins and the rest instead of swimming through them

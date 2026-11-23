@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7033,7 +7033,8 @@ const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 &&
 const OCEAN_HOTELS = [{ name: 'georgian', box: [424.6, -352.0, 455.6, -333.6], c: 0x5ebcc5 }, { name: 'shangrila', box: [422.0, -609.6, 467.2, -564.8], c: 0xf3f3ef, round: [422.0, -609.6, 6] },
   { name: 'pacific', box: [420.6, -320.2, 458.4, -273.8], c: 0xf4f4f0 }, { name: 'oceanview', box: [420.8, -265.4, 467.0, -233.4], c: 0xe8d8b8 },
   { name: 'clocktower', box: [594.0, -457.8, 610.4, -426.8], c: 0xefeadf, ht: 32 },
-  { name: 'shoepalace', box: [558.4, -404.4, 589.0, -357.4], c: 0xe3d2b2 }, { name: 'britannia', box: [716.8, -404.2, 735.2, -372.0], c: 0x7a6658 }];   // (Santa Monica Blvd: Shoe Palace's Spanish Baroque front and the Britannia pub: see buildSMBlvd)   // (the Clock Tower Building on Santa Monica Blvd: see buildClockTower)   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
+  { name: 'shoepalace', box: [558.4, -404.4, 589.0, -357.4], c: 0xe3d2b2 }, { name: 'britannia', box: [716.8, -404.2, 735.2, -372.0], c: 0x7a6658 },
+  { name: 'o1299', box: [421.8, -694.0, 457.0, -654.8], c: 0xefede6, ht: 16 }, { name: 'o1299b', box: [457.0, -690.4, 517.8, -634.2], c: 0xefede6 }];   // (1299 Ocean Ave, 1980: see buildO1299)   // (Santa Monica Blvd: Shoe Palace's Spanish Baroque front and the Britannia pub: see buildSMBlvd)   // (the Clock Tower Building on Santa Monica Blvd: see buildClockTower)   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
 function buildOceanHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const txt = (text, w, h, fg, font, bg) => new THREE.MeshBasicMaterial({ transparent: !bg, map: canvasTex(1024, Math.round(1024*h/w), x => { const H = Math.round(1024*h/w); if (bg){ x.fillStyle = bg; x.fillRect(0, 0, 1024, H); } x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(text, 512, H/2 + 4); }, false) });
@@ -7130,6 +7131,20 @@ function buildSMBlvd(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, 
     sign(8, .4, x => { x.fillStyle = '#b51f2a'; x.fillRect(0, 0, 512, 26); x.fillStyle = '#fff'; x.font = 'bold 20px sans-serif'; x.textAlign = 'center'; x.fillText('BRITANNIA BRITISH PUB', 256, 20); }, (s0 + s1)/2 + 1, f - 2.25, base + 3.05, Math.PI);
     for (let s = s0 + .5; s <= s1 - .5; s += 1.1){ bx(s, s + .1, f - 4.6, f - 4.5, 0, .95, 0xf7f7f5, base); } bx(s0 + .5, s1 - .4, f - 4.62, f - 4.48, .7, .82, 0xf7f7f5, base); bx(s0 + .5, s1 - .4, f - 4.62, f - 4.48, .25, .37, 0xf7f7f5, base);   // the white picket patio fence
     for (const s of [s0 + 4, s0 + 10]){ const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .55, 8), mat(0xf2d230, .7)); u.position.set(...P3(s, f - 2.9, base + 2.6)); grp.add(u); bx(s - .03, s + .03, f - 2.93, f - 2.87, 0, 2.4, 0xdddddd, base); } }
+  g.add(grp); mergeStatic(grp); }
+/* 1299 Ocean Ave (1980, 12 stories, at Arizona), from photos (Wikimedia Commons): cream-white offices with a ribbon of dark blue glass at
+   each floor; the front half steps back floor by floor on its north side in white terraces with rounded ends, like a stair, from four
+   floors up to the top. */
+function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75), GL = std(0x2a4058, .25, .45), H = n => OCEAN_HOTELS.find(h => h.name === n);
+  const bx = (a0, a1, c0, c1, y0, y1, m, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const A = H('o1299'), [s0, t0, s1, t1] = A.box, bA = CITY.bldgs.find(b => Math.abs(b.box[0] - s0) < 1.5 && Math.abs(b.box[1] - t0) < 1.5); if (!bA) return;
+  const base = bA.base, F = 4.04, top = bA.h;
+  for (let k = 0; k < 12; k++){ const y0 = k*F, tn = k < 4 ? t0 : t0 + (k - 3)*2.5;   // each floor: the terraces step south as they go up
+    if (k >= 4){ bx(s0, s1, tn, t1, y0, y0 + F, W, base); const cap = new THREE.Mesh(new THREE.CylinderGeometry(.55, .55, F, 10), W); cap.position.set(...P3(s0 + .55, tn + .55, base + y0 + F/2)); grp.add(cap); }
+    bx(s0 - .06, s0 + .2, tn + .8, t1 - .8, y0 + 1.1, y0 + 3.1, GL, base); bx(s0 + .8, s1 - .8, tn - .06, tn + .2, y0 + 1.1, y0 + 3.1, GL, base);   // the glass ribbons, front and north
+    if (k >= 4) bx(s0, s1, tn - 2.5, tn - 2.3, y0, y0 + 1, W, base); }   // (the terrace's white parapet)
+  { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
+    if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right

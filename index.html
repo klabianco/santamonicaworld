@@ -428,7 +428,7 @@
 </style>
 
 <div id="loading" class="loading" role="status" aria-live="polite"><div class="ld-in">
-  <p class="kicker">Swim · skate · explore</p><h1 class="name">Santa Monica <em>World</em></h1>
+  <p class="kicker">Real places · real size</p><h1 class="name">Santa Monica <em>World</em></h1>
   <div class="ld-bar"><i id="ldFill"></i></div><p class="ld-note" id="ldNote">Getting the beach ready…</p>
   <button id="ldSkip" class="btn secondary" type="button" hidden>Start anyway</button>
 </div></div>
@@ -485,22 +485,22 @@
 <div id="title" class="overlay">
   <div class="panel title">
     <div>
-      <p class="kicker">Swim · skate · explore</p>
+      <p class="kicker">Real places · real size</p>
       <h1 class="name">Santa Monica <em>World</em></h1>
     </div>
-    <p class="explain">Swim the bay, ride the pier, shop the Promenade and go ice skating, all in the real Santa Monica.</p>
+    <p class="explain">Walk the real Santa Monica, then teleport to San Francisco, Kyoto, the Getty and Disneyland. Try it before you go.</p>
     <ul class="how">
       <li><b>Move</b><span class="tch">Joystick to go. Drag to look around. Pinch to zoom.</span><span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to go. Drag to look around. Scroll to zoom.</span></li>
-      <li><b>Swim</b>Keep moving or you'll sink. <span class="tch">Hold Dive</span><span class="k">Hold <kbd>Space</kbd></span> to go under. Watch out for sharks!</li>
+      <li><b>Teleport</b>Step into a 🌀 teleport, or tap Menu → Go somewhere, to zap to another place.</li>
       <li><b>Do things</b><span class="tch">Tap</span><span class="k">Click</span> the buttons that pop up to talk, shop, ride and play.</li>
-      <li><b>Coins</b>Find pearls and treasure. Spend coins in the shops.</li>
+      <li><b>Coins</b>Earn coins as you explore. Spend them in the shops.</li>
     </ul>
     <div class="actions">
       <button id="startBtn" class="btn primary" type="button">Start Game</button>
       <button id="continueBtn" class="btn secondary" type="button">Continue</button>
       <button id="makeBtn" class="btn textlink" type="button" hidden>Make an account</button>
       <button id="cloneBtn" class="btn textlink" type="button" hidden>Clone an account</button>
-      <p class="note" id="titleNote">Continue logs you in and loads your saved swimmer.</p>
+      <p class="note" id="titleNote">Continue logs you in and loads your saved player.</p>
       <p class="note" id="loadNote"></p>
     </div>
   </div>
@@ -538,8 +538,8 @@
 </div>
 <div id="loginPanel" class="overlay" hidden>
   <div class="panel title">
-    <div><p class="kicker" id="loginKicker">Your swimmer, on any device</p><h2 id="loginTitle">Log in</h2></div>
-    <p class="explain" id="loginExplain">Log in with your swimmer name and password to load your swimmer. New here? Make an account. It only takes a second.</p>
+    <div><p class="kicker" id="loginKicker">Your player, on any device</p><h2 id="loginTitle">Log in</h2></div>
+    <p class="explain" id="loginExplain">Log in with your player name and password to load your player. New here? Make an account. It only takes a second.</p>
     <form id="loginForm" class="loginform" autocomplete="on" onsubmit="return false">
       <label>Swimmer name<input id="loginName" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="e.g. vienna"></label>
       <label>Password<input id="loginPass" type="password" autocomplete="current-password" maxlength="40" placeholder="at least 6 letters or numbers"><small class="hint">At least 6 letters or numbers</small></label>
@@ -584,11 +584,11 @@
 
 <div id="swimPanel" class="overlay" hidden>
   <div class="panel small">
-    <div><p class="kicker" id="swimKicker">Your swimmers</p><h2>Who's swimming?</h2></div>
+    <div><p class="kicker" id="swimKicker">Your players</p><h2>Who's playing?</h2></div>
     <div class="actions" id="swimList"></div>
     <div class="actions">
-      <button id="swimNew" class="btn secondary" type="button">+ New swimmer</button>
-      <button id="swimClone" class="btn secondary" type="button">Clone a swimmer</button>
+      <button id="swimNew" class="btn secondary" type="button">+ New player</button>
+      <button id="swimClone" class="btn secondary" type="button">Clone a player</button>
       <button id="swimBack" class="btn back" type="button">← Back</button>
     </div>
     <p class="note" id="swimNote"></p>
@@ -597,11 +597,11 @@
 
 <div id="clonePanel" class="overlay" hidden>
   <div class="panel small">
-    <div><p class="kicker">Clone a swimmer</p><h2 id="cloneTitle">Type in the clone code</h2></div>
+    <div><p class="kicker">Clone a player</p><h2 id="cloneTitle">Type in the clone code</h2></div>
     <p class="explain" id="cloneExplain"></p>
     <input id="cloneCode" class="movelink codein" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="12" placeholder="SHARK-4821" aria-label="Clone code">
     <div class="actions">
-      <button id="cloneGo" class="btn primary" type="button">Find the swimmer</button>
+      <button id="cloneGo" class="btn primary" type="button">Find the player</button>
       <button id="cloneBack" class="btn back" type="button">← Back</button>
     </div>
     <p class="note" id="cloneNote"></p>
@@ -618,9 +618,9 @@
 
 <div id="movePanel" class="overlay" hidden>
   <div class="panel title">
-    <div><p class="kicker">Take your swimmer with you</p><h2>Play on another device</h2></div>
-    <p class="explain">Open this link on any iPad, phone or computer. Your swimmer, coins, XP, gear and places come with you. Anyone who opens it gets a copy of your swimmer, so only send it to yourself.</p>
-    <input id="moveLink" class="movelink" type="text" readonly aria-label="Link to your swimmer">
+    <div><p class="kicker">Take your player with you</p><h2>Play on another device</h2></div>
+    <p class="explain">Open this link on any iPad, phone or computer. Your player, coins, XP, gear and places come with you. Anyone who opens it gets a copy of your player, so only send it to yourself.</p>
+    <input id="moveLink" class="movelink" type="text" readonly aria-label="Link to your player">
     <div class="actions">
       <button id="moveCopy" class="btn primary" type="button">Copy link</button>
       <button id="moveClose" class="btn secondary" type="button">Back</button>
@@ -775,7 +775,7 @@
       <button id="tripBtn" class="btn secondary" type="button">📋 Copy trip report</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
-      <button id="switchBtn" class="btn secondary" type="button" hidden>Switch swimmer</button>
+      <button id="switchBtn" class="btn secondary" type="button" hidden>Switch player</button>
       <button id="shareBtn" class="btn secondary" type="button" hidden>Share a clone code</button>
       <button id="logoutBtn" class="btn secondary" type="button" hidden>Log out</button>
     </div>
@@ -889,7 +889,7 @@ function addXP(n, quiet){
   const before = xpNow(), r0 = rankOf(before), c0 = CHARS.filter(c => before >= c.need).length;
   save.xp = before + n; const r1 = rankOf(), cs = CHARS.filter(c => save.xp >= c.need);
   if (!quiet){ const f = $('xpFloat'); f.textContent = `+${n} XP`; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
-  if (cs.length > c0){ const c = cs[cs.length - 1]; banner(`New swimmer: ${c.name}!`, 'Pick it in the Menu.'); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
+  if (cs.length > c0){ const c = cs[cs.length - 1]; banner(`New character: ${c.name}!`, 'Pick it in the Menu.'); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
   else if (r1 > r0){ banner(`You're now a ${RANKS[r1].n}!`, `${save.xp.toLocaleString()} XP · you swim a little faster`); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
   refreshLevelChip();
 }
@@ -1427,7 +1427,7 @@ function endRace(){
   const r = race; coach('');
   const fmtT = x => x.toFixed(2) + ' s';
   const unlocked = CHARS.filter(c => c.need > r.startXp && c.need <= xpNow()), nextC = CHARS.find(c => c.need > xpNow());
-  const unlockHtml = unlocked.map(c => `<div class="unlock">New swimmer unlocked: ${c.name}! Pick it in the Menu.</div>`).join('') +
+  const unlockHtml = unlocked.map(c => `<div class="unlock">New character unlocked: ${c.name}! Pick it in the Menu.</div>`).join('') +
     (nextC && !unlocked.length ? `<p class="res-line">${Math.ceil(nextC.need - xpNow())} more XP to unlock the ${nextC.name}</p>` : '');
   if (r.lesson){
     const first = !save.tutorialDone; save.tutorialDone = true; if (first){ save.coins = (save.coins || 0) + 20; addXP(25); } persist(); flushCloud();
@@ -1436,7 +1436,7 @@ function endRace(){
        <ul class="res-list"><li>Races are 50 m sprints: steer with the joystick and tap Stroke on the beat. Perfect strokes in a row are fastest. Your best time is saved.</li>
        <li>Every second you swim makes you a little faster. Watch your top speed in the Menu.</li>
        <li>Keep moving: stop swimming and you'll slowly sink. Hold Space (or the Dive button) to dive on purpose.</li>
-       <li>Everything you do earns XP: every meter you swim, races, pearls, chests, map pieces and new places. XP makes you faster and unlocks new swimmers: the Sea Turtle at 200 XP, the Otter at 700 XP, the Dolphin at 1,800 XP.</li>
+       <li>Everything you do earns XP: every meter you swim, races, pearls, chests, map pieces and new places. XP makes you faster and unlocks new characters: the Sea Turtle at 200 XP, the Otter at 700 XP, the Dolphin at 1,800 XP.</li>
        <li>Earn coins from races, pearls, shells and treasure chests, and spend them at the Dive Shop on Pool Island (or in the Menu).</li>
        <li>The pool is calm, so it's the place to practice. The ocean is open any time. Out there, waves and currents push you around.</li></ul>` + unlockHtml,
       first ? 'Go to the pool' : 'Back to pool', () => startPool(), 'Take the lesson again', () => startRace(true));
@@ -10711,7 +10711,7 @@ function renderPanel(){
     : `<span class="wchip">7 ocean worlds are waiting past the gate</span>`;
   $('homeBtn').hidden = !(mode === 'ocean' && (save.houseFound || save.homeRuns)); $('promBtn').hidden = $('aptWayBtn').hidden = $('aptBtn').hidden = mode !== 'ocean';
   $('logoutBtn').hidden = !(STANDALONE && fbAuth && account); $('switchBtn').hidden = $('shareBtn').hidden = !(STANDALONE && fbAuth && account && save.sid); $('moveBtn').hidden = STANDALONE;
-  $('saveInfo').textContent = STANDALONE ? (fbAuth && account ? `Logged in as ${fbAuth.name}. Your swimmer saves to your account.` : 'Not logged in. Progress saves on this device only.') : account ? 'Progress saves to your account, so you can continue on any device.'
+  $('saveInfo').textContent = STANDALONE ? (fbAuth && account ? `Logged in as ${fbAuth.name}. Your player saves to your account.` : 'Not logged in. Progress saves on this device only.') : account ? 'Progress saves to your account, so you can continue on any device.'
     : 'Progress saves on this device. Use Continue on the title screen to log in and keep it on your account.';
   const box = $('chars'); box.innerHTML = '';
   for (const c of CHARS){
@@ -10775,11 +10775,11 @@ $('moveCopy').onclick = async () => { const inp = $('moveLink'); inp.select();
 const hasSwimmer = d => !!d && ((d.coins || 0) > 250 || (d.gear || []).length > 0 || (d.xp || d.dist || 0) > 20);
 function arrangeTitle(){
   const back = !!fbAuth || hasSwimmer(readLocal()), st = $('startBtn'), co = $('continueBtn');
-  if (!startArmed) st.textContent = back ? 'or start a new swimmer' : 'Start Game';
+  if (!startArmed) st.textContent = back ? 'or start a new player' : 'Start Game';
   if (!co.disabled) co.textContent = back ? 'Continue playing' : STANDALONE ? 'Log in' : 'Continue';
   st.classList.toggle('primary', !back); st.classList.toggle('textlink', back); co.classList.toggle('primary', back); co.classList.toggle('secondary', !back);   // one big button; starting over is a small link
   if (back) st.before(co); else co.before(st);
-  $('makeBtn').hidden = !STANDALONE || !!fbAuth; $('cloneBtn').hidden = !STANDALONE; $('cloneBtn').textContent = fbAuth ? 'Clone a swimmer' : 'Clone an account';
+  $('makeBtn').hidden = !STANDALONE || !!fbAuth; $('cloneBtn').hidden = !STANDALONE; $('cloneBtn').textContent = fbAuth ? 'Clone a player' : 'Clone an account';
 }
 if (VISIT){ const T = $('title'); T.querySelector('.kicker').textContent = 'Try it before you go'; T.querySelector('.explain').textContent = VISIT.stops.length ? `Walk your trip in a real-size 3D city before you get there: ${VISIT.stops.length} stops, with a gold arrow from one to the next. No account needed.` : 'Walk around the real place, real size, before you get there. No account needed.'; }   // (came from a trip link)
 function titleNote(text, warn){ const n = $('titleNote'); n.textContent = text; n.className = 'note' + (warn ? ' warn' : ''); }
@@ -10795,8 +10795,8 @@ $('startBtn').onclick = () => {
   if (STANDALONE && fbAuth){ pendingNew = true; titleNote('Logging in…'); fbToken().then(startAccount).catch(() => { pendingNew = false; openLogin(false); }); return; }   // with an account, Start new adds a swimmer
   const had = readLocal();
   if (hasSwimmer(had) && !startArmed){
-    startArmed = true; $('startBtn').textContent = $('startBtn').classList.contains('textlink') ? 'Tap again to erase your swimmer and start over' : 'Yes, start over';
-    titleNote(`You already have a swimmer with ${had.coins || 0} coins${(had.gear || []).length ? ' and gear' : ''}. Starting over makes a brand-new one. Press Continue playing to keep yours.`, true);
+    startArmed = true; $('startBtn').textContent = $('startBtn').classList.contains('textlink') ? 'Tap again to erase your player and start over' : 'Yes, start over';
+    titleNote(`You already have a player with ${had.coins || 0} coins${(had.gear || []).length ? ' and gear' : ''}. Starting over makes a brand-new one. Press Continue playing to keep yours.`, true);
     return; }
   startArmed = false; arrangeTitle();
   account = null; guestT = 0; save = fresh(); persist(); enterGame();
@@ -10834,8 +10834,8 @@ const fbDb = { doc: () => ({
       headers: { Authorization: 'Bearer ' + await fbToken(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields: { data: { stringValue: JSON.stringify(obj) }, name: { stringValue: fbAuth.name }, updatedAt: { integerValue: String(Date.now()) } } }) });
     if (!r.ok){ const e = new Error('save failed'); e.code = r.status >= 500 || r.status === 0 ? 'unavailable' : 'denied'; throw e; } } }) };
-const FB_ERR = { EMAIL_EXISTS: 'That swimmer name is taken. Try another one, or log in.', INVALID_LOGIN_CREDENTIALS: 'Wrong swimmer name or password.', INVALID_PASSWORD: 'Wrong swimmer name or password.',
-  EMAIL_NOT_FOUND: 'No swimmer with that name yet. Make a new account?', INVALID_EMAIL: 'Names can use letters, numbers, dots, dashes and underscores.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many tries. Wait a minute and try again.' };
+const FB_ERR = { EMAIL_EXISTS: 'That player name is taken. Try another one, or log in.', INVALID_LOGIN_CREDENTIALS: 'Wrong player name or password.', INVALID_PASSWORD: 'Wrong player name or password.',
+  EMAIL_NOT_FOUND: 'No player with that name yet. Make a new account?', INVALID_EMAIL: 'Names can use letters, numbers, dots, dashes and underscores.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many tries. Wait a minute and try again.' };
 let loginCreate = false, loginGate = false;
 // a login message: problems show in red right under the boxes, and the box to fix is outlined (bad = true, or the box's id)
 function loginSay(text, bad){ const n = $('loginNote'); n.textContent = text; n.classList.toggle('bad', !!bad); for (const id of ['loginName', 'loginPass']) $(id).classList.toggle('bad', bad === id);
@@ -10844,13 +10844,13 @@ for (const id of ['loginName', 'loginPass']) $(id).addEventListener('input', () 
 function openLogin(gate){
   loginGate = !!gate; loginCreate = false; if (playing()){ paused = true; ptr.down = false; }
   for (const id of ['panel','shopPanel','mapPanel','movePanel']) $(id).hidden = true;
-  $('loginKicker').textContent = gate ? 'Nice swimming!' : 'Your swimmer, on any device';
+  $('loginKicker').textContent = gate ? 'Nice swimming!' : 'Your player, on any device';
   $('loginBack').hidden = gate; loginSay(''); setLoginMode(false); $('loginPanel').hidden = false; resetPick();
   setTimeout(() => { try { $('loginName').focus(); } catch(e){} }, 50); }
 function setLoginMode(create){
   loginCreate = create; $('loginTitle').textContent = create ? 'Make an account' : (loginGate ? 'Log in to keep playing' : 'Log in');
-  $('loginExplain').textContent = create ? 'Pick a swimmer name and a password. Use them to log in on any iPad, phone or computer.'
-    : loginGate ? 'Log in or make a free account to keep playing. Your coins, XP and gear are saved, and you can play on any device.' : 'Log in with your swimmer name and password to load your swimmer. New here? Make an account.';
+  $('loginExplain').textContent = create ? 'Pick a player name and a password. Use them to log in on any iPad, phone or computer.'
+    : loginGate ? 'Log in or make a free account to keep playing. Your coins, XP and gear are saved, and you can play on any device.' : 'Log in with your player name and password to load your player. New here? Make an account.';
   $('loginGo').textContent = create ? 'Make my account' : 'Log in'; $('loginSwap').textContent = create ? 'I already have an account' : 'Make a new account';
   $('loginPass').autocomplete = create ? 'new-password' : 'current-password'; loginSay(''); }
 $('loginSwap').onclick = () => setLoginMode(!loginCreate);
@@ -10927,10 +10927,10 @@ function showSwimmers(){
   for (const sv of swimmers){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary swimrow';
     b.innerHTML = `${htmlText(sv.label || fbAuth.name)}<small>${RANKS[rankOf(sv.xp || 0)].n} · ${(sv.xp || 0).toLocaleString()} XP · ${sv.coins || 0} coins${sv.near ? ' · a clone' : ''}</small>`;
     b.onclick = () => playSwimmer(sv); box.appendChild(b); }
-  $('swimKicker').textContent = `${fbAuth.name}'s swimmers`; $('swimNote').textContent = ''; $('swimPanel').hidden = false; resetPick(); }
+  $('swimKicker').textContent = `${fbAuth.name}'s players`; $('swimNote').textContent = ''; $('swimPanel').hidden = false; resetPick(); }
 async function addNewSwimmer(){
   const sv = newSwimmer(`${fbAuth.name} ${swimmers.length + 1}`); try { await putSwimmer(sv); } catch(e){}
-  swimmers.unshift(sv); playSwimmer(sv, 'A brand-new swimmer!'); }
+  swimmers.unshift(sv); playSwimmer(sv, 'A brand-new player!'); }
 // logged in: pick up where you were (a clone you just made, a new swimmer, the guest you were playing) or choose a swimmer
 async function startAccount(){
   const inGame = playing(); let list = []; try { list = await listSwimmers(); } catch(e){ if (e.status === 403) return legacyAccount(inGame); }   // server rules not updated yet: the old one-swimmer save
@@ -10940,7 +10940,7 @@ async function startAccount(){
   if (inGame){   // logged in while playing as a guest: that swimmer joins the account
     const sv = list.length ? { ...mergeSaves(list[0], { ...save }), sid: list[0].sid, label: list[0].label } : { ...save, sid: newSid(), label: fbAuth.name };
     account = { db: swimDb, uid: fbAuth.uid, sid: sv.sid }; save = Object.assign(fresh(), sv); persist(); cloudDirty = true; flushCloud(); guestT = 0;
-    resetPick(); paused = false; if (ocean) buildMinimap(); loadNeighbors(); banner(`Logged in as ${fbAuth.name}!`, 'Your swimmer now saves to your account.'); return; }
+    resetPick(); paused = false; if (ocean) buildMinimap(); loadNeighbors(); banner(`Logged in as ${fbAuth.name}!`, 'Your player now saves to your account.'); return; }
   if (!list.length){ const local = readLocal(), sv = hasSwimmer(local) && !local.sid ? { ...local, sid: newSid(), label: fbAuth.name } : newSwimmer(fbAuth.name);
     try { await putSwimmer(sv); } catch(e){} swimmers = [sv]; playSwimmer(sv, `Hi, ${fbAuth.name}!`); return; }
   if (resumeSid){ const sv = list.find(x => x.sid === resumeSid); resumeSid = null; if (sv){ playSwimmer(sv); return; } }   // (back from an update: the same swimmer, no questions)
@@ -10954,10 +10954,10 @@ async function legacyAccount(inGame){
   const current = inGame || (save.xp || 0) > 0 ? save : readLocal();
   save = Object.assign(fresh(), cloud ? (current ? mergeSaves(cloud, current) : cloud) : (current || {})); delete save.sid;
   persist(); cloudDirty = true; flushCloud(); guestT = 0; $('loginPanel').hidden = true; resetPick();
-  if (inGame){ paused = false; if (ocean) buildMinimap(); banner(`Logged in as ${fbAuth.name}!`, 'Your swimmer now saves to your account.'); }
+  if (inGame){ paused = false; if (ocean) buildMinimap(); banner(`Logged in as ${fbAuth.name}!`, 'Your player now saves to your account.'); }
   else { enterGame(); banner(cloud ? `Welcome back, ${fbAuth.name}!` : `Hi, ${fbAuth.name}!`, `${RANKS[rankOf()].n} · ${xpNow().toLocaleString()} XP · ${save.coins || 0} coins`); }
 }
-$('swimNew').onclick = () => { $('swimNote').textContent = 'Making a new swimmer…'; addNewSwimmer(); };
+$('swimNew').onclick = () => { $('swimNote').textContent = 'Making a new player…'; addNewSwimmer(); };
 $('swimClone').onclick = () => openClone();
 $('swimBack').onclick = () => { $('swimPanel').hidden = true; resetPick(); };
 $('switchBtn').onclick = async () => { $('panel').hidden = true; persist(); await flushCloud(); setMode('title'); try { swimmers = await listSwimmers(); } catch(e){} showSwimmers(); };
@@ -10983,12 +10983,12 @@ let cloneFound = null;
 function openClone(){
   for (const id of ['swimPanel', 'panel', 'loginPanel']) $(id).hidden = true; if (playing()) paused = true; cloneFound = null;
   $('cloneTitle').textContent = 'Type in the clone code'; $('cloneExplain').textContent = 'Ask your friend to open their Menu and tap Share a clone code, then type the code here.';
-  $('cloneCode').hidden = false; $('cloneCode').value = ''; $('cloneGo').textContent = 'Find the swimmer'; $('cloneNote').textContent = ''; $('clonePanel').hidden = false; resetPick();
+  $('cloneCode').hidden = false; $('cloneCode').value = ''; $('cloneGo').textContent = 'Find the player'; $('cloneNote').textContent = ''; $('clonePanel').hidden = false; resetPick();
   setTimeout(() => { try { $('cloneCode').focus(); } catch(e){} }, 50); }
 $('cloneGo').onclick = async () => {
   const note = $('cloneNote'), btn = $('cloneGo');
   if (cloneFound){ const pc = cloneFound;   // step 2: make the clone
-    if (!fbAuth){ pendingClone = pc; $('clonePanel').hidden = true; openLogin(false); setLoginMode(true); $('loginExplain').textContent = `Pick your own swimmer name and password. Your new account starts with your clone of ${pc.label}.`; return; }
+    if (!fbAuth){ pendingClone = pc; $('clonePanel').hidden = true; openLogin(false); setLoginMode(true); $('loginExplain').textContent = `Pick your own player name and password. Your new account starts with your clone of ${pc.label}.`; return; }
     btn.disabled = true; note.textContent = 'Cloning…';
     try { await fbToken(); const sv = await makeClone(pc); swimmers.unshift(sv); if (playing()) paused = false; playSwimmer(sv, `You cloned ${pc.label}!`); }
     catch(e){ note.textContent = "Couldn't reach the server. Check the internet and try again."; }
@@ -11118,7 +11118,7 @@ const loginFirst = '<p>Log in to your account to use this. Only friends you add 
 function showPhone(scr = 'home', arg = null){
   phoneScreen = scr; phoneArg = arg; const el = $('phoneScreen'), d = new Date(); $('phoneClock').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   let h = '';
-  if (scr === 'home') h = `<h3>Hi, ${htmlText(save.label || fbAuth?.name || 'swimmer')}!</h3><div class="apps">${APPS.map(([id, ic, name, col]) =>
+  if (scr === 'home') h = `<h3>Hi, ${htmlText(save.label || fbAuth?.name || 'there')}!</h3><div class="apps">${APPS.map(([id, ic, name, col]) =>
     `<button class="app" data-app="${id}" type="button"><i style="background:${col}">${ic}</i>${name}${id === 'messages' && inbox.length ? `<b>${inbox.length}</b>` : ''}${id === 'music' && musicOn ? ' ♪' : ''}</button>`).join('')}</div>`;
   else if (scr === 'friends') h = !socialOn() ? `<h3>👫 Friends</h3>${loginFirst}` : `<h3>👫 Friends</h3>
     <div class="prow"><div class="who">Your friend code<small>Tell it to a friend so you can send each other messages. It works for 24 hours.</small></div></div>
@@ -11211,7 +11211,7 @@ function drawOthers(t){
   for (const [uid, o] of others){
     if (performance.now() - o.seen > 15000 || (o.t && Date.now() - o.t > 60000)){ dropOther(o); others.delete(uid); continue; }   // gone quiet: they closed the game
     if (!o.model || o.kind !== o.c){ dropOther(o); o.model = buildModel(o.c || 'swimmer'); o.model.rotation.order = 'YZX'; o.kind = o.c; oceanWorld.add(o.model);
-      o.tag = sprite(labelTex(o.n || 'Swimmer', '#082b45', '#fff', 512, 128, 80), 1.4, .35); oceanWorld.add(o.tag); }
+      o.tag = sprite(labelTex(o.n || 'Player', '#082b45', '#fff', 512, 128, 80), 1.4, .35); oceanWorld.add(o.tag); }
     const k = .18, moving = Math.hypot(o.x - o.sx, o.y - o.sy) > 1.5;   // glide toward the latest spot between updates
     o.sx += (o.x - o.sx)*k; o.sy += (o.y - o.sy)*k; o.sw += ((o.w ?? 0) - o.sw)*k; o.sa = lerpAngle(o.sa, o.a ?? 0, k);
     const m = o.model, u = m.userData; m.visible = true;
@@ -11262,7 +11262,7 @@ $('continueBtn').onclick = async () => {
       persist(); cloudDirty = true; flushCloud();
       let name = ''; try { name = (await user.me()).name || ''; } catch(e){}
       enterGame();
-      banner(loaded ? `Welcome back${name ? ', ' + name.split(' ')[0] : ''}!` : 'Logged in', loaded ? `Top speed ${speedMul().toFixed(2)}×` : 'Your swimmer now saves to your account.');
+      banner(loaded ? `Welcome back${name ? ', ' + name.split(' ')[0] : ''}!` : 'Logged in', loaded ? `Top speed ${speedMul().toFixed(2)}×` : 'Your player now saves to your account.');
     } else if (local){
       account = null; save = Object.assign(fresh(), local); enterGame();
       banner('Welcome back!', 'Loaded the swimmer saved on this device.');
@@ -11349,7 +11349,7 @@ if (STANDALONE) $('titleNote').textContent = fbAuth ? `Log in to keep playing as
   if (m){ try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
     const d = readSaveCode(m[1]);
     if (d){ const merged = mergeSaves(readLocal(), migrate(d)); try { localStorage.setItem(LOCAL_KEY, JSON.stringify(merged)); } catch(e){}
-      titleNote(`Your swimmer is here! ${merged.coins || 0} coins, ${(merged.xp || 0).toLocaleString()} XP. Press Continue to keep playing.`); }
+      titleNote(`Your player is here! ${merged.coins || 0} coins, ${(merged.xp || 0).toLocaleString()} XP. Press Continue to keep playing.`); }
     else titleNote("That swimmer link didn't work. Try copying it again.", true); } }
 }
 initTitleNotes();

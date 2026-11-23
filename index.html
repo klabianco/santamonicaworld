@@ -6410,6 +6410,25 @@ function attnStep(dt, o){ if (paused || document.hidden || o.x < coastX(o.y) - 4
   camera.getWorldDirection(_camDir); const h = Math.hypot(_camDir.x, _camDir.z) || 1; add(A.l, sq(o.x + _camDir.x/h*25*METERS, o.y + _camDir.z/h*25*METERS), k);   // (what's 25 m ahead of the camera)
   const pl = ($('hudVal')?.textContent || '').slice(0, 32); if (pl && !/^[\d.,]+\s*[×s%]?$/.test(pl)) add(A.p, pl, k);   // (skip scores and timers, not "3rd Street...")
   if ((attnSaveT += k) >= 30){ attnSaveT = 0; attnTrim(A.c, 220); attnTrim(A.l, 160); attnTrim(A.p, 90); while (JSON.stringify(A).length > 6000){ attnTrim(A.c, Object.keys(A.c).length*.8|0); attnTrim(A.l, Object.keys(A.l).length*.8|0); A.e.splice(0, 5); } persist(); } }
+/* ---------- Anonymous place counts: which places people visit, so the nightly build can build those out ----------
+   When a player has been in a named place for 5 seconds, the game adds 1 to that place's count for the day in the Realtime
+   Database (visits/<day>/<place>), at most once per place per play, sent in one batch about once a minute. Nothing about
+   who: no user id, name, device or real location, only the game's own place name (landName or the water zone), and once per
+   play the trip link's ref (refs/<day>/<ref>). Only the live website sends these. */
+const VISIT_ON = /(^|\.)github\.io$/.test(location.hostname) || window.__visitTest === true;
+const visitSeen = new Set(), visitQ = new Map(); let visitCur = '', visitDwell = 0, visitFlushT = 0, visitRefSent = false;
+const visitKey = v => String(v || '').replace(/[.#$\/\[\]\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+function visitFlush(){ if (!visitQ.size) return; const day = new Date().toISOString().slice(0, 10), body = {};
+  for (const [k, n] of visitQ) body[k] = { '.sv': { increment: n } }; visitQ.clear();
+  fetch(`${RTDB}/visits/${day}.json`, { method: 'PATCH', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+  const ref = visitKey(VISIT?.ref).replace(/[^\w-]/g, '').slice(0, 30);
+  if (ref && !visitRefSent){ visitRefSent = true; fetch(`${RTDB}/refs/${day}.json`, { method: 'PATCH', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [ref]: { '.sv': { increment: 1 } } }) }).catch(() => {}); } }
+function visitStep(dt, o){ if (!VISIT_ON || paused || document.hidden || mode !== 'ocean') return;
+  let n = ''; try { const ashore = o.onLand && (onMainland(o.x, o.y) || onPierNow(o)); n = visitKey(ashore ? landName(o.x, o.y) : ZONES[o.zone]?.name); } catch(e){ return; }
+  if (n !== visitCur){ visitCur = n; visitDwell = 0; }
+  if (n && !visitSeen.has(n) && (visitDwell += dt) >= 5){ visitSeen.add(n); visitQ.set(n, (visitQ.get(n) || 0) + 1); }
+  if ((visitFlushT += dt) >= 60){ visitFlushT = 0; visitFlush(); } }
+document.addEventListener('visibilitychange', () => { if (document.hidden && VISIT_ON) visitFlush(); });
 function iceStep(dt, o){ const [s, t] = landST(o.x, o.y), [S0, S1, T0, T1] = ICE.site, sc = (S0 + S1)/2, tc = (T0 + T1)/2, near = Math.abs(s - sc) < 220 && Math.abs(t - tc) < 260; if (!near && !iceVis) return; const V = iceBuild(); V.g.visible = near; if (!near) return;
   for (const k of V.sk){ const R = k.R, a = (R.s1 - R.s0)/2 - k.edge - k.lane, b = (R.t1 - R.t0)/2 - k.edge - k.lane, cs = (R.s0 + R.s1)/2, ct = (R.t0 + R.t1)/2; k.ph += k.dir*k.v*dt;
     const ss = cs + Math.cos(k.ph)*a, tt = ct + Math.sin(k.ph)*b, ds = -Math.sin(k.ph)*a*k.dir, dtt = Math.cos(k.ph)*b*k.dir;
@@ -8261,7 +8280,7 @@ function updCoast(o){
   // the dinosaur fountains spout, and the people on the Promenade stroll
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
-    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); foodStep(dt, o); ballStep(dt, o); fishStep(dt, o);
+    partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); visitStep(dt, o); foodStep(dt, o); ballStep(dt, o); fishStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)
         _cq.setFromAxisAngle(_cu, -Math.PI/2 + P.yaw + (k ? Math.sin(time*(1.5 + k) + p.ph*3)*.45*k : 0)); _cs.setScalar(1); _cm.compose(_cv.set(x*U, (P.h ?? landH(p.s, p.t)) + hop, y*U), _cq, _cs); mb.setMatrixAt(i, _cm); mh.setMatrixAt(i, _cm); ml.setMatrixAt(i, _cm); return; }
       const near = !o.car && Math.hypot(p.s - ps, p.t + p.dir*.8 - pt) < 1.1;   // (they wait for you to get out of the way)

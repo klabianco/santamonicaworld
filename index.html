@@ -5008,7 +5008,7 @@ function buildMatter(pk, g, W3){ const D = pk.data, b = pk.blds.find(b => b.n ==
   const coneR = z => R0*(1 - z/H), V = (x, y, z) => new THREE.Vector3(x, y, z), pts = [V(118, 139.5, 1), V(106, 139.5, 1), V(98.5, 135, 1.4), V(95, 126, 4.5), V(94, 114, 12.5), V(97, 103, 20.5), V(103, 97.5, 24.4)];
   const th0 = Math.atan2(97.5 - cy, 103 - cx), turns = 3.39, n = Math.round(turns*24); for (let k = 1; k <= n; k++){ const f = k/n, th = th0 - f*turns*2*Math.PI, z = 23.4 - f*19.4, r = coneR(z) + 1.4; pts.push(V(cx + Math.cos(th)*r, cy + Math.sin(th)*r, z)); }
   pts.push(V(92, 132, .9), V(98, 137, .7), V(104, 140.5, .8), V(116, 140.5, 1));
-  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), L = curve.getLength(); Object.assign(MATTER, { curve, L, pk, h0, C: [cx, cy], lift: [L*curve.getUtoTmapping ? 0 : 0, 0] });
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), L = curve.getLength(); Object.assign(MATTER, { curve, L, pk, h0, C: [cx, cy], coneR, lift: [L*curve.getUtoTmapping ? 0 : 0, 0] });
   { let acc = 0, prev = curve.getPointAt(0); const N = 600; MATTER.liftEnd = 0; for (let i = 1; i <= N; i++){ const q = curve.getPointAt(i/N); acc += prev.distanceTo(q); prev = q; if (q.z >= 24.3 && !MATTER.liftEnd) MATTER.liftEnd = acc; } MATTER.liftStart = 22; }
   const at = d => { const u = clamp(d/L, 0, 1), q = curve.getPointAt(u), t = curve.getTangentAt(u); return [q.x, q.y, q.z, Math.atan2(t.y, t.x), Math.atan2(t.z, Math.hypot(t.x, t.y))]; }; MATTER.at = at;
   // the track: two steel rails on ties, white supports down to the ground where it runs outside the mountain
@@ -5020,8 +5020,8 @@ function buildMatter(pk, g, W3){ const D = pk.data, b = pk.blds.find(b => b.n ==
     last = c; }
   g.add(new THREE.Mesh(mergeGeometries(rails), std(0x8d9aa6, .35, .7))); g.add(new THREE.Mesh(mergeGeometries(ties), std(0x5b5f63, .8))); if (posts.length){ const pm = new THREE.Mesh(mergeGeometries(posts), std(0xf2f2ee, .6)); pm.castShadow = true; g.add(pm); }
   // the ice cave the lift climbs through: blue-white crystals glowing in the dark inside the mountain
-  { const ice = [], R5 = mulberry(12); for (let k = 0; k < 26; k++){ const [x, y, z] = at(MATTER.liftStart + R5()*(MATTER.liftEnd - MATTER.liftStart)), a = R5()*2*Math.PI, r = 2.2 + R5()*1.6, q = new THREE.OctahedronGeometry(.22 + R5()*.4, 0); q.scale(1, 1.8, 1); q.translate(...W3(x + Math.cos(a)*r, y + Math.sin(a)*r, h0 + z + (R5() - .3)*2)); ice.push(q); }
-    g.add(new THREE.Mesh(mergeGeometries(ice), new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x4aa8e0, emissiveIntensity: .8, roughness: .2, transparent: true, opacity: .85 }))); }
+  { const ice = [], R5 = mulberry(12); for (let k = 0; k < 60; k++){ const [x, y, z] = at(MATTER.liftStart + R5()*(MATTER.liftEnd - MATTER.liftStart)), a = R5()*2*Math.PI, r = 1.5 + R5()*1.2, q = new THREE.OctahedronGeometry(.18 + R5()*.3, 0); q.scale(1, 1.8, 1); q.translate(...W3(x + Math.cos(a)*r, y + Math.sin(a)*r, h0 + z + .3 + R5()*2.2)); ice.push(q); }
+    g.add(new THREE.Mesh(mergeGeometries(ice), new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x6cc4ff, emissiveIntensity: 4, roughness: .2, transparent: true, opacity: .85 }))); }
   // the bobsleds: low and white with a red stripe, riders one behind another (the colors are a guess)
   const mkSled = () => { const sg = new THREE.Group(); sg.rotation.order = 'YZX'; const wht = std(0xf4f4f0, .35, .1), red = std(0xc8202e, .45), blk = std(0x2a2a2a, .7);
     const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, .55, 1.05), wht); body.position.y = .45; sg.add(body); const nose = new THREE.Mesh(new THREE.CylinderGeometry(.53, .53, .55, 12, 1, false, 0, Math.PI), wht); nose.rotation.y = Math.PI/2; nose.position.set(1.6, .45, 0); sg.add(nose);
@@ -7859,6 +7859,8 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
   const p = w.T < R.dur ? R.f(w.T) : null; if (!p) return stopWorkout();
   if (w.key === 'matter' && MATTER.curve){ const M = MATTER, z = M.at(w.d)[2], wasLift = w.d < M.liftEnd; w.v = matterSpeed(w.d, z, w.v, dt); w.d += w.v*dt; if (w.d >= M.L) return stopWorkout();
     if (wasLift && w.d >= M.liftEnd){ sfx(500, .4, 'sawtooth', .03, 0, 300); } if (!w.splash && w.d > M.L - 40 && z < 1.2){ w.splash = true; sfx(120, .6, 'sine', .08, 0, -80); camShake = Math.max(camShake || 0, .5); heartsAt = time; }
+    { const [qx, qy, qz] = M.at(w.d), inside = (w.d > M.liftStart - 8 && w.d < M.liftEnd + 2) || Math.hypot(qx - M.C[0], qy - M.C[1]) < M.coneR(qz)*.9 - .4; M.dark = lerp(M.dark || 0, inside ? 1 : 0, Math.min(1, dt*3)); }   // (in the dark inside the mountain; the ice glows)
+    if (w.d > M.liftStart && w.d < M.liftEnd && (w.clk = (w.clk ?? 0) - dt) <= 0){ w.clk = .16; sfx(95 + Math.random()*20, .05, 'square', .035); sfx(1400, .015, 'square', .012); }   // (the lift chain: clack-clack-clack)
     placeSled(M.sled, w.d); M.sled.updateMatrixWorld(); const c = new THREE.Vector3(.7, .55, 0).applyMatrix4(M.sled.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = { sit: true, arms: w.v > 9 }; o.ang = -M.sled.rotation.y; return; }   // (in the front seat)
   if (w.key === 'gtram' && GTRAM.cars.length){ const car = GTRAM.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(2.4, 1.15, .6).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (GTRAM.dir < 0 ? Math.PI : 0); return; }   // (a seat at the uphill end, by the window)
   if (w.key === 'eline' && ELINE.cars.length){ const car = ELINE.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(-4, 1.9, .8).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (ELINE.dir < 0 ? Math.PI : 0); return; }   // (in a seat in the front car)
@@ -10341,7 +10343,7 @@ function updOceanWorld(o){
   oceanScene.fog.color.copy(OC.fog); seaFloor.material.color.copy(OC.floor);
   oceanCaustic.material.uniforms.uI.value = .55*(1 - OC.dark);
   // Deep regions darken as you dive; sunlight still reaches the ocean surface.
-  renderer.toneMappingExposure = EXPO*(1 - OC.dark*.72*clamp((o.depth || 0)/8, 0, 1));
+  renderer.toneMappingExposure = EXPO*(1 - OC.dark*.72*clamp((o.depth || 0)/8, 0, 1))*(1 - .88*(o.workout?.key === 'matter' ? MATTER.dark || 0 : 0));   // (inside the Matterhorn it's dark)
   const gx = Math.round(px/4)*4, gz = Math.round(pz/4)*4;
   oceanWaterMesh.position.set(gx, 0, gz); oceanWaterDepth.position.copy(oceanWaterMesh.position);
   const coastKey = `${gx},${gz},${HOUSE.x},${HOUSE.y},${neighborsSig}`;

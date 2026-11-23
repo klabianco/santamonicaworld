@@ -7228,7 +7228,7 @@ function buildBBB(g){ const r = BBB.route = laneRoute([[AVES.fourth, XST.broadwa
     add(new THREE.BoxGeometry(.06, 1.7, 2.3), new THREE.MeshStandardMaterial({ color: 0x182028, roughness: .1, transparent: true, opacity: .35 }), 6.01, 1.95, 0);   // (the windshield: see-through, so riders can look out) for (const x of [-4, 4.2]) for (const z of [-1.28, 1.28]) add(new THREE.CylinderGeometry(.5, .5, .32, 14), dark, x, .5, z, Math.PI/2);
     for (const z of [-1.29, 1.29]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, .55), side); sg.position.set(-.5, 1.3, z); sg.rotation.y = z < 0 ? Math.PI : 0; b.add(sg); }
     const fs = new THREE.Mesh(new THREE.PlaneGeometry(2, .25), sign); fs.position.set(6.05, 2.85, 0); fs.rotation.y = Math.PI/2; b.add(fs);
-    g.add(b); BBB.buses.push({ m: b, d: k*r.L/2, v: 0, wait: 0, ang: null }); }
+    mergeStatic(b); g.add(b); BBB.buses.push({ m: b, d: k*r.L/2, v: 0, wait: 0, ang: null }); }   // (merged into a few meshes while still at the origin; the bus moves as one)
   const near = (sv, t) => { let best = 0, bd = 1e9; for (let q = 0; q < 2000; q++){ const d = q/2000*r.L, [a, c] = at(d), e = Math.hypot(a - sv, c - t); if (e < bd){ bd = e; best = d; } } return best; };
   for (const [sv, t] of [[AVES.fourth + 4, -300], [600, XST.smblvd - 4], [AVES.second - 4, -300]]){ const d = near(sv, t), [ps, pt, h] = at(d), nx = -Math.sin(h), ny = Math.cos(h), qs = ps + nx*3.4, qt = pt + ny*3.4;   // the stops: a blue sign on a pole at the curb
     BBB.stops.push(d); (BBB.stopPos || (BBB.stopPos = [])).push({ s: qs, t: qt, d }); const p = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x666666, .5)); pole.position.y = 1.5; p.add(pole);

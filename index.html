@@ -5465,6 +5465,7 @@ function buildCoast(){
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
+    { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
     { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
@@ -5689,7 +5690,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -6968,6 +6969,20 @@ function buildSauro(d, dir, ivy, ivy2, E){ const curb = std(0xb9b6ae, .85), gras
   for (const z of [.2, -.2]){ const ey = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 5), std(0x111111, .3)); ey.position.set(5.75, 4.93, z); s.add(ey); } }
 // a table at Michael's: walk up to the porch to eat
 const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 && s < MICHAELS.s + .5 && t > MICHAELS.t0 + .5 && t < MICHAELS.t1 - .5; };
+/* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
+   "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right
+   round the building, round its rounded corners; the wing stands on white piers over a glass lobby. box: the OSM footprint [s0, t0, s1, t1] */
+const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
+const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };
+function buildW100(g, P3){ const grp = new THREE.Group(), glass = std(0x1f3550, .2, .5), white = std(0xf4f4f1, .7);
+  for (const W of W100){ const b = CITY.bldgs.find(b => Math.abs(b.box[0] - W.box[0]) < 1.5 && Math.abs(b.box[1] - W.box[1]) < 1.5); if (!b) continue;
+    const [s0, t0, s1, t1] = W.box, sc = (s0 + s1)/2, tc = (t0 + t1)/2, H = b.top - b.base, base = b.base;
+    const sh = new THREE.Shape(), q = (W.r ? roundRect(W.box, W.r + .06) : [[s1 + .06, t1 + .06], [s0 - .06, t1 + .06], [s0 - .06, t0 - .06], [s1 + .06, t0 - .06]]).map(([s, t]) => [s - sc, -(t - tc)]);
+    q.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y));
+    for (let y = W.f0; y < H - W.top; y += W.fh){ const ge = new THREE.ExtrudeGeometry(sh, { depth: W.fh*.5, bevelEnabled: false }); ge.rotateX(-Math.PI/2); const me = new THREE.Mesh(ge, glass); me.position.set(...P3(sc, tc, base + y)); grp.add(me); }   // a glass ribbon at each floor
+    if (W.lobby){ const lb = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0 + .1, W.f0 - 2.6, t1 - t0 - 2), glass); lb.position.set(...P3(sc, tc, base + (W.f0 - 2.6)/2)); grp.add(lb);
+      for (let t = t0 + 1; t < t1; t += 9.3) for (const s of [s0 - .4, s1 - .8]){ const pr = new THREE.Mesh(new THREE.BoxGeometry(1.2, H + .3, 1), white); pr.position.set(...P3(s + .6, t, base + (H + .3)/2)); grp.add(pr); } } }   // (the wing's white piers, full height)
+  g.add(grp); mergeStatic(grp); }
 /* The top of the California Incline, from photos (Wikimedia Commons, Sept 2022, geotagged) and OpenStreetMap:
    Beacon Overlook (Jody Pinto, 2000) just south of where the Incline leaves Ocean Ave: a wooden deck at the edge of the bluff with
    cable railings on wood posts, and a tall slender green steel mast rising from a curved wooden hull, like a ship's mast and deck.

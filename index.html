@@ -8527,6 +8527,10 @@ function buildPromenade(g, P3, at, instanceOf){
     const js = [], ps = [], PR = mulberry(33);
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let t = t0 + 13, k = 0; t < t1 - 4; t += 18, k++) for (const sv of [646.2, 659.8]) ((k + (sv > 653 ? 1 : 0)) % 2 ? ps : js).push([sv, t, .9 + PR()*.25, PR()*TAU]);
     instanceOf(jac, js); instanceOf(palm(11), ps);
+    { const lan = new THREE.Group(), rimM = std(0x3f9f9f, .5), face = new THREE.MeshBasicMaterial({ color: 0xfff3d6 });   // round lanterns hung in the jacarandas (night photos, 2022): a glowing white disc with a teal rim, three to a tree
+      for (const [x, y, z, ry] of [[1.25, 2.45, .5, .3], [-1.15, 2.65, -.6, 1.4], [.3, 2.35, -1.35, 2.3]]){ const f = new THREE.Mesh(new THREE.CylinderGeometry(.24, .24, .07, 14), face); f.rotation.set(Math.PI/2, ry, 0); f.position.set(x, y, z); lan.add(f);
+        const r = new THREE.Mesh(new THREE.TorusGeometry(.245, .025, 6, 16), rimM); r.rotation.set(0, ry, 0); r.position.set(x, y, z); lan.add(r); const c = new THREE.Mesh(new THREE.CylinderGeometry(.004, .004, .5, 3), rimM); c.position.set(x, y + .5, z); lan.add(c); }
+      instanceOf(lan, js); }
     const pole = new THREE.Group(); { const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, 8.4, 8), std(0x2f6b5f, .5)); p.position.y = 4.2; pole.add(p); }
     const pp = [], ban = new THREE.Group(), wireM = std(0x30363a, .6), BC = [0xf4f1ea, 0xe86a92, 0xf4f1ea, 0x2f8f9d, 0xf4f1ea, 0xf2c230];
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let t = t0 + 22; t < t1 - 10; t += 36){ pp.push([642.6, t, 1, 0], [663.4, t, 1, 0]);

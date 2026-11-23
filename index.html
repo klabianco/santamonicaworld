@@ -448,7 +448,7 @@
   </div>
   <div class="hud-col right">
     <div class="chip lvl" id="airChip" hidden><span>Air</span><div class="xpbar"><i id="airFill"></i></div></div>
-    <div class="chip rank" id="rankChip"><div class="rk"><b id="rankName">Guppy</b><span id="xpVal">0 XP</span></div><div class="xpbar"><i id="xpFill"></i></div><span id="xpFloat" aria-hidden="true"></span></div>
+    <div class="chip rank" id="rankChip"><div class="rk"><b id="rankName">Visitor</b><span id="xpVal">0 XP</span></div><div class="xpbar"><i id="xpFill"></i></div><span id="xpFloat" aria-hidden="true"></span></div>
     <div class="hudrow"><div class="chip food" id="foodChip" hidden title="How full you are">🍔<i><b id="foodFill"></b></i></div></div>
     <div class="hudrow"><div class="chip mph" id="mphChip" hidden><b id="mphVal">0</b><span>mph</span></div>
     <div class="chip coins" id="coinChip"><span class="coin" aria-hidden="true"></span><b id="coinVal">0</b></div></div>
@@ -871,15 +871,15 @@ async function useCap(name){
 
 /* ---------- Characters & leveling ---------- */
 const CHARS = [
-  { id:'swimmer', name:'Swimmer',    speed:1.00, need:0,    perk:'A person. The only one who can ride dolphins.' },
+  { id:'swimmer', name:'You',        speed:1.00, need:0,    perk:'Yourself, a person. The only one who can ride dolphins.' },
   { id:'turtle',  name:'Sea Turtle', speed:0.70, need:200,  perk:'Slow and steady. Can talk to other sea turtles.' },
   { id:'otter',   name:'Otter',      speed:1.15, need:700,  perk:'Quick and playful. Can talk to other otters.' },
   { id:'dolphin', name:'Dolphin',    speed:1.40, need:1800, perk:'Super fast. Can talk to other dolphins.' },
 ];
 /* XP: everything you do earns XP. XP makes you faster, unlocks new swimmers (CHARS need = XP)
    and gives you a rank. There are no game levels. */
-const RANKS = [ { n:'Guppy', xp:0 }, { n:'Minnow', xp:200 }, { n:'Reef Explorer', xp:700 }, { n:'Wave Rider', xp:1800 },
-  { n:'Deep Diver', xp:3500 }, { n:'Shark Dodger', xp:6000 }, { n:'Ocean Legend', xp:10000 } ];
+const RANKS = [ { n:'Visitor', xp:0 }, { n:'Day Tripper', xp:200 }, { n:'Explorer', xp:700 }, { n:'Adventurer', xp:1800 },
+  { n:'Trailblazer', xp:3500 }, { n:'Globetrotter', xp:6000 }, { n:'World Legend', xp:10000 } ];
 function xpNow(){   // older saves had no XP: give them credit for what they've already done
   if (save.xp == null) save.xp = Math.round((save.dist || 0) + (save.worlds || [0]).length*50 - 50 + (save.landmarks || []).length*40 + (save.mapPieces || []).length*30 + (save.races || 0)*20);
   return save.xp; }
@@ -890,11 +890,11 @@ function addXP(n, quiet){
   save.xp = before + n; const r1 = rankOf(), cs = CHARS.filter(c => save.xp >= c.need);
   if (!quiet){ const f = $('xpFloat'); f.textContent = `+${n} XP`; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
   if (cs.length > c0){ const c = cs[cs.length - 1]; banner(`New character: ${c.name}!`, 'Pick it in the Menu.'); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
-  else if (r1 > r0){ banner(`You're now a ${RANKS[r1].n}!`, `${save.xp.toLocaleString()} XP · you swim a little faster`); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
+  else if (r1 > r0){ banner(`You're now ${/^[AEIOU]/.test(RANKS[r1].n) ? 'an' : 'a'} ${RANKS[r1].n}!`, `${save.xp.toLocaleString()} XP · you move a little faster`); [523,659,784,1047].forEach((f,i) => sfx(f,.2,'triangle',.07,i*.1)); persist(); flushCloud(); }
   refreshLevelChip();
 }
 const OCEAN_BONUS = 0.2;
-const swimBonus = () => Math.min(0.6, xpNow()/6000);   // up to 60% faster, maxed at Shark Dodger
+const swimBonus = () => Math.min(0.6, xpNow()/6000);   // up to 60% faster, maxed at Globetrotter
 const oceanReady = () => clamp(swimBonus()/OCEAN_BONUS, 0, 1);
 const oceanOpen = () => true;   // the pool and the ocean are both open from the start
 const levelBonus = swimBonus;
@@ -1123,7 +1123,7 @@ const SHOP = [
   { id:'snorkel',  who:'swimmer', name:'Mask & snorkel',   lv: curve(80, 5), inf: true, say: n => `Breathe with your face in the water, see farther, and ${breathSay(n).toLowerCase()}` },
   { id:'light',    who:'swimmer', name:'Dive light',       lv: curve(150, 3), inf: true,  say: n => n === 1 ? 'Lights up dark, deep water like Dume Canyon.' : `A brighter light that shines about ${lightAt(n)[1]} m.` },
   { id:'scuba',    who:'swimmer', name:'Scuba gear',       lv: curve(500, 5), inf: true, say: n => `A tank with about ${scubaMin(n)} minutes of air. Dive to the deep sea floor and explore the shipwreck.` },
-  { id:'goldcap',  who:'swimmer', name:'Golden swim cap',  lv:[60],                        say: () => 'Just for looks: shows on the Swimmer. It looks amazing.' },
+  { id:'goldcap',  who:'swimmer', name:'Golden swim cap',  lv:[60],                        say: () => 'Just for looks: you wear it. It looks amazing.' },
   { id:'turbotail',who:'dolphin', name:'Turbo Tail',       lv: curve(100, 5), inf: true, say: fastSay },
   { id:'blowhole', who:'dolphin', name:'Big Blowhole',     lv: curve(80, 5), inf: true, say: breathSay },
   { id:'rocketfin',who:'dolphin', name:'Rocket Fin',       lv: curve(200, 8, 1.4), legend: true, say: n => `Jump ${timesTxt(jumpAt(n))} as high. (Dolphins can jump, and so can anyone with Spring Fins.)` },
@@ -10857,7 +10857,7 @@ $('loginSwap').onclick = () => setLoginMode(!loginCreate);
 $('loginBack').onclick = () => { $('loginPanel').hidden = true; if (playing()) paused = false; resetPick(); };
 $('loginGo').onclick = async () => {
   const name = $('loginName').value, pass = $('loginPass').value;
-  if (nameSlug(name).length < 3) return loginSay('Swimmer names need at least 3 letters or numbers.', 'loginName');
+  if (nameSlug(name).length < 3) return loginSay('Player names need at least 3 letters or numbers.', 'loginName');
   if (pass.length < 6) return loginSay(`Passwords need at least 6 letters or numbers. "${'•'.repeat(pass.length)}" is only ${pass.length}.`, 'loginPass');
   const btn = $('loginGo'); btn.disabled = true; loginSay(loginCreate ? 'Making your account…' : 'Logging in…');
   try { await fbSign(name, pass, loginCreate); await startAccount(); }

@@ -328,6 +328,7 @@
   .btn.primary{background:var(--pool);color:var(--ink)}
   .btn.secondary{background:var(--deep);color:var(--foam)}
   .btn.textlink{background:none;box-shadow:none;border:none;color:var(--muted);font-family:inherit;font-size:15px;font-weight:700;text-decoration:underline;padding:4px;margin-top:-6px}
+  #questChip,#leagueChip{display:none!important}   /* (Nov 2026, Kevin: the map location is enough; no quest chips for now) */
   .sharkset{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:8px;align-items:center}
   .sharkset>span{font-family:var(--display);font-size:20px;color:var(--deep);padding-right:4px}
   .btn.seg{font-size:17px;padding:10px 8px;background:#e3eef3;color:var(--deep);line-height:1.1}
@@ -3034,7 +3035,8 @@ const landST = (x, y) => [(x - coastX(y))*U, y*U];
 const landXY = (s, t) => [coastX(t*METERS) + s*METERS, t*METERS];   // (back to units)
 { const L = LANDMARKS.find(L => L.kind === 'smpier'); if (L){ const [x, y] = landXY(-38, 68); L.x = x; L.y = y; L.r = 700; } }   // (the landmark is the real pier's Pacific Wheel now)
 function landH(s, t){   // the ground (what the 3D land shows)
-  if (s > 20000){ const [x, y] = landXY(s, t); return sfWalkH(x*U, y*U); }   // (San Francisco)
+  if (s > 20000){ const [x, y] = landXY(s, t), P = placeAtX(x*U); return P ? placeWalkH(P, x*U, y*U) : sfWalkH(x*U, y*U); }   // (San Francisco, or a faraway place)
+   // (San Francisco)
   if (s < 0){ const h0 = Math.min(.3, landH(0, t)); return Math.max(h0 - shelfD(-s), h0 + s*.3); }   // (the wet sand slopes gently on down into the sea, so you can wade in: no step at the water's edge)
   const m = bluffMid(t); let h = !isNaN(m) && Math.abs(s - m) < 25 ? smElev(m + clamp((s - m)*2.2, -25, 25), t) : smElev(s, t);   // (the bluff face made steep again)
   h = Math.min(h, .3 + s*.12);   // the sand slopes up out of the water
@@ -3101,6 +3103,7 @@ function mariH(s, t){ const M = MARI, A = 390 - s, off = -t; if (A < M.A0 - .05 
   for (const [a0, a1, b0, b1] of lv ? M.walls1 : M.walls0) if (A > a0 - .12 && A < a1 + .12 && off > b0 - .12 && off < b1 + .12) return dk + 8;   // (a wall, a window or the rail)
   return dk + h; }
 function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (too tall to walk into, but you can land on them)
+  { const P = placeAtX(x*U); if (P) return placeWalkH(P, x*U, y*U); }   // (Kyoto and the other faraway places)
   if (inSFu(x)) return sfWalkH(x*U, y*U);   // (San Francisco)
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
@@ -3116,6 +3119,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   return h;
 }
 function landName(x, y){
+  { const P = placeAtX(x*U); if (P) return placeName(P, x*U, y*U); }   // (Kyoto and the other faraway places)
   if (inSFu(x)) return sfPlaceName(x*U, y*U);
   const [s, t] = landST(x, y);
   if (t < -2500) return 'Malibu'; if (s > 2600) return 'Bergamot Station'; if (s > 1260 && s < 2600) return 'the E Line'; if (t > 5100) return 'Palos Verdes'; if (t > 4250 && t < 4420 && VPIER.poly && vpierAt(s, t)) return 'the Venice Fishing Pier'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
@@ -3794,7 +3798,7 @@ function updOcean(dt){
   if (o.onLand){ const [hx, hy] = landXY(...DIVE_SHOP), nearHut = Math.hypot(o.x - hx, o.y - hy) < 2.2*METERS; if (nearHut && !o.shopNear){ o.shopNear = true; openShop(); return; } if (!nearHut) o.shopNear = false; }
   o.saveT += dt; if (o.saveT > 4){ o.saveT = 0; persist(); }
   const ashore = o.onLand && (onMainland(o.x, o.y) || onPierNow(o));
-  const inSF = inSFu(o.x); $('hudLbl').textContent = inSF ? 'San Francisco' : ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
+  const inSF = inSFu(o.x), farP = placeAtX(o.x*U); $('hudLbl').textContent = farP ? farP.name : inSF ? 'San Francisco' : ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
   $('hudProg').hidden = true;
   $('hudSub').textContent = inSF ? 'Fisherman\'s Wharf · the phone booth zaps you home' : `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
 }
@@ -4509,7 +4513,7 @@ function buildPierRailings(g, P3){ const posts = [], rails = [], H = 1.1, s0 = P
    by itself, 30 km inland of Santa Monica. SF meters: x east, y north, from the crab wheel sign at Jefferson & Taylor. */
 const SF = { X: coastX(0)*U + 30000, Z: 0, x0: -1060, y0: -545, W: 2010, H: 1000, LAND: 2.2, data: null, walk: null, bid: null, loading: null, group: null };
 const sfLocal = (wx, wz) => [wx - SF.X, SF.Z - wz];   // (world meters → SF meters)
-const inSFu = xu => xu*U > SF.X - 3000;               // (is this world x, in units, out in San Francisco?)
+const inSFu = xu => xu*U > SF.X - 3000 && xu*U < SF.X + 6000;   // (is this world x, in units, out in San Francisco?)
 function sfInPoly(f, x, y){ let c = false; for (let i = 0, j = f.length - 2; i < f.length; j = i, i += 2){ const a = f[i], b = f[i + 1], cx = f[j], cy = f[j + 1]; if ((b > y) !== (cy > y) && x < (cx - a)*(y - b)/(cy - b) + a) c = !c; } return c; }
 function sfWalkH(wx, wz){ const [x, y] = sfLocal(wx, wz); if (!SF.walk){ loadSF(); return SF.LAND; }
   const i = Math.floor(x - SF.x0), j = Math.floor(SF.y0 + SF.H - y); if (i < 0 || j < 0 || i >= SF.W || j >= SF.H) return -6;
@@ -4653,6 +4657,148 @@ function sfStreets(D, g, W3, add, flatGeo, off){ const L = SF.LAND, m4 = new THR
     if (gG.length) g.add(new THREE.Mesh(mergeGeometries(gG), glass)); if (fG.length) g.add(new THREE.Mesh(mergeGeometries(fG), frame)); for (const [c, geos] of aw) g.add(new THREE.Mesh(mergeGeometries(geos), std(new THREE.Color(c).getHex(), .8))); } }
 
 function sfStep(dt){ if (SF.car && SF.ttSpin && time - SF.ttSpin < 4){ const k = (time - SF.ttSpin)/4; SF.car.rotation.y = Math.PI*k; if (SF.tt) SF.tt.rotation.y = Math.PI*k; } }
+/* Faraway places: real neighborhoods from OpenStreetMap (buildings, streets, paths, rivers, parks, trees, shops, shrines) with the
+   ground from the SRTM survey, each in its own frame (x meters east, y meters north of lat0/lon0), placed far out in the world like
+   San Francisco and loaded only when you go there (a phone booth, or a trip link). One builder for all of them; each place has its
+   own look (Kyoto: dark wooden machiya with tile roofs, vermilion shrines and torii). */
+const PLACES = [
+  { id: 'kyoto', name: 'Kyoto', X: SF.X + 25000, Z: 0, span: [-11500, 3500], frame: { lat0: 35, lon0: 135.775, kx: 91188, ky: 110940 }, style: 'kyoto',
+    packs: [ { id: 'core', file: 'places/kyoto_core.json', name: 'Gion & Higashiyama', box: [-1300, -1125, 1375, 1000], booth: [176, 409], more: 'on Shijo-dori, at Yasaka Shrine\'s west gate' },
+      { id: 'fushimi', file: 'places/fushimi.json', name: 'Fushimi Inari', box: [-638, -4493, 1915, -2940], booth: [-262, -3650], more: 'in front of the Romon gate' },
+      { id: 'arashiyama', file: 'places/arashiyama.json', name: 'Arashiyama', box: [-10122, 777, -8298, 2496], booth: [-8862, 1688], more: 'by Keifuku Arashiyama station' } ] },
+  { id: 'getty', name: 'The Getty Center', X: SF.X + 45000, Z: 0, span: [-1500, 1500], frame: { lat0: 34.078, lon0: -118.474, kx: 92213, ky: 110940 }, style: 'getty',
+    packs: [ { id: 'center', file: 'places/getty.json', name: 'the museum', box: [-840, -900, 840, 1335], booth: [-96, 18], more: 'at the tram\'s arrival plaza, on top of the hill' } ] } ];
+for (const P of PLACES) for (const pk of P.packs) pk.place = P;
+const placeAtX = wx => PLACES.find(P => wx > P.X + P.span[0] && wx < P.X + P.span[1]) || null;   // (world meters)
+const placeLocal = (P, wx, wz) => [wx - P.X, P.Z - wz];
+const packAt = (P, x, y) => P.packs.find(pk => x > pk.box[0] && x < pk.box[2] && y > pk.box[1] && y < pk.box[3]) || null;
+function packE(pk, x, y){ const E = pk.data.E, fi = clamp((x - E.x0)/E.dx, 0, E.nx - 1.001), fj = clamp((y - E.y0)/E.dy, 0, E.ny - 1.001), i = fi|0, j = fj|0, u = fi - i, v = fj - j, H = E.h, k = j*E.nx + i;
+  return (H[k]*(1 - u) + H[k + 1]*u)*(1 - v) + (H[k + E.nx]*(1 - u) + H[k + E.nx + 1]*u)*v; }
+function packMask(pk, x, y){ const M = pk.mask; if (!M) return 0; const i = Math.floor((x - M.x0)/2), j = Math.floor((M.y1 - y)/2); return i < 0 || j < 0 || i >= M.W || j >= M.H ? 0 : M.m[j*M.W + i]; }   // (1: river or pond, 2: a bridge over it)
+function packGround(pk, x, y){ const h = packE(pk, x, y), m = packMask(pk, x, y); return m === 1 ? h - 1.6 : h; }   // (the water lies about a meter and a half below the banks)
+function packBld(pk, x, y){ const L = pk.cells.get(Math.floor(x/25) + ',' + Math.floor(y/25)); if (!L) return null; for (const b of L){ const B = b.box; if (x > B[0] && x < B[2] && y > B[1] && y < B[3] && inPoly(b.p, x, y)) return b; } return null; }
+function placeWalkH(P, wx, wz){ const [x, y] = placeLocal(P, wx, wz), pk = packAt(P, x, y); if (!pk) return -6; if (!pk.data){ loadPack(pk); return 60; }
+  let h = packGround(pk, x, y); const b = packBld(pk, x, y); if (b && b.top > h) h = b.top; return h; }
+function placeName(P, wx, wz){ const [x, y] = placeLocal(P, wx, wz), pk = packAt(P, x, y); if (!pk?.data) return P.name;
+  let best = null, bd = 14; for (const r of pk.named || []){ if (x < r.box[0] - 14 || x > r.box[2] + 14 || y < r.box[1] - 14 || y > r.box[3] + 14) continue; for (let i = 0; i < r.p.length - 1; i++){ const d = segD(x, y, r.p[i], r.p[i + 1]); if (d < bd){ bd = d; best = r; } } }
+  return best ? (best.nj && best.n && best.nj !== best.n ? `${best.n} · ${best.nj}` : best.n || best.nj) : pk.name; }
+function loadPack(pk){ if (pk.loading) return pk.loading; return pk.loading = fetch(pk.file).then(r => r.json()).then(D => { prepPack(pk, D); buildPack(pk); return pk; }).catch(e => { pk.loading = null; console.warn('place', pk.id, e?.stack || e); }); }
+function prepPack(pk, D){ pk.data = D; D.E.h = Float32Array.from(D.E.h); const [bx0, by0, bx1, by1] = pk.box;
+  { const W = Math.ceil((bx1 - bx0)/2), H = Math.ceil((by1 - by0)/2), cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), X = x => (x - bx0)/2, Y = y => (by1 - y)/2;   // the water and bridges, painted onto a 2 m grid
+    const fill = (p, col) => { g.fillStyle = col; g.beginPath(); p.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); g.closePath(); g.fill(); };
+    for (const w of D.water || []) if (w.p?.length > 2 && (w.k === 'river' || w.k === 'water' || w.k === 'pond' || w.k === 'canal' || w.k === 'shallow' || !w.k)) fill(w.p, '#ff0000');
+    g.lineCap = 'round'; for (const w of D.ww || []) if ((w.k === 'stream' || w.k === 'canal') && w.p?.length > 1){ g.strokeStyle = '#ff0000'; g.lineWidth = Math.max(1, (+w.w || 3)/2); g.beginPath(); w.p.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); g.stroke(); }
+    for (const b of D.bridges || []) if (b.p?.length > 2) fill(b.p, '#00ff00');
+    for (const r of D.rd || []) if (r.br && r.p?.length > 1){ g.strokeStyle = '#00ff00'; g.lineWidth = Math.max(1.5, (roadW(r) + 1)/2); g.beginPath(); r.p.forEach(([x, y], i) => g[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); g.stroke(); }
+    const px = g.getImageData(0, 0, W, H).data, m = new Uint8Array(W*H); for (let k = 0; k < W*H; k++) m[k] = px[k*4 + 1] > 127 ? 2 : px[k*4] > 127 ? 1 : 0; pk.mask = { m, W, H, x0: bx0, y1: by1 }; }
+  pk.cells = new Map(); pk.blds = [];
+  for (const b of D.b || []){ if (!b.p || b.p.length < 3) continue; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, lo = 1e9; for (const [x, y] of b.p){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); lo = Math.min(lo, packE(pk, x, y)); }
+    const area = (x1 - x0)*(y1 - y0), B = { ...b, box: [x0, y0, x1, y1], base: lo - .3 };
+    if (!b.h || b.h === 7.5){ B.h = b.k === 'temple' ? clamp(Math.sqrt(area)*.55, 7, 20) : b.k === 'shrine' ? clamp(Math.sqrt(area)*.45, 4.5, 12) : b.k === 'gate' ? 9 : area < 60 ? 6 : 7.5; }   // (no height in the map: a guess from its size and kind)
+    B.top = B.base + B.h + .3; pk.blds.push(B);
+    for (let i = Math.floor(x0/25); i <= Math.floor(x1/25); i++) for (let j = Math.floor(y0/25); j <= Math.floor(y1/25); j++){ const k = i + ',' + j; (pk.cells.get(k) || pk.cells.set(k, []).get(k)).push(B); } }
+  pk.named = (D.rd || []).filter(r => (r.n || r.nj) && r.p?.length > 1).map(r => ({ ...r, box: [Math.min(...r.p.map(q => q[0])), Math.min(...r.p.map(q => q[1])), Math.max(...r.p.map(q => q[0])), Math.max(...r.p.map(q => q[1]))] })); }
+const ROADW_P = { motorway: 16, trunk: 15, primary: 13, secondary: 11, tertiary: 8.5, residential: 5.5, unclassified: 5, living_street: 4, service: 3.6, pedestrian: 5, footway: 2.4, path: 1.8, steps: 2.4, cycleway: 2.4, track: 3 };
+const roadW = r => (+r.w > 0 && +r.w < 40 ? +r.w : ROADW_P[r.c] || 4);
+const placeTex = {};
+function placeTexture(k){ if (placeTex[k]) return placeTex[k]; return placeTex[k] = canvasTex(128, 128, (x, w, h) => {
+  if (k === 'koshi'){ x.fillStyle = '#e6dcc6'; x.fillRect(0, 0, w, h*.45); x.fillStyle = '#5b4332'; x.fillRect(0, 0, w, 6); x.fillRect(0, h*.45 - 8, w, 8); for (let i = 10; i < w; i += 14) x.fillRect(i, h*.12, 3, h*.24);   // (a machiya front: cream plaster upstairs with slatted mushiko windows,
+    x.fillStyle = '#7a5c44'; x.fillRect(0, h*.45, w, h*.55); x.fillStyle = '#5b4332'; for (let i = 0; i < w; i += 7) x.fillRect(i, h*.52, 3, h*.44); x.fillStyle = '#4a3628'; x.fillRect(0, h*.45, w, 7); }   //  the wooden koshi lattice below, under the eave)
+  else if (k === 'plaster'){ x.fillStyle = '#ece6d8'; x.fillRect(0, 0, w, h); x.fillStyle = '#5a4434'; x.fillRect(0, 0, 8, h); x.fillRect(w - 8, 0, 8, h); x.fillRect(0, h - 10, w, 10); }   // (white plaster in a dark wooden frame)
+  else if (k === 'travertine'){ x.fillStyle = '#d8c9a8'; x.fillRect(0, 0, w, h); const R2 = mulberry(5); for (let i = 0; i < 900; i++){ x.fillStyle = R2() < .5 ? 'rgba(120,95,60,.12)' : 'rgba(255,250,235,.15)'; x.fillRect(R2()*w, R2()*h, 1 + R2()*6, 1); } x.fillStyle = 'rgba(110,90,60,.45)'; for (let i = 0; i <= w; i += 32){ x.fillRect(i, 0, 1.5, h); x.fillRect(0, i, w, 1.5); } }   // (rough-cut travertine, in the Getty's 30-inch squares)
+  else if (k === 'stucco'){ x.fillStyle = '#ede3cf'; x.fillRect(0, 0, w, h); x.fillStyle = '#4a5866'; x.fillRect(22, 36, 32, 40); x.fillRect(76, 36, 32, 40); x.fillStyle = '#ffffff'; x.fillRect(20, 76, 36, 4); x.fillRect(74, 76, 36, 4); }
+  else if (k === 'vermilion'){ x.fillStyle = '#c9412a'; x.fillRect(0, 0, w, h); x.fillStyle = '#efe7d6'; x.fillRect(16, 20, w - 32, h - 50); x.fillStyle = '#c9412a'; x.fillRect(w/2 - 3, 20, 6, h - 50); }
+  else { x.fillStyle = '#d8d2c6'; x.fillRect(0, 0, w, h); x.fillStyle = '#3c4a56'; for (const [wx, wy] of [[18, 30], [74, 30]]) x.fillRect(wx, wy, 36, 44); }   // (a plain modern building with windows)
+  }, true); }
+function buildPack(pk){ const P = pk.place, D = pk.data, g = new THREE.Group(), W3 = (x, y, h) => [P.X + x, h, P.Z - y], [bx0, by0, bx1, by1] = pk.box, R = mulberry(pk.id.length*7919);
+  const col = new THREE.Color(), tiles = new Map(), tileOf = (x, y) => { const k = Math.floor(x/250) + ',' + Math.floor(y/250); return tiles.get(k) || tiles.set(k, {}).get(k); }, push = (T, key, ...v) => (T[key] || (T[key] = [])).push(...v);
+  // the ground: every 6 m, colored by what's on it (woods, gardens, cemeteries, parking), dropping into the rivers
+  { const cv = document.createElement('canvas'), S = 3, CW = Math.ceil((bx1 - bx0)/S), CH = Math.ceil((by1 - by0)/S); cv.width = CW; cv.height = CH; const c2 = cv.getContext('2d'), X = x => (x - bx0)/S, Y = y => (by1 - y)/S;
+    c2.fillStyle = '#86837c'; c2.fillRect(0, 0, CW, CH);
+    { const E = D.E; c2.fillStyle = '#3b5a2f'; for (let j = 0; j < E.ny; j++) for (let i = 0; i < E.nx; i++){ const x = E.x0 + i*E.dx, y = E.y0 + j*E.dy, sl = Math.hypot(packE(pk, x + 12, y) - packE(pk, x - 12, y), packE(pk, x, y + 12) - packE(pk, x, y - 12))/24;   // (the hillsides are forest...
+        if (sl > .1) c2.fillRect(X(x - E.dx/2), Y(y + E.dy/2), E.dx/S + 1, E.dy/S + 1); }
+      c2.strokeStyle = c2.fillStyle = '#86837c'; c2.lineWidth = 8/S; c2.lineJoin = 'round'; for (const b of pk.blds){ c2.beginPath(); b.p.forEach(([x, y], i) => c2[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); c2.closePath(); c2.fill(); c2.stroke(); } }   // ...except where there are buildings)
+    const PC = { wood: '#3f5e31', forest: '#3f5e31', garden: '#5f8a45', park: '#6b9550', grass: '#7aa35a', cemetery: '#9a968c', parking: '#6d6c68' };
+    for (const q of [...(D.parks || []), ...(D.woods || []).map(p => ({ p, k: 'wood' })), ...(D.bamboo || []).map(b => ({ p: b.p, k: 'wood' }))]){ const c = PC[q.k]; if (!c || !q.p || q.p.length < 3) continue; c2.fillStyle = c; c2.beginPath(); q.p.forEach(([x, y], i) => c2[i ? 'lineTo' : 'moveTo'](X(x), Y(y))); c2.closePath(); c2.fill(); }
+    const img = c2.getImageData(0, 0, CW, CH).data, st = 6, NX = Math.ceil((bx1 - bx0)/st) + 1, NY = Math.ceil((by1 - by0)/st) + 1, mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 });
+    for (let j0 = 0; j0 < NY - 1; j0 += 40){ const nj = Math.min(41, NY - j0), pos = new Float32Array(NX*nj*3), cl = new Float32Array(NX*nj*3), idx = [];
+      for (let j = 0; j < nj; j++) for (let i = 0; i < NX; i++){ const x = bx0 + i*st, y = by0 + (j0 + j)*st, k = (j*NX + i)*3, h = packGround(pk, x, y), [wx, , wz] = W3(x, y, 0); pos[k] = wx; pos[k + 1] = h; pos[k + 2] = wz;
+        const ci = (Math.min(CH - 1, Math.max(0, Math.floor(Y(y))))*CW + Math.min(CW - 1, Math.max(0, Math.floor(X(x)))))*4; col.setRGB(img[ci]/255, img[ci + 1]/255, img[ci + 2]/255, THREE.SRGBColorSpace); if (packMask(pk, x, y) === 1) col.setHex(0x7d776c); cl[k] = col.r; cl[k + 1] = col.g; cl[k + 2] = col.b; }
+      for (let j = 0; j < nj - 1; j++) for (let i = 0; i < NX - 1; i++){ const a = j*NX + i; idx.push(a, a + 1, a + NX, a + 1, a + NX + 1, a + NX); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(cl, 3)); geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); } }
+  // the water: rivers and ponds, a little below the banks
+  { const pos = []; const put = (a, b, c, d) => { const L = Math.max(Math.hypot(a[0] - b[0], a[1] - b[1]), Math.hypot(b[0] - c[0], b[1] - c[1]), Math.hypot(c[0] - a[0], c[1] - a[1]));
+      if (L > 14 && d < 7){ const m = (u, v) => [(u[0] + v[0])/2, (u[1] + v[1])/2], ab = m(a, b), bc = m(b, c), ca = m(c, a); put(a, ab, ca, d + 1); put(ab, b, bc, d + 1); put(ca, bc, c, d + 1); put(ab, bc, ca, d + 1); return; }
+      for (const v of [a, b, c]) pos.push(...W3(v[0], v[1], packE(pk, v[0], v[1]) - .9)); };
+    for (const w of D.water || []){ if (!w.p || w.p.length < 3) continue; const tri = THREE.ShapeUtils.triangulateShape(w.p.map(([x, y]) => new THREE.Vector2(x, y)), []); for (const [i, j, k] of tri) put(w.p[i], w.p[k], w.p[j], 0); }
+    if (pos.length){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x4f7a78, roughness: .12, metalness: .2, side: THREE.DoubleSide }))); } }
+  // streets and paths, draped on the ground: asphalt for roads, pale stone for the lanes and paths, and roofs over the covered arcades (Nishiki)
+  { const asph = [], stone = [], step = [], arc = [];
+    for (const r of D.rd || []){ if (!r.p || r.p.length < 2) continue; const w = roadW(r), out = r.c === 'steps' ? step : /footway|path|pedestrian|living_street|cycleway/.test(r.c) ? stone : asph, lift = out === asph ? .07 : .09;
+      const P2 = []; for (let i = 0; i < r.p.length - 1; i++){ const [a, b] = r.p[i], [c, d] = r.p[i + 1], n = Math.max(1, Math.ceil(Math.hypot(c - a, d - b)/4)); for (let k = 0; k < n; k++) P2.push([lerp(a, c, k/n), lerp(b, d, k/n)]); } P2.push(r.p[r.p.length - 1]);
+      let prev = null; for (let i = 0; i < P2.length; i++){ const [x, y] = P2[i], [x0, y0] = P2[Math.max(0, i - 1)], [x1, y1] = P2[Math.min(P2.length - 1, i + 1)], L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0)/L*w/2, ny = (x1 - x0)/L*w/2;
+        const hA = (r.br ? packE(pk, x + nx, y + ny) : packGround(pk, x + nx, y + ny)) + lift, hB = (r.br ? packE(pk, x - nx, y - ny) : packGround(pk, x - nx, y - ny)) + lift, A = W3(x + nx, y + ny, hA), B = W3(x - nx, y - ny, hB);
+        if (prev) out.push(...prev[0], ...A, ...prev[1], ...prev[1], ...A, ...B); prev = [A, B];
+        if (r.cov && i){ const hc = Math.max(hA, hB) + 6.5, A2 = W3(x + nx*1.05, y + ny*1.05, hc), B2 = W3(x - nx*1.05, y - ny*1.05, hc); if (prev.c) arc.push(...prev.c[0], ...A2, ...prev.c[1], ...prev.c[1], ...A2, ...B2); prev.c = [A2, B2]; } } }
+    const add = (arr, m) => { if (!arr.length) return; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); geo.computeVertexNormals(); m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; g.add(new THREE.Mesh(geo, m)); };
+    add(asph, std(0x45474b, .9)); add(stone, std(0xb3ab9b, .92)); add(step, std(0x9c968a, .9));
+    if (arc.length){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arc, 3)); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xf2d7a0, emissive: 0x6b4a1a, emissiveIntensity: .35, transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false }))); } }
+  // bridges: a deck with low railings
+  for (const b of D.bridges || []){ if (!b.p || b.p.length < 3) continue; const shp = new THREE.Shape(b.p.map(([x, y]) => new THREE.Vector2(x, y))), q = new THREE.ExtrudeGeometry(shp, { depth: .6, bevelEnabled: false }); q.rotateX(-Math.PI/2); let lo = 1e9; for (const [x, y] of b.p) lo = Math.min(lo, packE(pk, x, y)); q.translate(P.X, lo + .02, P.Z); q.scale(1, 1, 1); const m = new THREE.Mesh(q, std(0xb7b0a2, .85)); m.position.set(0, 0, 0); m.rotation.set(0, 0, 0); g.add(m); }
+  // buildings: Kyoto's low wooden machiya with dark tile roofs, white-plastered temple halls under big roofs, vermilion shrine buildings and gates, pagodas in tiers
+  { const getty = P.style === 'getty', roofOf = b => getty ? (/getty|parking/.test(b.k) ? 'white' : 'clay') : b.k === 'shrine' ? 'bark' : b.k === 'apartments' || b.h > 11 ? 'flat' : 'tile', wallOf = b => getty ? (/getty/.test(b.k) ? 'travertine' : 'stucco') : b.k === 'shrine' || b.k === 'gate' ? 'vermilion' : b.k === 'temple' ? 'plaster' : b.k === 'apartments' || b.h > 11 ? 'modern' : 'koshi';   // (the Getty: rough beige travertine and off-white panels, flat roofs; the houses round it in stucco with clay-tile roofs)
+    for (const b of pk.blds){ const p = b.p, T = tileOf(p[0][0], p[0][1]), wk = wallOf(b), top = b.base + b.h, rk = roofOf(b);
+      if (b.k === 'pagoda'){ const n = b.h > 30 ? 5 : 3, cx = (b.box[0] + b.box[2])/2, cy = (b.box[1] + b.box[3])/2, half = Math.min(b.box[2] - b.box[0], b.box[3] - b.box[1])/2, th = b.h/(n + .8);   // (a pagoda: a stack of shrinking stories, each with its own wide roof, and the spire on top)
+        for (let k = 0; k < n; k++){ const hw = half*(1 - k*.08), y0 = b.base + k*th, q = new THREE.BoxGeometry(hw*1.5, th*.62, hw*1.5); q.translate(...W3(cx, cy, y0 + th*.31)); push(T, 'g:vermilion', q); const r = new THREE.ConeGeometry(hw*1.55, th*.42, 4, 1); r.rotateY(Math.PI/4); r.translate(...W3(cx, cy, y0 + th*.62 + th*.21)); push(T, 'r:tile', r); }
+        const sp = new THREE.CylinderGeometry(.18, .25, th*.8, 6); sp.translate(...W3(cx, cy, b.base + n*th + th*.4)); push(T, 'r:bronze', sp); continue; }
+      const H = Math.max(2.4, (rk === 'flat' ? b.h : b.h*.62)), wall = []; let along = 0;
+      for (let i = 0; i < p.length; i++){ const a = p[i], c = p[(i + 1) % p.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < .05) continue; const A0 = W3(a[0], a[1], b.base), A1 = W3(a[0], a[1], b.base + H), B0 = W3(c[0], c[1], b.base), B1 = W3(c[0], c[1], b.base + H), u0 = along/3, u1 = (along + L)/3, v1 = wk === 'koshi' ? 1 : (H + .3)/3;   // (a machiya front fills its whole wall, top to bottom)
+        wall.push([...A0, ...B0, ...B1, ...A0, ...B1, ...A1], [u0, 0, u1, 0, u1, v1, u0, 0, u1, v1, u0, v1]); along += L; }
+      const wp = T['w:' + wk] || (T['w:' + wk] = []); wp.push(wall);
+      if (rk === 'flat' || rk === 'white'){ const tri = THREE.ShapeUtils.triangulateShape(p.map(([x, y]) => new THREE.Vector2(x, y)), []), arr = []; for (const [i, j, k] of tri) for (const v of [p[i], p[k], p[j]]) arr.push(...W3(v[0], v[1], b.base + H)); push(T, 'rf:' + rk, arr); continue; }
+      const roofH = b.k === 'temple' || b.k === 'shrine' || b.k === 'gate' ? b.h - H : Math.max(1.4, b.h - H), ov = b.k === 'temple' || b.k === 'gate' ? 1.4 : b.k === 'shrine' ? 1.1 : .55;   // (a hipped roof with deep eaves)
+      let cx = 0, cy = 0; for (const [x, y] of p){ cx += x/p.length; cy += y/p.length; }
+      if (p.length === 4){ const e1 = [p[1][0] - p[0][0], p[1][1] - p[0][1]], e2 = [p[2][0] - p[1][0], p[2][1] - p[1][1]], L1 = Math.hypot(...e1), L2 = Math.hypot(...e2), [ux, uy] = L1 >= L2 ? [e1[0]/L1, e1[1]/L1] : [e2[0]/L2, e2[1]/L2], [vx, vy] = [-uy, ux], hl = Math.max(L1, L2)/2 + ov, hw = Math.min(L1, L2)/2 + ov, rl = Math.max(.1, hl - hw*.9);
+        const C = (a, bb, h) => W3(cx + ux*a + vx*bb, cy + uy*a + vy*bb, h), e = b.base + H - .15, t2 = b.base + H + roofH, c1 = C(-hl, -hw, e), c2 = C(hl, -hw, e), c3 = C(hl, hw, e), c4 = C(-hl, hw, e), r1 = C(-rl, 0, t2), r2 = C(rl, 0, t2);
+        push(T, 'rf:' + rk, ...c1, ...c2, ...r2, ...c1, ...r2, ...r1, ...c3, ...c4, ...r1, ...c3, ...r1, ...r2, ...c2, ...c3, ...r2, ...c4, ...c1, ...r1); }
+      else { const e = b.base + H - .15, t2 = b.base + H + roofH*.8, arr = []; for (let i = 0; i < p.length; i++){ const a = p[i], c = p[(i + 1) % p.length], grow = q => { const dx = q[0] - cx, dy = q[1] - cy, d = Math.hypot(dx, dy) || 1; return [q[0] + dx/d*ov, q[1] + dy/d*ov]; }, A = grow(a), C2 = grow(c); arr.push(...W3(A[0], A[1], e), ...W3(C2[0], C2[1], e), ...W3(cx, cy, t2)); } push(T, 'rf:' + rk, ...arr); } } }
+  const MAT = { 'w:koshi': () => new THREE.MeshStandardMaterial({ map: placeTexture('koshi'), roughness: .85 }), 'w:plaster': () => new THREE.MeshStandardMaterial({ map: placeTexture('plaster'), roughness: .9 }), 'w:vermilion': () => new THREE.MeshStandardMaterial({ map: placeTexture('vermilion'), roughness: .7 }), 'w:modern': () => new THREE.MeshStandardMaterial({ map: placeTexture('modern'), roughness: .8 }),
+    'rf:tile': () => std(0x4f5257, .7, .15), 'r:tile': () => std(0x4f5257, .7, .15), 'rf:bark': () => std(0x5a3d2b, .95), 'rf:white': () => std(0xeeebe3, .6), 'rf:clay': () => std(0xa85a3c, .85), 'w:travertine': () => new THREE.MeshStandardMaterial({ map: placeTexture('travertine'), roughness: .95 }), 'w:stucco': () => new THREE.MeshStandardMaterial({ map: placeTexture('stucco'), roughness: .9 }), 'rf:flat': () => std(0x8d8a84, .9), 'r:bronze': () => std(0x8a6a3a, .5, .6), 'g:vermilion': () => std(0xc9412a, .7) }, mats = {};
+  for (const T of tiles.values()) for (const [key, arr] of Object.entries(T)){ const m = mats[key] || (mats[key] = MAT[key]()); m.side = THREE.DoubleSide;
+    if (key.startsWith('w:')){ const pos = [], uv = []; for (const wall of arr) for (let i = 0; i < wall.length; i += 2){ pos.push(...wall[i]); uv.push(...wall[i + 1]); } const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.computeVertexNormals(); const me = new THREE.Mesh(geo, m); me.castShadow = me.receiveShadow = true; g.add(me); }
+    else if (key.startsWith('rf:')){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); geo.computeVertexNormals(); const me = new THREE.Mesh(geo, m); me.castShadow = true; g.add(me); }
+    else { const me = new THREE.Mesh(mergeGeometries(arr.map(q => { q = q.index ? q.toNonIndexed() : q; q.deleteAttribute('uv'); return q; })), m); me.castShadow = true; g.add(me); } }
+  // torii: the vermilion gates (from the map's gate points and lines, and Fushimi Inari's tunnels of thousands of them)
+  { const spots = [], addT = (x, y, ang, w, h) => spots.push([x, y, ang, w, h]), TR = D.torii && !Array.isArray(D.torii) ? D.torii : { torii: D.torii || [] };
+    const roadAng = (x, y) => { let best = 0, bd = 30; for (const r of D.rd || []) for (let i = 0; i < (r.p?.length || 0) - 1; i++){ const a = r.p[i], c = r.p[i + 1]; if (Math.abs(a[0] - x) > 60 || Math.abs(a[1] - y) > 60) continue; const d = segD(x, y, a, c); if (d < bd){ bd = d; best = Math.atan2(c[1] - a[1], c[0] - a[0]); } } return best; };
+    for (const t of TR.torii || []){ const [x, y, , bear, span] = t; const ang = bear != null ? (90 - bear)*Math.PI/180 + Math.PI/2 : roadAng(x, y) + Math.PI/2; addT(x, y, ang, span || 4, (span || 4)*1.15); }
+    for (const tp of TR.torii_paths || []){ const p = tp.p, gap = 1/Math.max(.15, Math.min(tp.density || .5, 2.2)); let acc = 0; for (let i = 0; i < p.length - 1; i++){ const a = p[i], c = p[i + 1], L = Math.hypot(c[0] - a[0], c[1] - a[1]), ang = Math.atan2(c[1] - a[1], c[0] - a[0]);
+        for (let d = acc; d < L; d += gap){ const f = d/L; addT(lerp(a[0], c[0], f), lerp(a[1], c[1], f), ang + Math.PI/2, tp.density > 2 ? 1.9 : 2.6, tp.density > 2 ? 2.6 : 3.2); } acc = ((acc - L) % gap + gap) % gap; } }
+    if (spots.length){ const red = std(0xd4442a, .6), blk = std(0x1d1d1d, .6), parts = [[.18, 1, .18, -.5, .5, 0, red], [.18, 1, .18, .5, .5, 0, red], [1.25, .09, .26, 0, 1.02, 0, blk], [1.15, .07, .2, 0, .94, 0, red], [1.05, .06, .14, 0, .8, 0, red]];   // (2 posts, the black top beam, the beams under it)
+      for (const [sx, sy, sz, ox, oy, oz, m] of parts){ const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), m, spots.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+        spots.forEach(([x, y, ang, w, h], i) => { const gh = packGround(pk, x, y), [wx, , wz] = W3(x, y, 0); q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -ang); v.set(ox*w, oy*h, oz).applyQuaternion(q).add(new THREE.Vector3(wx, gh, wz)); sc.set(sx === .18 ? .18*Math.max(1, w/4) : sx*w, sy*h, sz*Math.max(1, w/4)); m4.compose(v, q, sc); im.setMatrixAt(i, m4); });
+        im.castShadow = true; im.computeBoundingSphere(); g.add(im); } } }
+  // trees, and Arashiyama's bamboo
+  { const pts = (D.trees || []).map(([x, y]) => [x, y]), tree = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, 3, 6), std(0x5a4636, .9)); tr.position.y = 1.5; tree.add(tr); const top = new THREE.Mesh(new THREE.IcosahedronGeometry(2, 0), std(0x40683a, .85)); top.position.y = 4; top.scale.y = .75; tree.add(top);
+    const inst = (proto, spots, sc) => { proto.updateMatrixWorld(true); proto.traverse(o => { if (!o.isMesh) return; const geo = o.geometry.clone().applyMatrix4(o.matrixWorld), im = new THREE.InstancedMesh(geo, o.material, spots.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v = new THREE.Vector3(), s3 = new THREE.Vector3();
+      spots.forEach(([x, y, k], i) => { const [wx, , wz] = W3(x, y, 0); m4.compose(v.set(wx, packGround(pk, x, y), wz), q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (x*7 + y*3) % 6.28), s3.setScalar(k || sc)); im.setMatrixAt(i, m4); }); im.computeBoundingSphere(); g.add(im); }); };
+    if (pts.length) inst(tree, pts.map(([x, y]) => [x, y, .85 + ((x*13 + y*7) % 1 + 1) % 1*.4]), 1);
+    const bam = []; for (const b of D.bamboo || []){ const p = b.p; if (!p || p.length < 3) continue; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of p){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }   // (moso bamboo, about 15 m tall, a couple of meters apart)
+      for (let x = x0; x < x1; x += 2.1) for (let y = y0; y < y1; y += 2.1){ const jx = x + (R() - .5)*1.6, jy = y + (R() - .5)*1.6; if (inPoly(p, jx, jy) && !packBld(pk, jx, jy) && !(D.bamboo_path?.p || []).some((q, i, A) => i && segD(jx, jy, A[i - 1], q) < 2.6)) bam.push([jx, jy, .8 + R()*.45]); } }
+    if (bam.length){ const st = new THREE.Group(), culm = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 15, 5), std(0x7fa24a, .55)); culm.position.y = 7.5; st.add(culm); const lv = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4, 0), std(0x5d8c3a, .8)); lv.position.y = 14.2; lv.scale.set(1, 1.6, 1); st.add(lv); inst(st, bam, 1); } }
+  // shop and restaurant signs (names in Japanese where the map has them), on a few atlases so they cost little
+  { const list = (D.poi || []).filter(q => (q.nj || q.n) && /restaurant|cafe|fast_food|bar|pub|ice_cream|confectionery|bakery|clothes|gift|souvenir|deli|tea|seafood|pastry|craft|art|kimono|shoes|books|antiques|variety|jewelry|beverages|convenience|supermarket|greengrocer|butcher|spices/.test(q.k || '')).slice(0, 768);
+    for (let a = 0; a < list.length; a += 256){ const part = list.slice(a, a + 256), cv = document.createElement('canvas'); cv.width = 2048; cv.height = 2048; const c2 = cv.getContext('2d'), pos = [], uv = [];
+      part.forEach((q, i) => { const cx = (i % 8)*256, cy = Math.floor(i/8)*64, pal = [['#f4efe2', '#2b2b2b'], ['#2b2b2b', '#f4efe2'], ['#7b1f2b', '#fff6e0'], ['#1f3b4d', '#ffffff'], ['#e9d8a6', '#3b2412']][(i*7) % 5];
+        c2.fillStyle = pal[0]; c2.fillRect(cx + 2, cy + 2, 252, 60); c2.fillStyle = pal[1]; const t = (q.nj || q.n).slice(0, 14); c2.font = `bold ${t.length > 9 ? 26 : 34}px "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif`; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(t, cx + 128, cy + 33, 244);
+        const b = packBld(pk, q.x, q.y), ang = (() => { let best = 0, bd = 25; for (const r of D.rd || []) for (let k = 0; k < (r.p?.length || 0) - 1; k++){ const A = r.p[k], C = r.p[k + 1]; if (Math.abs(A[0] - q.x) > 40 || Math.abs(A[1] - q.y) > 40) continue; const d = segD(q.x, q.y, A, C); if (d < bd){ bd = d; best = Math.atan2(C[1] - A[1], C[0] - A[0]); } } return best; })();
+        const h = (b ? b.base : packGround(pk, q.x, q.y)) + 3.2, ux = Math.cos(ang)*1.2, uy = Math.sin(ang)*1.2, cA = W3(q.x - ux, q.y - uy, h - .3), cB = W3(q.x + ux, q.y + uy, h - .3), cC = W3(q.x + ux, q.y + uy, h + .3), cD = W3(q.x - ux, q.y - uy, h + .3), u0 = cx/2048, u1 = (cx + 256)/2048, v0 = 1 - (cy + 64)/2048, v1 = 1 - cy/2048;
+        pos.push(...cA, ...cB, ...cC, ...cA, ...cC, ...cD); uv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1); });
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = MAXANI; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }))); }
+    pk.shops = list; }
+  // a phone booth to get home again
+  { const [bx, by] = pk.booth, h = packGround(pk, bx, by), bg = new THREE.Group(), red = std(0xc62828, .45); bg.position.set(...W3(bx, by, h)); for (const [w, hh, d, x, y, z] of [[1.1, .1, 1.1, 0, .05, 0], [1.1, .1, 1.1, 0, 2.45, 0], [.08, 2.4, .08, -.52, 1.2, -.52], [.08, 2.4, .08, .52, 1.2, -.52], [.08, 2.4, .08, -.52, 1.2, .52], [.08, 2.4, .08, .52, 1.2, .52]]){ const me = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), red); me.position.set(x, y, z); bg.add(me); } g.add(bg); }
+  oceanWorld.add(g); pk.group = g; }
 /* The sightseeing bus: a red open-top double-decker, hop on and hop off (like the real tour buses; their Santa Monica stop is on Ocean Ave
    outside the Camera Obscura, 1450 Ocean). It loops Ocean Ave south, Colorado east, 4th St north and Wilshire west, and waits at each stop. */
 const BUS = (() => { const oc = t => { const E = CITY.E, f = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), j = Math.floor(f); return lerp(OCEAN_C[j], OCEAN_C[j + 1], f - j); };
@@ -4706,6 +4852,7 @@ function geoToGame(lat, lon){
     const x = (lon - LON0)*MO, y = (lat - LAT0)*ML, s0 = x*NE[0] + y*NE[1], t0 = -(x*NW[0] + y*NW[1]), t = t0 - K*s0 + 42.5, s = s0 + K*t0 + 222 - southShift(t);   // (south of the pier, moved in with the coast like the map)
     const BX = SOUTHP.box; if (BX && s > BX[0] && s < BX[2] && t > BX[1] && t < BX[3]){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; }   // (Bergamot Station)
     if (s > -400 && s < 1250 && t > -2450 && t < (SOUTHP.on ? 4700 : 2900)){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; } }
+  for (const P of PLACES){ const F = P.frame, x = (lon - F.lon0)*F.kx, y = (lat - F.lat0)*F.ky, pk = packAt(P, x, y); if (pk) return { city: P.id, pack: pk, x: (P.X + x)/U, y: (P.Z - y)/U }; }   // (Kyoto and the other faraway places)
   { const LAT0 = 37.8083294, LON0 = -122.4157264, x = (lon - LON0)*88060.572, y = (lat - LAT0)*110992.853;
     if (x > SF.x0 && x < SF.x0 + SF.W && y > SF.y0 && y < SF.y0 + SF.H) return { city: 'sf', x: (SF.X + x)/U, y: (SF.Z - y)/U }; }
   return null; }
@@ -4720,15 +4867,16 @@ function visitArrive(){ const V = VISIT, o = ocean; if (!V || V.done || !o) retu
       const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(`${i + 1}. ${P.title}`, '#1d2026', '#ffc23a', 1024, 128, P.title.length > 30 ? 46 : 62), depthTest: false })); sg.scale.set(12, 1.5, 1); sg.position.y = 6; grp.add(sg);
       grp.position.set(P.g.x*U, gh, P.g.y*U); oceanScene.add(grp); V.marks.push({ ...P, i, grp, seen: false }); });
     const out = places.filter(P => !P.g).length;
-    if (!where) banner('🧭 That place isn\'t built yet', 'So far you can visit Santa Monica, Venice and San Francisco\'s Fisherman\'s Wharf. Here\'s Santa Monica!');
+    if (!where) banner('🧭 That place isn\'t built yet', 'So far you can visit Santa Monica, Venice, San Francisco\'s Fisherman\'s Wharf, Kyoto and the Getty. Here\'s Santa Monica!');
     else banner('🧭 Try it before you go!', V.marks.length ? `${V.marks.length} stops on your trip. Follow the gold arrow` : 'Walk around and see what\'s here');
-    if (out && where) setTimeout(() => banner(`${out} of your stops ${out === 1 ? 'isn\'t' : 'aren\'t'} built yet`, 'So far: Santa Monica, Venice and San Francisco\'s Fisherman\'s Wharf'), 4000);
+    if (out && where) setTimeout(() => banner(`${out} of your stops ${out === 1 ? 'isn\'t' : 'aren\'t'} built yet`, 'So far: Santa Monica, Venice, San Francisco\'s Fisherman\'s Wharf and Kyoto'), 4000);
     visitNext(); };
-  const needSF = where?.city === 'sf' || places.some(P => P.g?.city === 'sf');
-  if (needSF && !SF.walk) loadSF().then(go); else go(); }
+  const needSF = where?.city === 'sf' || places.some(P => P.g?.city === 'sf'), packs = [...new Set([where?.pack, ...places.map(P => P.g?.pack)].filter(Boolean))];
+  Promise.all([needSF && !SF.walk ? loadSF() : null, ...packs.map(loadPack)]).then(go); }
 // (the gold arrow only points to stops in the city you're in)
-function visitNext(){ const V = VISIT, here = ocean && inSFu(ocean.x) ? 'sf' : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in ' + (here === 'sm' ? 'San Francisco' : 'Santa Monica'), 'Get there from a ☎️ phone booth'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
-function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { const c = inSFu(o.x) ? 'sf' : 'sm'; if (V.city && V.city !== c) visitNext(); V.city = c; }   // (teleported to the other city: point to its stops)
+const cityOf = o => placeAtX(o.x*U)?.id || (inSFu(o.x) ? 'sf' : 'sm');
+function visitNext(){ const V = VISIT, here = ocean ? cityOf(ocean) : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in another city', 'Get there from a ☎️ phone booth'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
+function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { const c = cityOf(o); if (V.city && V.city !== c) visitNext(); V.city = c; }   // (teleported to the other city: point to its stops)
   for (const M of V.marks){ M.grp.children[0].material.opacity = .25 + .15*Math.sin(time*3 + M.i);
     if (!M.seen && Math.hypot(M.g.x - o.x, M.g.y - o.y) < 12*METERS){ M.seen = true; [523, 659, 784].forEach((f, k) => sfx(f, .1, 'triangle', .04, k*.08)); const left = V.marks.filter(m => !m.seen).length;
       banner(`📍 ${M.i + 1}. ${M.title}`, left ? `A stop on your trip. ${left} more to go: follow the gold arrow` : 'The last stop on your trip!'); visitNext(); } } }
@@ -6312,6 +6460,7 @@ const PHONE_BOOTHS = [
   { id: 'pier', name: 'Santa Monica Pier', s: 85, t: 5.2, face: 0, more: "at Route 66's End of the Trail sign", deck: true },
   { id: 'park', name: 'Palisades Park', s: 392, t: -846, face: 2, more: 'at the end of Wilshire' },
   (() => { const [x, y] = [(SF.X + 8)/U, (SF.Z - 6)/U], [s, t] = landST(x, y); return { id: 'sf', name: "San Francisco: Fisherman's Wharf", s, t, face: 0, more: 'at the crab wheel sign, Jefferson & Taylor', city: 'San Francisco' }; })() ];
+for (const P of PLACES) for (const pk of P.packs){ const [s, t] = landST((P.X + pk.booth[0])/U, (P.Z - pk.booth[1])/U); PHONE_BOOTHS.push({ id: P.id + '-' + pk.id, name: `${P.name}: ${pk.name}`, s, t, face: 0, more: pk.more, pack: pk }); }   // (a booth in each faraway place)
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
 function openBooth(from){ const o = ocean; if (!o) return; paused = true; $('boothPanel').querySelector('.kicker').textContent = '☎️ Phone booth'; $('boothPanel').querySelector('h2').textContent = 'Where do you want to go?'; $('boothPanel').querySelector('.explain').textContent = 'Pick up the phone and dial another phone booth. Zap! You come out of that one.'; $('boothClose').textContent = 'Hang up'; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12)); const box = $('boothList'); box.innerHTML = '';
   for (const b of PHONE_BOOTHS){ if (b === from) continue; const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + (b.soon ? 'secondary' : 'primary'); bt.disabled = !!b.soon;
@@ -6323,7 +6472,7 @@ function zapTo(b){ const o = ocean; $('boothPanel').hidden = true; let z = $('za
   z.style.opacity = '1'; [523, 784, 1046, 1568].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.05)); sfx(200, .5, 'sawtooth', .03, 0, 1400);
   const go = () => setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
     paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`☎️ ${b.name}`, b.more); }, 120); }, 380);
-  if (b.id === 'sf' && !SF.walk) loadSF().then(go); else go(); }
+  if (b.pack) loadPack(b.pack).then(go); else if (b.id === 'sf' && !SF.walk) loadSF().then(go); else go(); }
 /* 3rd Street between Wilshire and California (the 1100 block), building by building from Google Street View (Jul 2025,
    the middle of the block Feb 2022) and listings. side 1 = the inland side (fronts face the ocean), -1 = the ocean side. */
 const BLOCK1100 = [
@@ -6856,7 +7005,7 @@ function buildCarousel(g, P3){ const C = CAROUSEL, s = 390 - C.A, base = new THR
   carouselStep(0); }
 const horseY = (H, ang) => 1.25 + Math.sin(ang*3 + H.ph)*.28;   // (up and down as it goes round)
 function carouselStep(dt){ const K = PARK_ANIM.carousel; if (!K) return; K.ang += dt*.47; K.spin.rotation.y = K.ang;   // (about 4.5 turns a minute)
-  K.list.forEach((H, i) => { const y = horseY(H, K.ang); K.v.set(Math.cos(H.a)*H.r, y, -Math.sin(H.a)*H.r); K.q.setFromEuler(K.e.set(0, H.a + Math.PI, 0)); K.m4.compose(K.v, K.q, K.one); K.horses.setMatrixAt(i, K.m4); K.tack.setMatrixAt(i, K.m4);
+  K.list.forEach((H, i) => { const y = horseY(H, K.ang); K.v.set(Math.cos(H.a)*H.r, y, -Math.sin(H.a)*H.r); K.q.setFromEuler(K.e.set(0, H.a + Math.PI/2, 0));   /* (nose forward along the circle, the way it turns: counterclockwise from above, like every American carousel) */ K.m4.compose(K.v, K.q, K.one); K.horses.setMatrixAt(i, K.m4); K.tack.setMatrixAt(i, K.m4);
     K.v.y = 2.3; K.m4.compose(K.v, K.q, K.one); K.poles.setMatrixAt(i, K.m4); });
   K.horses.instanceMatrix.needsUpdate = K.tack.instanceMatrix.needsUpdate = K.poles.instanceMatrix.needsUpdate = true; }
 function carouselSeat(){ const K = PARK_ANIM.carousel, H = K.list[0]; K.spin.updateWorldMatrix(true, false); const p = new THREE.Vector3(Math.cos(H.a)*H.r, horseY(H, K.ang) + .28, -Math.sin(H.a)*H.r).applyMatrix4(K.spin.matrixWorld); return p; }
@@ -6945,7 +7094,7 @@ function hangPaint(){ const small = document.createElement('canvas'); small.widt
   $('paintClear').onclick = () => { paintCtx.fillStyle = '#fffdf7'; paintCtx.fillRect(0, 0, cv.width, cv.height); }; $('paintHang').onclick = hangPaint; $('paintClose').onclick = closePaint; }
 function showArt(sp){ const A = SMAM_ART[sp.art]; if (!A) return; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about}`); }
 function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPHONE', '#111111', '#ffffff', 512, 96, 60) });
-  for (const b of PHONE_BOOTHS){ if (b.soon) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));
+  for (const b of PHONE_BOOTHS){ if (b.soon || b.pack) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));
     { const [x1, y1] = landXY(b.s + 1, b.t), [x0, y0] = landXY(b.s, b.t); bg.rotation.y = -Math.atan2(y1 - y0, x1 - x0) + b.face*Math.PI/2; }
     const bx = (w, h, d, x, y, z, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = m !== glass; bg.add(me); return me; };
     bx(1.1, .1, 1.1, 0, .05, 0, red); for (const [x, z] of [[-.5, -.5], [.5, -.5], [-.5, .5], [.5, .5]]) bx(.1, 2.3, .1, x, 1.2, z, red);

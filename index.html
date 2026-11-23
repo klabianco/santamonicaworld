@@ -2516,6 +2516,7 @@ function startOcean(){
     if (got){ save.coins = (save.coins || 0) + got; persist(); flushCloud(); setTimeout(() => banner(`💰 +${got} coins!`, why), 2500); } }
   ocean.teach = !save.tutorialDone;
   if (!ocean.teach) coach(OCEAN_HELLO, 10);
+  visitArrive();   // (came from a trip link: go to that place)
 }
 const OCEAN_HELLO = 'You\'re on the 3rd Street Promenade at Wilshire, right by the triceratops fountain, and everything here is real size! Shops and dinosaur fountains run three blocks down to Broadway. For the beach, walk down California Avenue to the cliffs and take the California Incline down (hold Run to go faster). Your own island is out in the bay: tap Go to my island in the Menu to build your dream house there. Swim out and press Surf (B) to ride the waves, or explore Santa Monica Bay, find treasure and help the animals. The people and animals you meet can point you back home.';
 // Waves and currents: the pool is calm, the ocean pushes you around.
@@ -4654,6 +4655,49 @@ function busStep(dt){ const B = BUS; if (!B.mesh) return;
 function busStopNear(o){ const [sv, t] = landST(o.x, o.y); return BUS.stops.find(S => Math.hypot(S.s - sv, S.t - t) < 6); }
 function busETA(S){ const B = BUS, d = ((S.d - B.d) % B.L + B.L) % B.L; return Math.round(d/9 + (B.wait > 0 ? B.wait : 0) + B.stops.filter(x => { const q = ((x.d - B.d) % B.L + B.L) % B.L; return q > .5 && q < d; }).length*14); }
 function hopOff(o){ const S = BUS.stopAt; if (!S) return; o.workout = null; const [x, y] = landXY(S.s, S.t); o.x = x; o.y = y; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner(`🚏 ${S.name}`, 'Hop back on at any tour stop'); }
+/* Try it before you go: a link can drop a visitor at a real place and show the stops of their trip (for Plantrip and friends).
+     ?at=34.0094,-118.4973&heading=270   start here, facing this way (compass degrees)
+     ?stops=[{"title":"The pier","lat":34.0094,"lon":-118.4973},...]   (JSON, or the same JSON in base64url): numbered markers, and a gold arrow from stop to stop
+     ?ref=plantrip   where the visitor came from (kept with their swimmer)
+   Visitors play without logging in. Only the places built so far work: Santa Monica, and San Francisco's Fisherman's Wharf. */
+const VISIT = (() => { let q; try { q = new URLSearchParams(location.search); } catch(e){ return null; }
+  const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+  let at = null; { const m = (q.get('at') || '').split(','); if (m.length === 2 && num(m[0]) != null && num(m[1]) != null) at = { lat: num(m[0]), lon: num(m[1]) }; }
+  let stops = []; { const raw = q.get('stops'); if (raw){ let j = null; try { j = JSON.parse(raw); } catch(e){ try { j = JSON.parse(atob(raw.replace(/-/g, '+').replace(/_/g, '/'))); } catch(_){} }
+    if (Array.isArray(j)) stops = j.slice(0, 40).map((s, i) => ({ title: String(s?.title || s?.name || `Stop ${i + 1}`).slice(0, 60), lat: num(s?.lat ?? s?.latitude), lon: num(s?.lon ?? s?.lng ?? s?.longitude) })).filter(s => s.lat != null && s.lon != null); } }
+  if (!at && !stops.length) return null;
+  return { at: at || { lat: stops[0].lat, lon: stops[0].lon }, heading: num(q.get('heading')), stops, ref: (q.get('ref') || '').replace(/[^\w.-]/g, '').slice(0, 40), done: false, marks: [], next: 0 }; })();
+// real latitude/longitude to the game's own map: Santa Monica (the same projection the OpenStreetMap city was built with) or San Francisco
+function geoToGame(lat, lon){
+  { const LAT0 = 34.0100, LON0 = -118.4960, ML = 110940, MO = 111320*Math.cos(34.015*Math.PI/180), a = 134.8*Math.PI/180, NW = [Math.cos(a), Math.sin(a)], NE = [NW[1], -NW[0]], K = .00923;
+    const x = (lon - LON0)*MO, y = (lat - LAT0)*ML, s0 = x*NE[0] + y*NE[1], t0 = -(x*NW[0] + y*NW[1]), s = s0 + K*t0 + 222, t = t0 - K*s0 + 42.5;
+    if (s > -400 && s < 1250 && t > -2450 && t < 2900){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; } }
+  { const LAT0 = 37.8083294, LON0 = -122.4157264, x = (lon - LON0)*88060.572, y = (lat - LAT0)*110992.853;
+    if (x > SF.x0 && x < SF.x0 + SF.W && y > SF.y0 && y < SF.y0 + SF.H) return { city: 'sf', x: (SF.X + x)/U, y: (SF.Z - y)/U }; }
+  return null; }
+function visitArrive(){ const V = VISIT, o = ocean; if (!V || V.done || !o) return; V.done = true; if (V.ref && !save.ref){ save.ref = V.ref; persist(); }
+  const where = geoToGame(V.at.lat, V.at.lon), places = V.stops.map(s => ({ ...s, g: geoToGame(s.lat, s.lon) }));
+  const go = () => { if (where){ o.x = where.x; o.y = where.y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3; o.onLand = true; camInit = false;
+      if (V.heading != null){ const a = geoToGame(V.at.lat + Math.cos(V.heading*Math.PI/180)*1e-4, V.at.lon + Math.sin(V.heading*Math.PI/180)*1.2e-4); if (a) o.ang = camHead = Math.atan2(a.y - o.y, a.x - o.x); } }
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffc23a, transparent: true, opacity: .35, depthWrite: false });
+    places.forEach((P, i) => { if (!P.g) return; const gh = (() => { walkRef = 1e9; const h = groundAt(P.g.x, P.g.y); walkRef = o.gh + .3; return h; })(), grp = new THREE.Group();
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(.9, .9, 30, 16, 1, true), mat); beam.position.y = 15; grp.add(beam);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(2.2, 3, 32), new THREE.MeshBasicMaterial({ color: 0xffc23a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI/2; ring.position.y = .08; grp.add(ring);
+      const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(`${i + 1}. ${P.title}`, '#1d2026', '#ffc23a', 1024, 128, P.title.length > 30 ? 46 : 62), depthTest: false })); sg.scale.set(12, 1.5, 1); sg.position.y = 6; grp.add(sg);
+      grp.position.set(P.g.x*U, gh, P.g.y*U); oceanScene.add(grp); V.marks.push({ ...P, i, grp, seen: false }); });
+    const out = places.filter(P => !P.g).length;
+    if (!where) banner('🧭 That place isn\'t built yet', 'So far you can visit Santa Monica and San Francisco\'s Fisherman\'s Wharf. Here\'s Santa Monica!');
+    else banner('🧭 Try it before you go!', V.marks.length ? `${V.marks.length} stops on your trip. Follow the gold arrow` : 'Walk around and see what\'s here');
+    if (out && where) setTimeout(() => banner(`${out} of your stops aren't built yet`, 'Only Santa Monica and Fisherman\'s Wharf so far'), 4000);
+    visitNext(); };
+  const needSF = where?.city === 'sf' || places.some(P => P.g?.city === 'sf');
+  if (needSF && !SF.walk) loadSF().then(go); else go(); }
+// (the gold arrow only points to stops in the city you're in)
+function visitNext(){ const V = VISIT, here = ocean && inSFu(ocean.x) ? 'sf' : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in ' + (here === 'sm' ? 'San Francisco' : 'Santa Monica'), 'Get there from a ☎️ phone booth'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
+function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { const c = inSFu(o.x) ? 'sf' : 'sm'; if (V.city && V.city !== c) visitNext(); V.city = c; }   // (teleported to the other city: point to its stops)
+  for (const M of V.marks){ M.grp.children[0].material.opacity = .25 + .15*Math.sin(time*3 + M.i);
+    if (!M.seen && Math.hypot(M.g.x - o.x, M.g.y - o.y) < 12*METERS){ M.seen = true; [523, 659, 784].forEach((f, k) => sfx(f, .1, 'triangle', .04, k*.08)); const left = V.marks.filter(m => !m.seen).length;
+      banner(`📍 ${M.i + 1}. ${M.title}`, left ? `A stop on your trip. ${left} more to go: follow the gold arrow` : 'The last stop on your trip!'); visitNext(); } } }
 // The Fairmont Miramar Hotel & Bungalows (101 Wilshire, at Ocean Ave): the hotel's sign on a low wall at the corner, its flags, and the huge
 // Moreton Bay fig in front (planted in 1889; one of the biggest trees in Santa Monica). The buildings themselves come from OpenStreetMap.
 function buildFairmont(g, P3){ const grp = new THREE.Group(), at = (sv, t, y) => P3(sv, t, landH(sv, t) + y);
@@ -7649,7 +7693,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep();   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
@@ -9537,6 +9581,7 @@ function arrangeTitle(){
   if (back) st.before(co); else co.before(st);
   $('makeBtn').hidden = !STANDALONE || !!fbAuth; $('cloneBtn').hidden = !STANDALONE; $('cloneBtn').textContent = fbAuth ? 'Clone a swimmer' : 'Clone an account';
 }
+if (VISIT){ const T = $('title'); T.querySelector('.kicker').textContent = 'Try it before you go'; T.querySelector('.explain').textContent = VISIT.stops.length ? `Walk your trip in a real-size 3D city before you get there: ${VISIT.stops.length} stops, with a gold arrow from one to the next. No account needed.` : 'Walk around the real place, real size, before you get there. No account needed.'; }   // (came from a trip link)
 function titleNote(text, warn){ const n = $('titleNote'); n.textContent = text; n.className = 'note' + (warn ? ' warn' : ''); }
 function enterGame(){ taken.clear(); refreshPearls(); buildMinimap(); startOcean(); }   // no pool any more: straight into the ocean
 function goPool(){ if (!save.tutorialDone) startRace(true, true); else startPool(); }
@@ -10094,7 +10139,7 @@ function frame(now){
     ctx.fill('evenodd'); ctx.restore(); }
   if ((mode === 'race' || mode === 'results') && race){ drawRaceOverlay(); drawBeat(); }
   else if (mode === 'ocean' && ocean){ drawMinimap(); drawWhiskers(); drawSharkWarn(); drawLeagueHud(); }
-  if (!account && playing() && !paused && (guestT += dt) > GUEST_SECS){ if (STANDALONE) openLogin(true); else openGate(); }
+  if (!account && !VISIT && playing() && !paused && (guestT += dt) > GUEST_SECS){ if (STANDALONE) openLogin(true); else openGate(); }
   chipT -= dt; if (chipT <= 0){ chipT = .5; refreshLevelChip(); $('coinVal').textContent = save.coins || 0; }
   requestAnimationFrame(frame);
 }

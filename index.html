@@ -5466,7 +5466,7 @@ function buildCoast(){
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = [...BLOCK1100, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
+    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -5662,7 +5662,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -6895,6 +6895,58 @@ function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     for (const d of [-.9, 0, .9]){ bx(sc + 2.1, sc + 2.16, tc + d - .13, tc + d + .13, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc - 2.16, tc - 2.1, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc + 2.1, tc + 2.16, 13.5, 20.3, D); }
     for (const d of [-.5, .5]) bx(sc + 1.7, sc + 1.76, tc + d - .1, tc + d + .1, 21.6, 23.4, D); }
   g.add(grp); mergeStatic(grp); }
+/* 3rd St, the Wilshire end of the 1200 block, from photos (Wikimedia Commons, Sept 2017 and July 2022): the 1935 streamline corner at 1201
+   (the old Barnes & Noble, its round corner, speed lines and the steel lattice sign tower on the tall block behind), the Santa Monica Art
+   Museum at 1219 (warm gray, piers, white transoms, silver letters), and across the street the white streamline corner with its fluted drum.
+   round: the corner (s, t) the facade turns at, and its radius. */
+const BLOCK1200 = [
+  { side: 1, s: 664.6, t0: -817.6, t1: -772.6, h: 7.2, ht: 7.2, c: 0xe8e8e3, name: 'corner', round: [664.6, -817.6, 3.5] },
+  { side: 1, s: 664.4, t0: -773.2, t1: -740.0, h: 7.9, c: 0x8e8f8a, name: 'museum' },
+  { side: -1, s: 640.8, t0: -816.6, t1: -785.4, h: 11.4, c: 0xf2f1ec, name: 'reed', round: [640.8, -816.6, 4] } ];
+const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
+  const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
+  for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }
+  return [...p.slice(0, i), ...arc, ...p.slice(i + 1)]; };
+function buildBlock1200(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1200.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m, y00) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, (y00 ?? landH(sc, tc)) + (y0 + y1)/2)); grp.add(me); return me; };
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => { const a = B.side > 0 ? B.s - out - dep : B.s + out, b2 = a + dep, me = new THREE.Mesh(new THREE.BoxGeometry(dep, y1 - y0, Math.abs(t1 - t0)), mat(hex)); me.position.set(...P3((a + b2)/2, (t0 + t1)/2, gl(B) + (y0 + y1)/2)); grp.add(me); return me; };
+  const txt = (text, bg, fg, w, h, font) => new THREE.MeshBasicMaterial({ map: canvasTex(1024, Math.round(1024*h/w), x => { const H = Math.round(1024*h/w); x.fillStyle = bg; x.fillRect(0, 0, 1024, H); x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(text, 512, H/2 + 4); }, false) });
+  const win = (B, t0, t1, y0, y1, n, frame = 0xf4f4f0, glass = 0x2f4250) => { const w = (t1 - t0)/n; for (let k = 0; k < n; k++){ const a = t0 + k*w + w*.12, b = t0 + (k + 1)*w - w*.12; f(B, a - .07, b + .07, y0 - .07, y1 + .07, frame, .1); f(B, a, b, y0, y1, glass, .12); } };
+  // drum: a round corner as a cylinder (its center r in from the corner on both sides), from y0 to y1; a: which quarter faces out
+  const drum = (cs, ct, r, y0, y1, hex, base, arcS, arcT) => { const me = new THREE.Mesh(new THREE.CylinderGeometry(r, r, y1 - y0, 28), mat(hex)); me.position.set(...P3(cs + arcS*r, ct + arcT*r, base + (y0 + y1)/2)); grp.add(me); return me; };
+  // ---- inland: the 1935 streamline corner (1201) ----
+  { const B = L('corner'), base = gl(B), r = B.round[2], cs = B.s + r, ct = B.t0 + r, G = 0x7c8186;
+    for (const y of [5.6, 6.05, 6.5]){ f(B, ct, B.t1, y, y + .12, G, .05, .1);   // speed lines: three grooves round the parapet, along 3rd, round the curve and along Wilshire
+      bx(cs, B.s + 30, B.t0 - .18, B.t0 - .06, y, y + .12, G, null, base); drum(B.s, B.t0, r + .1, y, y + .12, G, base, 1, 1); }
+    drum(B.s, B.t0, r + .02, 0, B.h, 0xe8e8e3, base, 1, 1);
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(r + 1.3, r + 1.3, .16, 28, 1, false, Math.PI, Math.PI/2), mat(0xf4f4f0)); can.position.set(...P3(cs, ct, base + 4.95)); grp.add(can);   // the thin flat canopy round the corner
+    bx(cs, B.s + 30, B.t0 - 1.3, B.t0, 4.87, 5.03, 0xf4f4f0, null, base); f(B, ct, ct + 4, 4.87, 5.03, 0xf4f4f0, 1.3);
+    const s2 = B.s + 9, T0 = B.t0 + 3, T1 = B.t1 - 1;   // the tall tan block behind, and its sign tower: a dark steel lattice with a white blade beside it (the blade said BARNES & NOBLE until the store moved to 1318)
+    bx(s2, 709.8, T0, T1, 0, 14.6, 0xd9cdb2, null, base);
+    for (const y of [8.4, 11.4]) for (let t = T0 + 9; t < T1 - 2; t += 4.2){ const fr = new THREE.Mesh(new THREE.BoxGeometry(.1, 2, 3), mat(0xf4f4f0)); fr.position.set(...P3(s2 - .05, t + 1.5, base + y + 1)); grp.add(fr); const gw = new THREE.Mesh(new THREE.BoxGeometry(.1, 1.8, 2.8), mat(0x34434d, .25, .3)); gw.position.set(...P3(s2 - .09, t + 1.5, base + y + 1)); grp.add(gw); }
+    const st = s2 + 3, tt0 = T0 + .5, tt1 = T0 + 6.5, D = 0x2a2f34, y0 = 14.6, y1 = 27;
+    for (const s of [st, st + 1.5]) for (const t of [tt0, tt1]) bx(s - .1, s + .1, t - .1, t + .1, y0, y1, D, null, base);
+    for (let y = y0 + 1; y <= y1; y += 1.1) for (const s of [st, st + 1.5]) bx(s - .05, s + .05, tt0, tt1, y, y + .07, D, null, base);
+    for (let t = tt0 + 1; t < tt1; t += 1) bx(st - .05, st + .05, t - .035, t + .035, y0, y1, D, null, base);
+    bx(st - .25, st + 1.4, tt1 + .4, tt1 + 1.4, 11, 25, 0xf4f4f0, null, base); }
+  // ---- inland: the Santa Monica Art Museum (1219) ----
+  { const B = L('museum'), door = -757.3, W = 0xf1f0ea, P = 0x86877f;
+    for (const t of [B.t0 + .35, door - 3.2, door + 2.4, B.t1 - .9]) if (t > B.t0 && t < B.t1){ f(B, t, t + .85, 0, 6.1, P, .3); f(B, t - .1, t + .95, 5.8, 6.15, W, .38); }   // the piers, with white capitals
+    for (let t = B.t0 + 2.2; t < B.t1 - 2; t += 5.5) if (Math.abs(t - door) > 4) f(B, t, t + .45, 0, 5.8, P, .22);
+    f(B, B.t0, B.t1, 6.15, 6.3, W, .3); f(B, B.t0, B.t1, B.h - .35, B.h - .05, W, .45); f(B, B.t0, B.t1, B.h - .05, B.h + .15, P, .55);   // the frieze between two white mouldings, and the cornice
+    for (const [a, b2] of [[B.t0 + 1.3, door - 3.3], [door + 3.4, B.t1 - 1]]) for (let t = a; t < b2 - 2.4; t += 3.1) win(B, t, t + 2.7, 4.75, 5.6, 3, W, 0x3a4a54);   // white-framed transom windows over the shop windows
+    const n = new THREE.Mesh(new THREE.PlaneGeometry(12, .95), txt('SANTA MONICA ART MUSEUM', '#8e8f8a', '#eceeef', 12, .95, "500 70px Georgia, 'Times New Roman', serif")); n.position.set(...P3(B.s - .32, door, gl(B) + 6.95)); n.rotation.y = rot(B); grp.add(n);
+    for (const d of [-1.3, 1.3]) bx(B.s - .7, B.s - .3, door + d - .02, door + d + .02, 6.6, 7.6, 0xc9cbcc);   // (the two steel rods holding the letters)
+    f(B, door - 1.7, door + 1.7, 3.6, 3.75, W, .35); }
+  // ---- ocean side: the white streamline corner (1200) and its fluted drum ----
+  { const B = L('reed'), base = gl(B), r = B.round[2], cs = B.s - r, ct = B.t0 + r, W = 0xf2f1ec, G = 0xc9c8c2;
+    drum(B.s, B.t0, r + .02, 0, B.h + 3.6, W, base, -1, 1); drum(B.s, B.t0, r + .15, B.h + 3.4, B.h + 3.75, 0xe4e3dd, base, -1, 1);
+    for (let k = 0; k < 18; k++){ const a = k/18*TAU, fl = new THREE.Mesh(new THREE.BoxGeometry(.18, 5.4, .18), mat(W)); const [x, , z] = P3(cs + Math.cos(a)*(r + .1), ct + Math.sin(a)*(r + .1), 0); fl.position.set(x, base + B.h + .6, z); grp.add(fl); }   // (the flutes up the drum)
+    for (const y of [B.h - 1.6, B.h - 1.1, B.h - .6]){ f(B, ct, B.t1, y, y + .12, G, .05, .1); bx(B.s - 30, cs, B.t0 - .18, B.t0 - .06, y, y + .12, G, null, base); drum(B.s, B.t0, r + .1, y, y + .12, G, base, -1, 1); }
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(r + 1.2, r + 1.2, .18, 28, 1, false, Math.PI/2, Math.PI/2), mat(0xf4f4f0)); can.position.set(...P3(cs, ct, base + 4.85)); grp.add(can);
+    bx(B.s - 30, cs, B.t0 - 1.2, B.t0, 4.76, 4.94, 0xf4f4f0, null, base); f(B, ct, B.t1 - 1, 4.76, 4.94, 0xf4f4f0, 1.2);
+    win(B, ct + 1.5, B.t1 - 1.5, 6.3, 8.3, 4, W, 0x2c3a44); }
+  g.add(grp); mergeStatic(grp); }
 /* One of the Lalannes' two topiary sauropods (1989): ivy over a steel frame, a bronze head with its mouth open, on a raised lawn with a
    low black rail round it. About 34 ft long and 12 ft tall. dir: which way along the Promenade its head points (+1: toward Broadway). */
 function buildSauro(d, dir, ivy, ivy2, E){ const curb = std(0xb9b6ae, .85), grass = std(0x5f9a40, .95), rail = std(0x2b2f33, .5), bronze = std(0x4d4238, .45, .55);
@@ -8087,13 +8139,24 @@ function buildPromenade(g, P3, at, instanceOf){
       const y = landH(PROM.s, t) + 8.1, w = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 20.8), wireM); w.position.set(...P3(653, t, y)); w.rotation.y = Math.PI/2; ban.add(w);
       for (let k = 0; k < 6; k++){ const bn = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.1), std(BC[(k + Math.round(t)) % BC.length], .9)); bn.material.side = THREE.DoubleSide; bn.position.set(...P3(645.5 + k*3, t, y - 1.15)); ban.add(bn); } }
     instanceOf(pole, pp); g.add(ban); mergeStatic(ban); }
-  // big signs at each end: 3RD STREET PROMENADE at Wilshire, and Santa Monica Place across Broadway
-  for (const [t, txt, col, face] of [[PROM.t0 - 2, '3RD STREET PROMENADE', '#22303c', 0]]){   // (no big sign over the Santa Monica Place entrance: Street View 2024 shows none)
-    const gp = new THREE.Group(), iron = std(0x2d3a35, .5);
-    for (const x of [-9.5, 9.5]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.16, .2, 6.5, 8), iron); p.position.set(x, 3.25, 0); gp.add(p); }   // (one post on each sidewalk, the sign across the street)
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 1.8), new THREE.MeshBasicMaterial({ map: labelTex(txt, col, '#fff', 1024, 132, 84) })); sg.position.set(0, 5.6, -.03); sg.rotation.y = Math.PI; gp.add(sg);   // (one facing each way, so it reads right from both sides)
-    const sg2 = sg.clone(); sg2.position.z = .03; sg2.rotation.y = 0; gp.add(sg2);
-    at(gp, PROM.s, t); }
+  // the Wilshire end, from photos (July 2022, Sept 2017): no sign over the street, but a tall white pylon in the middle with THIRD STREET PROMENADE
+  // up the side facing the Promenade and WILSHIRE on the side facing the street, a blue directory kiosk at its foot; behind it a bed of
+  // yellow flowers with a bronze plaque, then a long blue-tiled pool with one jet, inside a low railing
+  { const gp = new THREE.Group(), white = std(0xf4f4f1, .6), blue = std(0x2f8fc4, .5), t = PROM.t0 - 1;
+    const sh = new THREE.Mesh(new THREE.BoxGeometry(.95, 9, .7), white); sh.position.y = 4.5; gp.add(sh); const cap = new THREE.Mesh(new THREE.BoxGeometry(1.05, .25, .8), white); cap.position.y = 9.1; gp.add(cap);
+    const vt = (text, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(6.6, .62), new THREE.MeshBasicMaterial({ map: canvasTex(1024, 96, x => { x.fillStyle = '#f4f4f1'; x.fillRect(0, 0, 1024, 96); x.font = "600 62px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#5d6a74'; x.fillText(text.split('').join(String.fromCharCode(8202)), 512, 50); }, false) })); m.position.set(0, 5.3, z); m.rotation.set(0, ry, Math.PI/2); gp.add(m); };   // (the letters run up the pylon)
+    vt('THIRD STREET PROMENADE', .352, 0); vt('WILSHIRE', -.352, Math.PI);
+    const kio = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.1, .85), blue); kio.position.y = 1.05; gp.add(kio);
+    const map = new THREE.Mesh(new THREE.PlaneGeometry(.8, 1.1), std(0xe9eef2, .4)); map.position.set(0, 1.25, .43); gp.add(map);
+    at(gp, PROM.s, t); LAND_BOXES.push([PROM.s - .6, t - .45, PROM.s + .6, t + .45, landH(PROM.s, t) + 9.2]);
+    const ft = new THREE.Group(), stone = std(0xb4ab9c, .85), t0 = t + 2.4, t1 = t + 14.5, w = 5.2, flower = std(0xf2c62e, .9), leaf = std(0x4f7d39, .95), tile = std(0x5fb3d6, .3), rail = std(0x6d7378, .5, .4);
+    const box = (sw, h, tw, m, ds, y, tc) => { const me = new THREE.Mesh(new THREE.BoxGeometry(sw, h, tw), m); me.position.set(ds, y, tc); ft.add(me); return me; };
+    box(w, .45, 3.2, leaf, 0, .22, 1.6); for (let k = 0; k < 60; k++){ const fl = new THREE.Mesh(new THREE.SphereGeometry(.13, 6, 4), flower); fl.position.set(-w/2 + .3 + (k*1.37 % (w - .6)), .5, .25 + (k*.73 % 2.7)); ft.add(fl); }   // the flower bed
+    box(.9, .75, .25, std(0x8a6b3d, .4, .6), 0, .6, .5).rotation.x = -.5;   // the bronze plaque on its stone
+    box(w, .4, t1 - t0 - 3.4, stone, 0, .2, (3.4 + t1 - t0)/2); box(w - .5, .06, t1 - t0 - 3.9, tile, 0, .42, (3.4 + t1 - t0)/2); for (const dz of [0, t1 - t0 - 3.65]) box(w, .16, .25, stone, 0, .52, 3.525 + dz); for (const ds of [-w/2 + .125, w/2 - .125]) box(.25, .16, t1 - t0 - 3.4, stone, ds, .52, (3.4 + t1 - t0)/2);   // the pool and its blue tile water
+    const jet = new THREE.Mesh(new THREE.CylinderGeometry(.03, .08, 2.6, 6), new THREE.MeshStandardMaterial({ color: 0xe9f6fb, transparent: true, opacity: .7 })); jet.position.set(0, 1.7, (3.4 + t1 - t0)/2); ft.add(jet);
+    for (const ds of [-w/2 - .35, w/2 + .35]){ box(.05, .05, t1 - t0, rail, ds, .8, (t1 - t0)/2); for (let z = 0; z <= t1 - t0; z += 2) box(.05, .8, .05, rail, ds, .4, z); }
+    mergeStatic(ft); at(ft, PROM.s, t0); LAND_BOXES.push([PROM.s - w/2 - .4, t0, PROM.s + w/2 + .4, t1, landH(PROM.s, t0) + .9]); }
   // people out shopping: they stroll up and down each block (see updCoast)
   { const body = new THREE.CylinderGeometry(.22, .26, 1.05, 8); body.translate(0, .95, 0); const head = new THREE.SphereGeometry(.17, 10, 8); head.translate(0, 1.66, 0); const legs = new THREE.CylinderGeometry(.2, .16, .45, 8); legs.translate(0, .22, 0);
     const N = 46, mb = new THREE.InstancedMesh(body, new THREE.MeshStandardMaterial({ roughness: .8 }), N), mh = new THREE.InstancedMesh(head, std(0xc99a74, .7), N), ml = new THREE.InstancedMesh(legs, std(0x2d3d58, .8), N);

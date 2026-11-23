@@ -3554,7 +3554,8 @@ function steepStop(o, x0, y0){
   const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
   const shop = x0 > coastX(y0) && roomAt(...landST(x0, y0), true);   // (in a shop you can hop down off a table or the counter)
   const fw0 = !o.car && onFreeway(x0, y0);
-  const ok = (x, y) => { if (SOUTHP.box && bergOut(...landST(x, y))) return false; if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  const farAway = !!placeAtX(x0*U) || inSFu(x0);   // (Bergamot's island edge only applies at home, not in Kyoto, the Getty or Disneyland)
+  const ok = (x, y) => { if (SOUTHP.box && !farAway && bergOut(...landST(x, y))) return false; if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
   if (ok(o.x, o.y)) return;
   const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
   for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you

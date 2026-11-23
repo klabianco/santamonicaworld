@@ -10155,7 +10155,7 @@ function friendsOnline(){ const out = []; if (!ocean) return out;
     out.push({ ...f, m, dir: dirs[((Math.round(Math.atan2(dy, dx)/(Math.PI/4)) % 8) + 8) % 8] }); } return out; }
 // the screens
 const APPS = [['camera', '📸', 'Camera', '#ffd23f'], ['friends', '👫', 'Friends', '#3fb6a8'], ['messages', '🎙️', 'Messages', '#ff6f59'], ['find', '📍', 'Find Friends', '#b57bff'],
-  ['map', '🗺️', 'Map', '#e9d8a6'], ['boat', '🚤', 'Boat', '#6ecbf5'], ['music', '🎵', 'Music', '#ff7eb6']];
+  ['map', '🗺️', 'Map', '#e9d8a6'], ['music', '🎵', 'Music', '#ff7eb6']];   // (Nov 2026: no Boat app, Kevin's call)
 const loginFirst = '<p>Log in to your account to use this. Only friends you add with a friend code can reach you.</p>';
 function showPhone(scr = 'home', arg = null){
   phoneScreen = scr; phoneArg = arg; const el = $('phoneScreen'), d = new Date(); $('phoneClock').textContent = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });

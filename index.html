@@ -4635,7 +4635,8 @@ const BUS = (() => { const oc = t => { const E = CITY.E, f = clamp((t - E.t0)/E.
   return { pts, cum, L: cum[pts.length], at, stops, d: 0, v: 0, wait: 0, stopAt: null, mesh: null }; })();
 function buildBus(g){ const b = new THREE.Group(), red = std(0xc62828, .45), dark = std(0x1d2026, .3, .3), cream = std(0xf4ead2, .6);
   const lower = new THREE.Mesh(new THREE.BoxGeometry(10.8, 2.3, 2.5), red); lower.position.y = 1.55; b.add(lower); const win = new THREE.Mesh(new THREE.BoxGeometry(10.82, .9, 2.52), dark); win.position.y = 1.9; b.add(win);
-  for (const [w, d, x, z] of [[10.8, .1, 0, -1.2], [10.8, .1, 0, 1.2], [.1, 2.5, -5.35, 0], [.1, 2.5, 5.35, 0]]){ const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 1.1, d), red); wall.position.set(x, 3.25, z); b.add(wall); }   // (open on top: low sides round the upper deck) const floor = new THREE.Mesh(new THREE.BoxGeometry(10.6, .08, 2.3), std(0x37474f, .8)); floor.position.y = 3.0; b.add(floor);
+  for (const [w, d, x, z] of [[10.8, .1, 0, -1.2], [10.8, .1, 0, 1.2], [.1, 2.5, -5.35, 0], [.1, 2.5, 5.35, 0]]){ const wall = new THREE.Mesh(new THREE.BoxGeometry(w, 1.1, d), red); wall.position.set(x, 3.25, z); b.add(wall); }   // (open on top: low sides round the upper deck)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(10.6, .08, 2.3), std(0x37474f, .8)); floor.position.y = 2.76; b.add(floor);
   for (let x = -4.3; x < 4.6; x += 1.15) for (const z of [-.6, .6]){ const seat = new THREE.Mesh(new THREE.BoxGeometry(.45, .5, .8), std(0x1565c0, .6)); seat.position.set(x, 3.25, z); b.add(seat); }
   const glass = new THREE.Mesh(new THREE.BoxGeometry(.06, 1.0, 2.3), new THREE.MeshStandardMaterial({ color: 0xaad4e6, transparent: true, opacity: .4 })); glass.position.set(5.4, 3.95, 0); b.add(glass);
   for (const x of [-3.6, 3.4]) for (const z of [-1.27, 1.27]){ const w = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .3, 16), dark); w.rotation.x = Math.PI/2; w.position.set(x, .5, z); b.add(w); }
@@ -4646,8 +4647,8 @@ function buildBus(g){ const b = new THREE.Group(), red = std(0xc62828, .45), dar
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(.9, .9), new THREE.MeshBasicMaterial({ map: labelTex('🚌 TOUR', '#c62828', '#ffffff', 256, 256, 70), side: THREE.DoubleSide })); sg.position.y = 2.6; p.add(sg);
     const [x, y] = landXY(S.s, S.t); p.position.set(x*U, landH(S.s, S.t), y*U); g.add(p); } }
 function busStep(dt){ const B = BUS; if (!B.mesh) return;
-  if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { B.v = Math.min(9, B.v + dt*2.5); const d0 = B.d; B.d += B.v*dt; B.stopAt = null;
-    for (const S of B.stops){ const a = ((d0 % B.L) + B.L) % B.L, b = ((B.d % B.L) + B.L) % B.L; if ((a < S.d && b >= S.d) || (a > b && (S.d > a || S.d <= b))){ B.d = S.d; B.wait = 14; B.stopAt = S; sfx(500, .15, 'sine', .02); if (ocean?.workout?.key === 'bus') banner(`🚏 ${S.name}`, S.say + '. Tap Hop off to get off here'); } } }
+  if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { B.v = Math.min(9, B.v + dt*2.5); const d0 = B.d; B.d += B.v*dt; B.stopAt = null; if (B.left && Math.abs(((B.d - B.left.d) % B.L + B.L) % B.L) > 20) B.left = null;   // (just left a stop: don't stop there again)
+    for (const S of B.stops){ const a = ((d0 % B.L) + B.L) % B.L, b = ((B.d % B.L) + B.L) % B.L; if (S === B.left) continue; if ((a < S.d && b >= S.d) || (a > b && (S.d > a || S.d <= b))){ B.d = S.d; B.wait = 14; B.stopAt = S; B.left = S; sfx(500, .15, 'sine', .02); if (ocean?.workout?.key === 'bus') banner(`🚏 ${S.name}`, S.say + '. Tap Hop off to get off here'); } } }
   if (B.wait > 0 && !B.stopAt) B.stopAt = B.stops.find(S => Math.abs(S.d - (((B.d % B.L) + B.L) % B.L)) < .5) || null;
   const [sv, t, h] = B.at(B.d), [x, y] = landXY(sv, t); B.mesh.position.set(x*U, landH(sv, t), y*U); const want = -h; B.ang = B.ang == null ? want : lerpAngle(B.ang, want, Math.min(1, dt*3)); B.mesh.rotation.y = B.ang; }
 function busStopNear(o){ const [sv, t] = landST(o.x, o.y); return BUS.stops.find(S => Math.hypot(S.s - sv, S.t - t) < 6); }

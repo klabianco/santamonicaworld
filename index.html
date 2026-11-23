@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7147,6 +7147,38 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* Original Muscle Beach and the Chess Park, on the sand just south of the pier (OpenStreetMap: "Original Muscle Beach", "Old Muscle Beach"
+   playground, "Chess Park" and its chess area, the swings). Muscle Beach began here in the 1930s: gymnasts, acrobats and weightlifters
+   performing for crowds, the start of America's fitness craze; the rings, bars and ropes are still out on the sand for anyone. */
+const OMB = [ { k: 'rings', s: 214, t: 226, n: 'roman rings' }, { k: 'rings', s: 214, t: 234, n: 'roman rings' }, { k: 'pbars', s: 222, t: 229, n: 'parallel bars' }, { k: 'hbar', s: 222, t: 238, n: 'high bar' },
+  { k: 'rope', s: 205, t: 238, n: 'climbing ropes' }, { k: 'beam', s: 205, t: 226, n: 'balance beam' }, { k: 'swing', s: 193, t: 175.6, n: 'swings' }, { k: 'swing', s: 209.5, t: 175.1, n: 'swings' } ];
+const CHESS = { s0: 243.8, s1: 249.6, t0: 170.2, t1: 176.2 };
+const OMB_FACTS = ['Muscle Beach started right here in the 1930s: gymnasts and acrobats doing tricks on the sand for big crowds.', 'Jack LaLanne trained at Muscle Beach. People call it the birthplace of the fitness craze.', 'Rings take strong arms AND a strong middle. Hold still... now swing!', "Anyone can use Muscle Beach's rings and bars. It's free, by the sea."];
+let ombK = 0;
+function ombAt(o){ const [s, t] = landST(o.x, o.y); if (s < 180 || s > 270 || t < 140 || t > 250 || o.gh > landH(s, t) + 2) return null;
+  if (s > CHESS.s0 - 1.5 && s < CHESS.s1 + 1.5 && t > CHESS.t0 - 1.5 && t < CHESS.t1 + 1.5) return { label: '♟️ Watch a chess game', go: () => banner('♟️ The Chess Park', 'Players come to these stone tables by the pier every day. Some play speed chess with a clock: tap, tap, tap!') };
+  const E = OMB.find(E => Math.hypot(s - E.s, t - E.t) < 2.6); if (!E) return null;
+  if (E.k === 'swing') return { label: '🛝 Swing!', go: () => { sfx(520, .25, 'sine', .04, 0, 200); banner('Wheee! 🛝', 'Higher, higher... you can see the pier from up here!'); } };
+  return { label: `💪 Use the ${E.n}`, go: () => { save.lifts = (save.lifts || 0) + 3; persist(); sfx(160, .12, 'square', .04, .3); if (save.lifts % 20 < 3) flex(); banner(`💪 Muscle Beach: the ${E.n}`, OMB_FACTS[ombK++ % OMB_FACTS.length]); } }; }
+function buildOMB(g, P3){ const grp = new THREE.Group(), steel = std(0x5f6a72, .4, .6), blue = std(0x2f6fb3, .5, .3), wood = std(0x8a6a48, .85), rope = std(0xc9b48a, .9), stone = std(0xbdb6a8, .8), dark = std(0x2b2b2b, .6);
+  const put = (E, d) => { d.position.set(...P3(E.s, E.t, landH(E.s, E.t))); grp.add(d); };
+  const add = (d, geo, m, x, y, z, rx = 0, rz = 0) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.rotation.set(rx, 0, rz); d.add(me); return me; };
+  for (const E of OMB){ const d = new THREE.Group();
+    if (E.k === 'rings' || E.k === 'swing' || E.k === 'rope'){ const H = E.k === 'swing' ? 3 : 5.2, W = E.k === 'swing' ? 3.6 : 2.4; for (const z of [-W/2, W/2]) for (const x of [-.9, .9]) add(d, new THREE.CylinderGeometry(.08, .09, H + .3, 6), E.k === 'swing' ? blue : steel, x*.5, H/2, z, 0, x > 0 ? -.18 : .18);   // A-frame legs
+      add(d, new THREE.CylinderGeometry(.06, .06, W, 6), E.k === 'swing' ? blue : steel, 0, H, 0, Math.PI/2);
+      if (E.k === 'rings') for (const z of [-.3, .3]){ add(d, new THREE.CylinderGeometry(.012, .012, 2.6, 4), dark, 0, H - 1.3, z); add(d, new THREE.TorusGeometry(.11, .025, 6, 14), wood, 0, H - 2.7, z); }
+      if (E.k === 'rope') for (const z of [-.6, .6]) add(d, new THREE.CylinderGeometry(.03, .03, H - .2, 6), rope, 0, H/2 + .1, z);
+      if (E.k === 'swing') for (const z of [-.9, .9]){ for (const dz of [-.22, .22]) add(d, new THREE.CylinderGeometry(.01, .01, 2.4, 4), dark, 0, H - 1.2, z + dz); add(d, new THREE.BoxGeometry(.25, .04, .55), dark, 0, H - 2.42, z); } }
+    if (E.k === 'pbars'){ for (const z of [-.25, .25]){ add(d, new THREE.CylinderGeometry(.03, .03, 3, 6), wood, 0, 1.6, z, 0, Math.PI/2); for (const x of [-1.2, 1.2]) add(d, new THREE.CylinderGeometry(.04, .04, 1.6, 6), steel, x, .8, z); } }
+    if (E.k === 'hbar'){ add(d, new THREE.CylinderGeometry(.02, .02, 2.4, 6), steel, 0, 2.6, 0, Math.PI/2); for (const z of [-1.2, 1.2]) add(d, new THREE.CylinderGeometry(.05, .05, 2.7, 6), steel, 0, 1.35, z); }
+    if (E.k === 'beam'){ add(d, new THREE.BoxGeometry(5, .12, .12), wood, 0, 1.1, 0); for (const x of [-2, 2]) add(d, new THREE.CylinderGeometry(.05, .07, 1.1, 6), steel, x, .55, 0); }
+    put(E, d); }
+  for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++){ const d = new THREE.Group(), s = CHESS.s0 + 1.4 + i*3, t = CHESS.t0 + 1 + j*2;   // the stone chess tables, a board on each, and two stools
+    add(d, new THREE.CylinderGeometry(.15, .2, .7, 8), stone, 0, .35, 0); add(d, new THREE.BoxGeometry(.8, .08, .8), stone, 0, .74, 0);
+    add(d, new THREE.BoxGeometry(.5, .01, .5), new THREE.MeshStandardMaterial({ roughness: .5, map: canvasTex(64, 64, x => { for (let a = 0; a < 8; a++) for (let b2 = 0; b2 < 8; b2++){ x.fillStyle = (a + b2) % 2 ? '#2a2a2a' : '#e8e0cc'; x.fillRect(a*8, b2*8, 8, 8); } }, false) }), 0, .785, 0);
+    for (const z of [-.7, .7]) add(d, new THREE.CylinderGeometry(.18, .18, .45, 8), stone, 0, .22, z);
+    put({ s, t }, d); }
+  g.add(grp); mergeStatic(grp); }
 /* Heal the Bay Aquarium (the Santa Monica Pier Aquarium, 1600 Ocean Front Walk): a little aquarium of Santa Monica Bay's own animals at
    beach level under the pier by the carousel, run by Heal the Bay. Open Wednesday to Sunday, noon to 4, Santa Monica time (listings
    disagree: some say Thursday). Walk in from the beach on the land side under the deck. Tanks round the walls and a touch tank in the middle.
@@ -7704,6 +7736,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
   { const A = !o.workout && aquaAct(o); if (A) return A; }
+  { const E = !o.workout && ombAt(o); if (E) return E; }
   { const B = !o.workout && buskerAt(o); if (B) return { label: `${B.e} Tip the ${B.who} (1 coin)`, go: () => tipBusker(B) }; }
   if (!o.workout && marketAt(o)) return { label: '🥕 Shop the farmers market', go: () => openPlaceMenu('Farmers Market', 'food') };
   if (!o.workout && nearMichaels(o)) return { label: "🍽️ Eat at Michael's", go: () => openPlaceMenu("Michael's", 'food') };

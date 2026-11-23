@@ -4685,7 +4685,7 @@ const PLACES = [
   { id: 'getty', name: 'The Getty Center', where: 'Brentwood, Los Angeles · free, reserve a time · closed Mondays', X: SF.X + 45000, Z: 0, span: [-1500, 1500], frame: { lat0: 34.078, lon0: -118.474, kx: 92213, ky: 110940 }, style: 'getty',
     packs: [ { id: 'center', file: 'places/getty.json', name: 'the museum', box: [-840, -900, 840, 1335], booth: [-96, 18], more: 'at the tram\'s arrival plaza, on top of the hill' } ] },
   { id: 'disney', name: 'Disneyland Resort', where: 'Anaheim, California', X: SF.X + 60000, Z: 0, span: [-1500, 1500], frame: { lat0: 33.8121, lon0: -117.919, kx: 92525, ky: 110940 }, style: 'disney',   // (the real layout from the map: paths, water, buildings and ride tracks at their real sizes, named like a map names them; no characters or logos)
-    packs: [ { id: 'resort', file: 'places/disneyland.json', name: 'the Esplanade', box: [-900, -1080, 630, 780], booth: [30, -322], more: 'on the Esplanade, between the two parks' } ] } ];
+    packs: [ { id: 'resort', file: 'places/disneyland.json', name: 'the Matterhorn', box: [-900, -1080, 630, 780], booth: [117, 158], more: 'at the Matterhorn Bobsleds entrance, in Fantasyland' } ] } ];
 for (const P of PLACES) for (const pk of P.packs) pk.place = P;
 const placeAtX = wx => PLACES.find(P => wx > P.X + P.span[0] && wx < P.X + P.span[1]) || null;   // (world meters)
 const placeLocal = (P, wx, wz) => [wx - P.X, P.Z - wz];
@@ -4717,7 +4717,7 @@ function prepPack(pk, D){ pk.data = D; D.E.h = Float32Array.from(D.E.h); const [
   for (const b of D.b || []){ if (!b.p || b.p.length < 3) continue; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, lo = 1e9; for (const [x, y] of b.p){ x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); lo = Math.min(lo, packE(pk, x, y)); }
     if (covPts.length){ let n = 0; for (const [x, y] of covPts) if (x > x0 && x < x1 && y > y0 && y < y1 && inPoly(b.p, x, y) && ++n >= 3) break; if (n >= 3) continue; }
     const area = (x1 - x0)*(y1 - y0), B = { ...b, box: [x0, y0, x1, y1], base: lo - .3 };
-    if (b.k === 'roof' || b.k === 'getty_roof'){ B.canopy = true; B.h = 4.2; B.top = B.base + 4.5; pk.blds.push(B); continue; }   // (a roof on posts over a walkway or a queue: you walk under it)
+    if (b.k === 'roof' || b.k === 'getty_roof' || (pk.id === 'resort' && !b.n && Math.abs(x0 - 96) < 2 && Math.abs(y0 - 143) < 2)){ B.canopy = true;   /* (the Matterhorn's loading station is an open shed you walk into) */ B.h = 4.2; B.top = B.base + 4.5; pk.blds.push(B); continue; }   // (a roof on posts over a walkway or a queue: you walk under it)
     if (!b.h || b.h === 7.5){ B.h = b.k === 'temple' ? clamp(Math.sqrt(area)*.55, 7, 20) : b.k === 'shrine' ? clamp(Math.sqrt(area)*.45, 4.5, 12) : b.k === 'gate' ? 9 : area < 60 ? 6 : 7.5; }   // (no height in the map: a guess from its size and kind)
     if (pk.id === 'core' && b.k === 'temple' && area > 600 && Math.hypot((x0 + x1)/2 - 906, (y0 + y1)/2 + 581) < 30){ B.roofk = 'bark'; B.h = 18; }   // (Kiyomizu-dera's main hall: about 18 m, under a huge roof of hinoki cypress bark)
     B.top = B.base + B.h + .3; pk.blds.push(B);
@@ -4826,7 +4826,7 @@ function buildPack(pk){ const P = pk.place, D = pk.data, g = new THREE.Group(), 
         spots.forEach(([x, y, ang, w, h], i) => { const gh = packGround(pk, x, y), [wx, , wz] = W3(x, y, 0); q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -ang); v.set(ox*w, oy*h, oz).applyQuaternion(q).add(new THREE.Vector3(wx, gh, wz)); sc.set(sx === .18 ? .18*Math.max(1, w/4) : sx*w, sy*h, sz*Math.max(1, w/4)); m4.compose(v, q, sc); im.setMatrixAt(i, m4); });
         im.castShadow = true; im.computeBoundingSphere(); g.add(im); } } }
   // ride tracks and trains: the monorail's beam up on posts, the railroad's rails, the coasters' track (heights where the map has them, otherwise a guess)
-  { const beams = [], posts = [], rails = []; for (const t of D.tracks || []){ if (!t.p || t.p.length < 2 || /disused|abandoned|river|boat/.test(t.k)) continue; const z = +t.z || (t.k === 'monorail' ? 6.5 : t.k === 'roller_coaster' ? 7 : 0), out = z > .5 ? beams : rails;
+  { const beams = [], posts = [], rails = []; for (const t of D.tracks || []){ if (!t.p || t.p.length < 2 || /disused|abandoned|river|boat/.test(t.k) || t.n === 'Matterhorn Bobsleds') continue;   /* (the Matterhorn's own track is built whole in buildMatter) */ const z = +t.z || (t.k === 'monorail' ? 6.5 : t.k === 'roller_coaster' ? 7 : 0), out = z > .5 ? beams : rails;
       for (let i = 0; i < t.p.length - 1; i++){ const a = t.p[i], c = t.p[i + 1], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < .1) continue; const ms = (a[0] + c[0])/2, mt = (a[1] + c[1])/2, h = packGround(pk, ms, mt) + z, q = new THREE.BoxGeometry(L + .05, z > .5 ? .7 : .15, t.k === 'monorail' ? .9 : z > .5 ? 1.2 : 1.5); q.rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])); q.translate(...W3(ms, mt, h)); out.push(q);
         if (z > .5 && i % 3 === 0){ const gh = packGround(pk, a[0], a[1]), pq = new THREE.CylinderGeometry(.25, .3, z, 6); pq.translate(...W3(a[0], a[1], gh + z/2)); posts.push(pq); } } }
     if (beams.length) g.add(new THREE.Mesh(mergeGeometries(beams), std(0xd8d6d0, .5, .3))); if (posts.length) g.add(new THREE.Mesh(mergeGeometries(posts), std(0xc9c6bf, .6, .2))); if (rails.length) g.add(new THREE.Mesh(mergeGeometries(rails), std(0x6a6058, .9))); }
@@ -4860,6 +4860,7 @@ function buildPack(pk){ const P = pk.place, D = pk.data, g = new THREE.Group(), 
       { const [px, py] = C(0, D2), q = new THREE.BoxGeometry(W2*2, .9, .12); q.rotateY(-ang); q.translate(...W3(px, py, floor + .45)); parts.push([q, wood]); }   // (the railing along its open edge)
       for (const [q, m] of parts){ const me = new THREE.Mesh(q, m); me.castShadow = true; g.add(me); } } }
   if (P.style === 'getty') buildGetty(pk, g, W3);
+  if (P.style === 'disney') buildMatter(pk, g, W3);
   // a phone booth to get home again
   { const [bx, by] = pk.booth, h = packGround(pk, bx, by), bg = new THREE.Group(), red = std(0xc62828, .45); bg.position.set(...W3(bx, by, h)); for (const [w, hh, d, x, y, z] of [[1.1, .1, 1.1, 0, .05, 0], [1.1, .1, 1.1, 0, 2.45, 0], [.08, 2.4, .08, -.52, 1.2, -.52], [.08, 2.4, .08, .52, 1.2, -.52], [.08, 2.4, .08, -.52, 1.2, .52], [.08, 2.4, .08, .52, 1.2, .52]]){ const me = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), red); me.position.set(x, y, z); bg.add(me); } g.add(bg); }
   oceanWorld.add(g); pk.group = g; }
@@ -4997,6 +4998,42 @@ function gettyAct(o){ if (!GTRAM.cars.length) return null; const T = GTRAM;
   if (here) return { label: i ? '🚡 Ride the tram down to the parking' : '🚡 Ride the tram up to the museum', go: () => startRide2(o, 'gtram') };
   const eta = Math.round((i === 1) === (T.dir > 0) ? Math.abs(T.stops[i] - T.d)/4.4 + 5 : Math.max(0, T.wait) + Math.abs(T.d - T.stops[1 - i])/4.4 + 30 + T.L/4.4);
   return { label: `🚡 Tram · next one in ${eta < 60 ? eta + ' s' : Math.round(eta/60) + ' min'}`, go: () => banner('🚡 The Getty tram', `Driverless, pulled by a cable and floating on air. The next one is here in about ${eta} seconds`) }; }
+/* The Matterhorn Bobsleds (1959, Disneyland's first roller coaster): a 44.8 m (147 ft) mountain at 1/100 the real one's size, with two
+   intertwined steel tracks. Real: an 80 ft (24.4 m) lift inside the mountain, top speed about 27 mph (12 m/s), about 2 minutes, no
+   upside-downs, 42 in (107 cm) to ride, splashdown pools at the end (Wikipedia, Disneyland). The station and the two pools are where the
+   map has them (north side); the track in between is drawn as one run, the lift up through an ice cave and then spiralling down
+   round and through the mountain: shorter than the real 620-650 m, and its exact course is a guess (the map has it only in pieces). */
+const MATTER = { curve: null, L: 0, pk: null, sleds: [], idle: [], lift: [0, 0], C: [0, 0], exit: [117, 151] };
+function buildMatter(pk, g, W3){ const D = pk.data, b = pk.blds.find(b => b.n === 'Matterhorn Bobsleds'); if (!b) return; const cx = (b.box[0] + b.box[2])/2, cy = (b.box[1] + b.box[3])/2, R0 = Math.min(b.box[2] - b.box[0], b.box[3] - b.box[1])/2*1.05, H = 44.8, h0 = packGround(pk, cx, cy);
+  const coneR = z => R0*(1 - z/H), V = (x, y, z) => new THREE.Vector3(x, y, z), pts = [V(118, 139.5, 1), V(106, 139.5, 1), V(98.5, 135, 1.4), V(95, 126, 4.5), V(94, 114, 12.5), V(97, 103, 20.5), V(103, 97.5, 24.4)];
+  const th0 = Math.atan2(97.5 - cy, 103 - cx), turns = 3.39, n = Math.round(turns*24); for (let k = 1; k <= n; k++){ const f = k/n, th = th0 - f*turns*2*Math.PI, z = 23.4 - f*19.4, r = coneR(z) + 1.4; pts.push(V(cx + Math.cos(th)*r, cy + Math.sin(th)*r, z)); }
+  pts.push(V(92, 132, .9), V(98, 137, .7), V(104, 140.5, .8), V(116, 140.5, 1));
+  const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal'), L = curve.getLength(); Object.assign(MATTER, { curve, L, pk, h0, C: [cx, cy], lift: [L*curve.getUtoTmapping ? 0 : 0, 0] });
+  { let acc = 0, prev = curve.getPointAt(0); const N = 600; MATTER.liftEnd = 0; for (let i = 1; i <= N; i++){ const q = curve.getPointAt(i/N); acc += prev.distanceTo(q); prev = q; if (q.z >= 24.3 && !MATTER.liftEnd) MATTER.liftEnd = acc; } MATTER.liftStart = 22; }
+  const at = d => { const u = clamp(d/L, 0, 1), q = curve.getPointAt(u), t = curve.getTangentAt(u); return [q.x, q.y, q.z, Math.atan2(t.y, t.x), Math.atan2(t.z, Math.hypot(t.x, t.y))]; }; MATTER.at = at;
+  // the track: two steel rails on ties, white supports down to the ground where it runs outside the mountain
+  const rails = [], ties = [], posts = [], step = .9; let last = at(0);
+  for (let d = step; d <= L; d += step){ const c = at(d), [x0, y0, z0] = last, [x1, y1, z1] = c, a = Math.atan2(y1 - y0, x1 - x0), Ls = Math.hypot(x1 - x0, y1 - y0), pitch = Math.atan2(z1 - z0, Ls), nx = -Math.sin(a), ny = Math.cos(a);
+    for (const sd of [-.45, .45]){ const q = new THREE.BoxGeometry(Math.hypot(Ls, z1 - z0) + .05, .12, .1); q.rotateZ(pitch); q.rotateY(a); q.translate(...W3((x0 + x1)/2 + nx*sd, (y0 + y1)/2 + ny*sd, h0 + (z0 + z1)/2)); rails.push(q); }
+    if (Math.round(d/step) % 2 === 0){ const q = new THREE.BoxGeometry(.18, .08, 1.2); q.rotateY(a); q.translate(...W3(x1, y1, h0 + z1 - .1)); ties.push(q); }
+    if (Math.round(d/step) % 6 === 0 && z1 > 1.5 && Math.hypot(x1 - cx, y1 - cy) > R0 + .5){   /* (supports only where the track runs out beyond the mountain's foot; higher up it's held by the mountain) */ const pq = new THREE.CylinderGeometry(.1, .14, z1, 6); pq.translate(...W3(x1, y1, h0 + z1/2 - .1)); posts.push(pq); }
+    last = c; }
+  g.add(new THREE.Mesh(mergeGeometries(rails), std(0x8d9aa6, .35, .7))); g.add(new THREE.Mesh(mergeGeometries(ties), std(0x5b5f63, .8))); if (posts.length){ const pm = new THREE.Mesh(mergeGeometries(posts), std(0xf2f2ee, .6)); pm.castShadow = true; g.add(pm); }
+  // the ice cave the lift climbs through: blue-white crystals glowing in the dark inside the mountain
+  { const ice = [], R5 = mulberry(12); for (let k = 0; k < 26; k++){ const [x, y, z] = at(MATTER.liftStart + R5()*(MATTER.liftEnd - MATTER.liftStart)), a = R5()*2*Math.PI, r = 2.2 + R5()*1.6, q = new THREE.OctahedronGeometry(.22 + R5()*.4, 0); q.scale(1, 1.8, 1); q.translate(...W3(x + Math.cos(a)*r, y + Math.sin(a)*r, h0 + z + (R5() - .3)*2)); ice.push(q); }
+    g.add(new THREE.Mesh(mergeGeometries(ice), new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x4aa8e0, emissiveIntensity: .8, roughness: .2, transparent: true, opacity: .85 }))); }
+  // the bobsleds: low and white with a red stripe, riders one behind another (the colors are a guess)
+  const mkSled = () => { const sg = new THREE.Group(); sg.rotation.order = 'YZX'; const wht = std(0xf4f4f0, .35, .1), red = std(0xc8202e, .45), blk = std(0x2a2a2a, .7);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, .55, 1.05), wht); body.position.y = .45; sg.add(body); const nose = new THREE.Mesh(new THREE.CylinderGeometry(.53, .53, .55, 12, 1, false, 0, Math.PI), wht); nose.rotation.y = Math.PI/2; nose.position.set(1.6, .45, 0); sg.add(nose);
+    const st = new THREE.Mesh(new THREE.BoxGeometry(3.25, .12, 1.08), red); st.position.y = .62; sg.add(st); for (const x of [-1.1, -.2, .7]){ const seat = new THREE.Mesh(new THREE.BoxGeometry(.55, .35, .7), blk); seat.position.set(x, .78, 0); sg.add(seat); } g.add(sg); return sg; };
+  MATTER.sled = mkSled(); MATTER.sled.visible = false; for (let k = 0; k < 2; k++){ const sg = mkSled(); MATTER.idle.push({ m: sg, d: k*L/2, v: 0, wait: 0 }); }
+  matterStep(0); }
+function matterSpeed(d, z, v, dt){ const M = MATTER; if (d < M.liftStart) return Math.min(3, v + dt*1.5); if (d < M.liftEnd) return 1.7; if (d > M.L - 28) return Math.max(1.2, v - dt*4); return Math.min(12, Math.max(v, 3) + dt*(.35*(24.4 - z) > 0 ? 1.6 : -1)); }   // (the chain lift slow and steady, then gravity: faster and faster down the mountain, up to about 27 mph)
+function placeSled(m, d){ const M = MATTER, P = M.pk.place, [x, y, z, a, pitch] = M.at(d); m.position.set(P.X + x, M.h0 + z, P.Z - y); m.rotation.set(0, a, pitch); }
+function matterStep(dt){ const M = MATTER; if (!M.curve) return; for (const s of M.idle){ if (s.wait > 0){ s.wait -= dt; s.v = 0; } else { const z = M.at(s.d)[2]; s.v = matterSpeed(s.d, z, s.v, dt); s.d += s.v*dt; if (s.d >= M.L){ s.d = 0; s.wait = 9; } } placeSled(s.m, s.d); } }
+function matterAct(o){ const M = MATTER; if (!M.curve) return null; const P = M.pk.place; if (placeAtX(o.x*U) !== P || o.workout) return null; const [x, y] = placeLocal(P, o.x*U, o.y*U);
+  if (Math.hypot(x - 115, y - 152) > 13 && Math.hypot(x - 112, y - 142) > 6) return null;
+  return { label: '🎢 Ride the Matterhorn Bobsleds', go: () => startRide2(o, 'matter') }; }
 /* The real hills and mountains all around, out to 25 km (USGS survey, terrain.json): the Santa Monica Mountains behind Pacific Palisades
    (Temescal Peak 647 m, Saddle Peak 850 m), Mulholland, Brentwood and the Getty's hill, the Hollywood Hills, the Baldwin Hills and the
    Palos Verdes peninsula. It's scenery: drawn behind everything in the game (pushed to the very back of the depth buffer, so it never
@@ -5269,7 +5306,7 @@ function buildEline(g, P3){ const E = ELINE, rails = [], bal = [], road = [], po
       const pan = new THREE.Mesh(new THREE.BoxGeometry(2, .1, .1), dark); pan.position.set(0, 4.1, 0); pan.rotation.z = .5; car.add(pan); g.add(car); E.cars.push(car); } }
   elineStep(0); }
 let elineCam = null;
-function elineStep(dt){ const E = ELINE; if (!E.cars.length) return; if (elineCam && !['eline', 'bbb', 'gtram'].includes(ocean?.workout?.key)){ camMode = elineCam; elineCam = null; camInit = false; }   // (off the train: your view back)
+function elineStep(dt){ const E = ELINE; if (!E.cars.length) return; if (elineCam && !['eline', 'bbb', 'gtram', 'matter'].includes(ocean?.workout?.key)){ camMode = elineCam; elineCam = null; camInit = false; }   // (off the train: your view back)
   if (E.wait > 0){ E.wait -= dt; E.v = 0; if (E.wait <= 0 && E.at?.end && ((E.dir > 0 && E.at.d > E.L/2) || (E.dir < 0 && E.at.d < E.L/2))) E.dir = -E.dir; if (E.wait <= 0) E.left = E.at; }
   else { const nxt = E.stations.filter(S => S !== E.left && (S.d - E.d)*E.dir > -.5).sort((a, b) => Math.abs(a.d - E.d) - Math.abs(b.d - E.d))[0], [s] = elineAt(E.d), top = s < 1000 ? 5 : s < 2212 ? 7 : 15, toGo = nxt ? Math.abs(nxt.d - E.d) : 1e9;
     E.v = Math.min(top, E.v + dt*1.1, Math.sqrt(2*1.1*Math.max(0, toGo)) + .3); E.d += E.v*dt*E.dir;
@@ -7801,6 +7838,7 @@ const RIDES = {
   bbb: { name: 'the Big Blue Bus', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
   eline: { name: 'the E Line', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
   gtram: { name: 'the Getty tram', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
+  matter: { name: 'the Matterhorn Bobsleds', exit: [0, 0], dur: 1e9, f: T => ({ sit: true }) },
   carousel: { name: 'the carousel', exit: [171.5, -18], dur: 32, f: T => ({ sit: true, arms: false }) },
   trapeze: { name: 'the trapeze', exit: [372, -18.5], dur: 9.5, f: T => {   // up the ladder, swing out, let go, drop into the net, bounce
     if (T < 2.5) return { A: 362, off: -26, y: T/2.5*6.6, climb: true };
@@ -7809,6 +7847,7 @@ const RIDES = {
     if (T < 7) return { A: 376.6, off: -26, y: lerp(6.8, 2.5, (T - 6)), arms: true };
     return { A: 376.6, off: -26, y: 2.5 + Math.abs(Math.sin((T - 7)*6))*.7*Math.max(0, 1 - (T - 7)/2.2) }; } } };
 function startRide2(o, key){ const R = RIDES[key]; initAudio(); o.workout = { k: 'ride2', key, T: 0, t0: time, tapT: -9, py: o.gh ?? 0 }; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.08));
+  if (key === 'matter'){ const w = ocean.workout; w.d = 0; w.v = 0; MATTER.sled.visible = true; elineCam = camMode; camMode = 'first'; camInit = false; return banner('🎢 Matterhorn Bobsleds!', 'Up the lift through the ice cave, then down round the mountain, about 27 mph at the fastest. Hold on!'); }
   if (key === 'gtram'){ elineCam = camMode; camMode = 'first'; camInit = false; return banner('🚡 All aboard the Getty tram!', GTRAM.d > GTRAM.L/2 ? 'Down to the parking structure on Sepulveda' : 'Up the hill to the museum. Look out the windows at the 405'); }
   if (key === 'eline' || key === 'bbb'){ elineCam = camMode; camMode = 'first'; camInit = false; }   // (on the train or the city bus you look out of the windows)
   if (key === 'bbb') return banner('🚌 Big Blue Bus', 'Downtown loop: 4th St, Santa Monica Blvd, 2nd St, Broadway. Get off at any blue stop');
@@ -7818,6 +7857,9 @@ function startRide2(o, key){ const R = RIDES[key]; initAudio(); o.workout = { k:
   banner(`🎢 ${R.name}!`, key === 'trapeze' ? 'Up the ladder... swing... and let go!' : 'Hold on tight! (Tap Wheee! to scream)'); }
 function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0; o.walking = false; o.air = airMax(); o.idle = 0;
   const p = w.T < R.dur ? R.f(w.T) : null; if (!p) return stopWorkout();
+  if (w.key === 'matter' && MATTER.curve){ const M = MATTER, z = M.at(w.d)[2], wasLift = w.d < M.liftEnd; w.v = matterSpeed(w.d, z, w.v, dt); w.d += w.v*dt; if (w.d >= M.L) return stopWorkout();
+    if (wasLift && w.d >= M.liftEnd){ sfx(500, .4, 'sawtooth', .03, 0, 300); } if (!w.splash && w.d > M.L - 40 && z < 1.2){ w.splash = true; sfx(120, .6, 'sine', .08, 0, -80); camShake = Math.max(camShake || 0, .5); heartsAt = time; }
+    placeSled(M.sled, w.d); M.sled.updateMatrixWorld(); const c = new THREE.Vector3(.7, .55, 0).applyMatrix4(M.sled.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = { sit: true, arms: w.v > 9 }; o.ang = -M.sled.rotation.y; return; }   // (in the front seat)
   if (w.key === 'gtram' && GTRAM.cars.length){ const car = GTRAM.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(2.4, 1.15, .6).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (GTRAM.dir < 0 ? Math.PI : 0); return; }   // (a seat at the uphill end, by the window)
   if (w.key === 'eline' && ELINE.cars.length){ const car = ELINE.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(-4, 1.9, .8).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (ELINE.dir < 0 ? Math.PI : 0); return; }   // (in a seat in the front car)
   if (w.key === 'bbb' && w.bus){ const B = w.bus; B.m.updateMatrixWorld(); const c = new THREE.Vector3(3.2, .9, .6).applyMatrix4(B.m.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -B.ang; return; }   // (in a front seat of the city bus)
@@ -7833,7 +7875,10 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
   if (w.key === 'plunge' && w.T > 5.6 && !w.yelled){ w.yelled = true; sfx(900, .9, 'sawtooth', .03, 0, -600); }
   if (w.key === 'trapeze' && w.T > 6 && !w.yelled){ w.yelled = true; sfx(700, .5, 'sine', .05, 0, -400); } if (w.key === 'trapeze' && w.T > 7 && !w.netT){ w.netT = 1; sfx(160, .15, 'triangle', .05); heartsAt = time; }
   if (w.key === 'bumper' && (w.bumpT = (w.bumpT || 0) - dt) <= 0){ w.bumpT = 1.4 + Math.random()*1.6; sfx(120, .12, 'square', .05); camShake = Math.max(camShake || 0, .25); } }
-function endRide2(o, w){ const R = RIDES[w.key], [x, y] = landXY(390 - R.exit[0], -R.exit[1]); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3;
+function endRide2(o, w){ if (w.key === 'matter' || w.key === 'gtram'){ const pk = w.key === 'matter' ? MATTER.pk : GTRAM.pk, P = pk.place, [ex, ey] = w.key === 'matter' ? MATTER.exit : (() => { const [sx, sy, , a] = gtramAt(GTRAM.d - 14); return [sx - Math.sin(a)*4, sy + Math.cos(a)*4]; })();
+    if (MATTER.sled) MATTER.sled.visible = false; o.x = (P.X + ex)/U; o.y = (P.Z - ey)/U; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3;
+    return w.key === 'matter' && w.d >= MATTER.L - 1 ? banner('🏔️ What a ride!', 'The Matterhorn Bobsleds: the usual wait is 40 to 70 minutes, so ride it early or late') : null; }
+  const R = RIDES[w.key], [x, y] = landXY(390 - R.exit[0], -R.exit[1]); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3;
   if (PARK_ANIM.dragon) PARK_ANIM.dragon.rotation.z = 0; if (PARK_ANIM.plunge) PARK_ANIM.plunge.position.y = .6;
   if (w.key === 'carousel') return banner('🎠 What a ride!', 'Pick a different horse next time');
   banner(w.key === 'trapeze' ? 'You flew! 🤸' : `What a ride! 🎢`, w.key === 'trapeze' ? 'Right into the net. Again?' : `${R.name} on the Santa Monica Pier`); }
@@ -8027,7 +8072,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
-  { const d = gettyAct(o); if (d) return d; }
+  { const d = gettyAct(o) || matterAct(o); if (d) return d; }
   { const d = !o.workout && (kyotoAct(o) || disneyAct(o)); if (d) return d; }   // (Kyoto: shrines, fortunes, food, the stage... and the rides at Disneyland)
   if (BERG.signAt && !o.workout){ const [s, t] = landST(o.x, o.y); if (Math.hypot(s - BERG.signAt[0], t - BERG.signAt[1]) < 40) return { label: '🖼️ Look around the galleries', go: () => { const k = (bergArt = (bergArt + 1) % SMAM_ART.length), A = SMAM_ART[k]; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about} (Bergamot's galleries change their shows all the time; this one is made up for the game)`); } }; }
   if (!o.workout){ const F = townFront(o); if (F) return F.cat ? { label: `🛍️ ${F.name}`, go: () => openPlaceMenu(F.name, F.cat) } : { label: `${F.kind === 'bank' ? '🏦' : '🏨'} ${F.name}`, go: () => banner(F.name, F.kind === 'bank' ? 'A bank: grown-up money business. Your coins are safe in your pocket!' : 'A hotel. Guests only!') }; }
@@ -9018,7 +9063,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); elineStep(dt); gtramStep(dt); vrStep(o, dt); trackCity(o); farStep(o);   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); elineStep(dt); gtramStep(dt); matterStep(dt); vrStep(o, dt); trackCity(o); farStep(o);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop

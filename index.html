@@ -2950,9 +2950,12 @@ function mergeSouth(){ const D = SOUTHP.data; if (!D || SOUTHP.on) return; SOUTH
   for (const C of SOUTHP.canals) for (let i = 0; i < C.p.length - 1; i++){ const q = { a: C.p[i], b: C.p[i + 1], half: C.w/2 }; SOUTHP.segs.push(q); const r = q.half + 4;
     for (let a = Math.floor((Math.min(q.a[0], q.b[0]) - r)/20); a <= Math.floor((Math.max(q.a[0], q.b[0]) + r)/20); a++) for (let b = Math.floor((Math.min(q.a[1], q.b[1]) - r)/20); b <= Math.floor((Math.max(q.a[1], q.b[1]) + r)/20); b++){ const k = a + ',' + b; (SOUTHP.cells.get(k) || SOUTHP.cells.set(k, []).get(k)).push(q); } }
   for (const r of D.BR){ const p = pts(r, 1), half = ROAD_W[r[0]]/2 + .6; for (let i = 0; i < p.length - 1; i++){ const a = p[i], b = p[i + 1]; SOUTHP.br.push({ a, b, half, box: [Math.min(a[0], b[0]) - half, Math.min(a[1], b[1]) - half, Math.max(a[0], b[0]) + half, Math.max(a[1], b[1]) + half] }); } }
-  bldIndex.done = false; bldCells.clear(); roadIndex.done = false; roadCells.clear(); SOUTH.list.length = 0; SOUTH.cells.clear(); }   // (the stand-ins go)
-function smElev(s, t){ if (t > 240 && SOUTHP.h){ const b = southElev(s, t); return t >= 275 ? b : lerp(cityElev(s, t), b, (t - 240)/35); } return cityElev(s, t); }   // (south of the pier: Ocean Park and Venice's own survey)
-function cityElev(s, t){   // the real ground (USGS), meters above the sea
+  if (D.E2){ SOUTHP.E2 = D.E2; const h = new Float32Array(D.E2.h.length); let a = 0; for (let i = 0; i < h.length; i++){ a += D.E2.h[i]; h[i] = a/10; } SOUTHP.h2 = h; SOUTHP.box = D.BOX; SOUTHP.rails = (D.RL || []).map(r => pts(r, 0)); }   // (Bergamot Station's island)
+  bldIndex.done = false; bldCells.clear(); roadIndex.done = false; roadCells.clear(); SOUTH.list.length = 0; SOUTH.cells.clear();   // (the stand-ins go)
+  if (SOUTHP.box){ const p = bergFree(...BERG.station, 5); PHONE_BOOTHS.push({ id: 'bergamot', name: 'Bergamot Station', s: p[0], t: p[1], face: 0, more: 'the art galleries, by the E Line station at 26th St' }); } }
+function smElev(s, t){ if (t > 240 && SOUTHP.h && s < 2600){ const b = southElev(s, t); return t >= 275 ? b : lerp(cityElev(s, t), b, (t - 240)/35); } return cityElev(s, t); }   // (south of the pier: Ocean Park and Venice's own survey)
+function cityElev(s, t){ if (s > 2600 && SOUTHP.h2) return bergElev(s, t);   // (Bergamot Station's island)
+   // the real ground (USGS), meters above the sea
   const E = CITY.E, fi = clamp((s - E.s0)/E.ds, 0, E.ns - 1.001), fj = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), i = fi|0, j = fj|0, u = fi - i, v = fj - j, H = CITY.h, k = j*E.ns + i;
   return (H[k]*(1 - u) + H[k + 1]*u)*(1 - v) + (H[k + E.ns]*(1 - u) + H[k + E.ns + 1]*u)*v; }
 // The survey smooths the bluff into a gentle ramp; the real one is a steep face you can't walk up. Find where it is along each row...
@@ -3114,7 +3117,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
 function landName(x, y){
   if (inSFu(x)) return sfPlaceName(x*U, y*U);
   const [s, t] = landST(x, y);
-  if (t < -2500) return 'Malibu'; if (t > 5100) return 'Palos Verdes'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
+  if (t < -2500) return 'Malibu'; if (s > 2600) return 'Bergamot Station'; if (t > 5100) return 'Palos Verdes'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
   if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return '3rd Street';
   if (onPierDeck(s, t)) return s > PIER_L.s1 ? 'The Pier Bridge' : 'Santa Monica Pier';
   if (s > PIER_L.s2 - 1 && s < AVES.ocean - 9 && Math.abs(t) < 9) return 'The Pier Bridge';
@@ -3530,7 +3533,7 @@ function steepStop(o, x0, y0){
   const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
   const shop = x0 > coastX(y0) && roomAt(...landST(x0, y0), true);   // (in a shop you can hop down off a table or the counter)
   const fw0 = !o.car && onFreeway(x0, y0);
-  const ok = (x, y) => { if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  const ok = (x, y) => { if (SOUTHP.box && bergOut(...landST(x, y))) return false; if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
   if (ok(o.x, o.y)) return;
   const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
   for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you
@@ -4699,6 +4702,7 @@ const VISIT = (() => { let q; try { q = new URLSearchParams(location.search); } 
 function geoToGame(lat, lon){
   { const LAT0 = 34.0100, LON0 = -118.4960, ML = 110940, MO = 111320*Math.cos(34.015*Math.PI/180), a = 134.8*Math.PI/180, NW = [Math.cos(a), Math.sin(a)], NE = [NW[1], -NW[0]], K = .00923;
     const x = (lon - LON0)*MO, y = (lat - LAT0)*ML, s0 = x*NE[0] + y*NE[1], t0 = -(x*NW[0] + y*NW[1]), t = t0 - K*s0 + 42.5, s = s0 + K*t0 + 222 - southShift(t);   // (south of the pier, moved in with the coast like the map)
+    const BX = SOUTHP.box; if (BX && s > BX[0] && s < BX[2] && t > BX[1] && t < BX[3]){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; }   // (Bergamot Station)
     if (s > -400 && s < 1250 && t > -2450 && t < (SOUTHP.on ? 4700 : 2900)){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; } }
   { const LAT0 = 37.8083294, LON0 = -122.4157264, x = (lon - LON0)*88060.572, y = (lat - LAT0)*110992.853;
     if (x > SF.x0 && x < SF.x0 + SF.W && y > SF.y0 && y < SF.y0 + SF.H) return { city: 'sf', x: (SF.X + x)/U, y: (SF.Z - y)/U }; }
@@ -4780,6 +4784,56 @@ function buildAnnenberg(g, P3){ const pool = [[197.3, -2204.3], [204, -2173], [1
   flat(grow(pool, 1.35), h + .06, std(0xf3efe6, .7)); flat(pool, h + .1, new THREE.MeshStandardMaterial({ color: 0x4fb7d4, roughness: .08, metalness: .1 }));   // (the deck round it, then the water)
   const sg = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 1), new THREE.MeshBasicMaterial({ map: labelTex('ANNENBERG COMMUNITY BEACH HOUSE', '#1f4f6e', '#ffffff', 1024, 158, 62), side: THREE.DoubleSide }));
   sg.position.set(...P3(232, -2190, landH(232, -2190) + 1.4)); sg.rotation.y = Math.PI/2 - .2; g.add(sg); }
+/* Bergamot Station (2525 Michigan Ave), 2 km inland from the beach: an island of the real city (OpenStreetMap, in south.json) with
+   the old rail-yard warehouses that are now art galleries, the E Line's 26th St/Bergamot station and its trains, and a ring of
+   low stand-in blocks round it for the rest of the city. Get there by phone booth (or a trip link). */
+const BERG = { arts: [3419, 404], station: [3395, 345], booth: [3378, 352], train: null, path: null, d: 0, wait: 0 };
+const inBergIsland = (s, t) => { const B = SOUTHP.box; return !!B && s > B[0] - 400 && s < B[2] + 400 && t > B[1] - 400 && t < B[3] + 400; };
+const bergOut = (s, t) => { const B = SOUTHP.box; return !!B && s > 2600 && !(s > B[0] + 3 && s < B[2] - 3 && t > B[1] + 3 && t < B[3] - 3); };   // (the island's edge: you can't walk off it)
+function bergFree(s, t, room){ const railNear = (a, b) => (SOUTHP.rails || []).some(p => p.some((q, i) => i && segD(a, b, p[i - 1], q) < 4.5));   // (the nearest open ground: not in a building, not on the tracks)
+  for (let r = 0; r < 120; r += 2) for (let k = 0; k < 24; k++){ const a = k/24*TAU, ps = s + Math.cos(a)*r, pt = t + Math.sin(a)*r; let ok = !railNear(ps, pt); for (let q = 0; ok && q < 8; q++) if (bldAt(ps + Math.cos(q*.785)*room, pt + Math.sin(q*.785)*room)) ok = false; if (ok && !bldAt(ps, pt)) return [ps, pt]; } return [s, t]; }
+function bergElev(s, t){ const E = SOUTHP.E2, fi = clamp((s - E.s0)/E.ds, 0, E.ns - 1.001), fj = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), i = fi|0, j = fj|0, u = fi - i, v = fj - j, H = SOUTHP.h2, k = j*E.ns + i;
+  return (H[k]*(1 - u) + H[k + 1]*u)*(1 - v) + (H[k + E.ns]*(1 - u) + H[k + E.ns + 1]*u)*v; }
+function buildBergamot(g, P3){ const B = SOUTHP.box; if (!B) return; const c = new THREE.Color(), mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 });
+  { const st = 5, NS = Math.round((B[2] - B[0])/st) + 1, NT = Math.round((B[3] - B[1])/st) + 1, pos = new Float32Array(NS*NT*3), col = new Float32Array(NS*NT*3), idx = [];   // the island's ground
+    for (let j = 0; j < NT; j++) for (let i = 0; i < NS; i++){ const s = B[0] + i*st, t = B[1] + j*st, k = (j*NS + i)*3, [x, y] = landXY(s, t), h = landH(s, t); pos[k] = x*U; pos[k + 1] = h; pos[k + 2] = y*U; c.setHex(0x8c8a80); col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b; }
+    for (let j = 0; j < NT - 1; j++) for (let i = 0; i < NS - 1; i++){ const a = j*NS + i; idx.push(a, a + NS, a + 1, a + 1, a + NS, a + NS + 1); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); }
+  { let lo = 1e9; for (let s = B[0]; s <= B[2]; s += 20) for (let t = B[1]; t <= B[3]; t += 20) lo = Math.min(lo, landH(s, t));   // the rest of the city round it: a plain ground and low blocks (stand-ins)
+    const q = new THREE.PlaneGeometry(1, 1); q.rotateX(-Math.PI/2); const [xa, ya] = landXY(B[0] - 420, B[1] - 420), [xb, yb] = landXY(B[2] + 420, B[3] + 420); q.scale(Math.abs(xb - xa)*U, 1, Math.abs(yb - ya)*U); q.translate((xa + xb)/2*U, lo - .6, (ya + yb)/2*U); g.add(new THREE.Mesh(q, std(0x8d8c84, .95)));
+    const R = mulberry(2525), geos = [], cc = new THREE.Color();
+    for (let s = B[0] - 400; s < B[2] + 400; s += 55) for (let t = B[1] - 400; t < B[3] + 400; t += 70){ if (s > B[0] - 50 && s < B[2] + 10 && t > B[1] - 60 && t < B[3] + 10) continue;
+      for (const [ds, dt] of [[8, 8], [30, 8], [8, 38], [30, 38]]){ if (R() < .2) continue; const w = 14 + R()*8, d = 18 + R()*10, h = 5 + R()*R()*20, [x, y] = landXY(s + ds + w/2, t + dt + d/2), box = new THREE.BoxGeometry(w, h, d); box.translate(x*U, lo - .6 + h/2, y*U);
+        cc.setHex([0xe8dcc8, 0xd9d4ca, 0xc9cfd2, 0xe3cdb5, 0xf2ede2][(R()*5)|0]); const n = box.attributes.position.count, cols = new Float32Array(n*3); for (let i = 0; i < n; i++){ const f = box.attributes.normal.getY(i) > .5 ? .8 : 1; cols[i*3] = cc.r*f; cols[i*3 + 1] = cc.g*f; cols[i*3 + 2] = cc.b*f; } box.setAttribute('color', new THREE.BufferAttribute(cols, 3)); box.deleteAttribute('uv'); geos.push(box); } }
+    g.add(new THREE.Mesh(mergeGeometries(geos), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9 }))); }
+  { const rails = [], bal = [];   // the E Line's tracks: steel rails on a gravel bed
+    for (const p of SOUTHP.rails) for (let i = 0; i < p.length - 1; i++){ const a = p[i], b = p[i + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .2) continue; const ang = -Math.atan2(b[1] - a[1], b[0] - a[0]), ns = -(b[1] - a[1])/L, nt = (b[0] - a[0])/L, ms = (a[0] + b[0])/2, mt = (a[1] + b[1])/2, h = landH(ms, mt);
+      const bb = new THREE.BoxGeometry(L, .12, 3); bb.rotateY(ang); bb.translate(...P3(ms, mt, h + .04)); bal.push(bb);
+      for (const sg of [-.72, .72]){ const r = new THREE.BoxGeometry(L, .16, .08); r.rotateY(ang); r.translate(...P3(ms + ns*sg, mt + nt*sg, h + .18)); rails.push(r); } }
+    if (bal.length){ g.add(new THREE.Mesh(mergeGeometries(bal), std(0x6f6a62, .95))); g.add(new THREE.Mesh(mergeGeometries(rails), std(0x9aa0a6, .35, .8))); } }
+  let best = null; for (const p of SOUTHP.rails){ let L = 0; for (let i = 1; i < p.length; i++) L += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); if (!best || L > best.L) best = { p, L }; }
+  if (best){ const p = best.p, cum = [0]; for (let i = 1; i < p.length; i++) cum.push(cum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); BERG.path = { p, cum, L: best.L };
+    let sd = 0, bd = 1e9; for (let i = 0; i < p.length - 1; i++) for (let f = 0; f <= 1; f += .05){ const s = lerp(p[i][0], p[i + 1][0], f), t = lerp(p[i][1], p[i + 1][1], f), d = Math.hypot(s - BERG.station[0], t - BERG.station[1]); if (d < bd){ bd = d; sd = cum[i] + f*(cum[i + 1] - cum[i]); } }
+    BERG.stopD = sd; BERG.d = Math.max(0, sd - 150);
+    { const [s, t, ang] = bergAt(sd), h = landH(s, t), plat = new THREE.Group();   // the platform, with its station sign (Metro's E Line is gold)
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(80, .9, 4), std(0xb9b4aa, .9)); slab.position.set(0, .45, 0); plat.add(slab);
+      const canopy = new THREE.Mesh(new THREE.BoxGeometry(30, .2, 4.4), std(0xdfe3e6, .5)); canopy.position.set(0, 4.3, 0); plat.add(canopy); for (const x of [-12, 0, 12]){ const col = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 3.4, 8), std(0x777777, .5)); col.position.set(x, 2.6, 0); plat.add(col); }
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 1.3), new THREE.MeshBasicMaterial({ map: labelTex('Ⓔ 26th St/Bergamot', '#2b2b2b', '#fdb913', 1024, 370, 120), side: THREE.DoubleSide })); sg.position.set(-20, 3, 0); plat.add(sg);
+      const off = 4.3, side = landXY(s - Math.sin(ang)*off, t + Math.cos(ang)*off); plat.position.set(side[0]*U, h, side[1]*U); plat.rotation.y = -ang; g.add(plat); }
+    { const tr = new THREE.Group(), body = std(0xd9dcdf, .35, .4), dark = std(0x23272b, .2, .3), gold = std(0xfdb913, .5);   // a 3-car train (the look is a guess: silver, dark windows, a gold stripe)
+      for (let k = 0; k < 3; k++){ const car = new THREE.Group(); car.position.x = -k*27.5; const b = new THREE.Mesh(new THREE.BoxGeometry(26.5, 3.1, 2.65), body); b.position.y = 2.2; car.add(b);
+        const w = new THREE.Mesh(new THREE.BoxGeometry(26.6, 1, 2.67), dark); w.position.y = 2.6; car.add(w); const st2 = new THREE.Mesh(new THREE.BoxGeometry(26.6, .22, 2.67), gold); st2.position.y = 1.55; car.add(st2);
+        const pan = new THREE.Mesh(new THREE.BoxGeometry(2, .1, .1), dark); pan.position.set(0, 4.3, 0); pan.rotation.z = .5; car.add(pan); tr.add(car); }
+      g.add(tr); BERG.train = tr; } }
+  { const [s, t] = BERG.arts, h = landH(s, t), grp = new THREE.Group();   // the arts center's sign (its look is a guess)
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.6), new THREE.MeshBasicMaterial({ map: labelTex('BERGAMOT STATION ARTS CENTER', '#f4f1ea', '#1d1d1d', 1024, 205, 72), side: THREE.DoubleSide })); sg.position.y = 3.2; grp.add(sg);
+    for (const x of [-3.8, 3.8]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 4, 8), std(0x333333, .5)); post.position.set(x, 2, 0); grp.add(post); }
+    const p = bergFree(s, t, 3); grp.position.set(...P3(p[0], p[1], landH(...p))); g.add(grp); BERG.signAt = p; } }
+function bergAt(d){ const P = BERG.path, L = P.L; d = clamp(d, 0, L); let i = 0; while (i < P.cum.length - 2 && P.cum[i + 1] < d) i++; const a = P.p[i], b = P.p[i + 1], f = (d - P.cum[i])/(P.cum[i + 1] - P.cum[i] || 1); return [lerp(a[0], b[0], f), lerp(a[1], b[1], f), Math.atan2(b[1] - a[1], b[0] - a[0])]; }
+function bergStep(dt){ const T = BERG.train; if (!T || !BERG.path) return;   // the train pulls in, waits, pulls out, and the next one comes
+  if (BERG.wait > 0) BERG.wait -= dt; else { const prev = BERG.d; BERG.d += dt*(Math.abs(BERG.d - BERG.stopD) < 60 ? 5 : 11); if (prev < BERG.stopD && BERG.d >= BERG.stopD){ BERG.d = BERG.stopD; BERG.wait = 25; } if (BERG.d > BERG.path.L + 90) BERG.d = -10; }
+  const d = BERG.d, [s, t, ang] = bergAt(d), h = landH(s, t), [x, y] = landXY(s, t); T.visible = d > 0 && d < BERG.path.L + 80; T.position.set(x*U, h + .1, y*U); T.rotation.y = -ang; }
+let bergArt = -1;
 function buildSouth(g){ const geos = [], col = new THREE.Color(), road = [];
   for (const B of SOUTH.list){ const sc = (B.s0 + B.s1)/2, tc = (B.t0 + B.t1)/2, base = Math.min(landH(B.s0, B.t0), landH(B.s1, B.t1)) - .3; B.base = base;
     const q = new THREE.BoxGeometry(1, 1, 1); q.scale(1, 1, 1); const [x0, y0] = landXY(B.s0, B.t0), [x1, y1] = landXY(B.s1, B.t1), [xc, yc] = landXY(sc, tc);
@@ -5013,6 +5067,7 @@ function buildCoast(){
     const ERA = b.yr && b.yr < 1930 ? [0xece2cc, 0xd9b98f, 0xb8674c, 0xf1e9da, 0xc9a27e] : b.yr && b.yr < 1950 ? [0xf2efe8, 0xe6dac6, 0xd8c7a8, 0xefe4cf] : b.yr && b.yr < 1980 ? [0xf4f2ee, 0xdcd8d0, 0xe9e4da] : b.yr ? [0xffffff, 0xd5d9dc, 0x9aa5ad, 0x3a444c, 0xf0ece4] : [0xefe8dc];
     if (pav){ pavilions.push(b); continue; }
     if (inSMP(sc, tc)) continue;
+    if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
     { const lk = [...BLOCK1100, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
@@ -5210,7 +5265,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? buildVenice(g, P3) : buildSouth(g)); buildAnnenberg(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? buildVenice(g, P3) : buildSouth(g)); buildAnnenberg(g, P3); buildBergamot(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -6820,6 +6875,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   { const b = !o.workout && boothAt(o); if (b) return { label: '☎️ Use the phone booth', go: () => openBooth(b) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
+  if (BERG.signAt && !o.workout){ const [s, t] = landST(o.x, o.y); if (Math.hypot(s - BERG.signAt[0], t - BERG.signAt[1]) < 40) return { label: '🖼️ Look around the galleries', go: () => { const k = (bergArt = (bergArt + 1) % SMAM_ART.length), A = SMAM_ART[k]; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about} (Bergamot's galleries change their shows all the time; this one is made up for the game)`); } }; }
   if (!o.workout){ const F = townFront(o); if (F) return F.cat ? { label: `🛍️ ${F.name}`, go: () => openPlaceMenu(F.name, F.cat) } : { label: `${F.kind === 'bank' ? '🏦' : '🏨'} ${F.name}`, go: () => banner(F.name, F.kind === 'bank' ? 'A bank: grown-up money business. Your coins are safe in your pocket!' : 'A hotel. Guests only!') }; }
   if (!o.workout && !o.bike && rackAt(o)){ const r = rackAt(o); return { label: `🚲 Rent a bike · ${r.cost || 0} coins`, go: () => bikeOn(o, r.cost || 0, r.shop) }; }
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
@@ -7758,7 +7814,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o);   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
@@ -9215,13 +9271,14 @@ $('ldSkip').onclick = hideLoading;
 function loadAssets(){
   const hdr = new RGBELoader(), gl = new GLTFLoader(), tl = new THREE.TextureLoader();
   // (binary files carry a .wasm name only so the host serves them byte-for-byte; they're ordinary .glb / .hdr files)
-  const models = { ship:'models/ship.glb.wasm', boulder:'models/boulder.glb.wasm', shell:'models/shell.glb.wasm', barrels:'models/barrels.glb.wasm', buoy:'models/buoy.glb.wasm', pier:'models/pier.glb.wasm' };
+  const models = {}, later = { shell:'models/shell.glb.wasm', barrels:'models/barrels.glb.wasm', buoy:'models/buoy.glb.wasm', pier:'models/pier.glb.wasm' };   // (Nov 2026: the floating ship and Pool Island's boulders are gone, so their models aren't loaded; the rest are out in the water, so they come after you're playing)
   const texs = { plankMap:'assets/planks_diff.webp', plankNor:'assets/planks_nor.webp', plankRough:'assets/planks_rough.webp', sandMap:'assets/sand_diff.webp', sandNor:'assets/sand_nor.webp', sandRough:'assets/sand_rough.webp', rockMap:'assets/rock_diff.webp', rockNor:'assets/rock_nor.webp', rockRough:'assets/rock_rough.webp' };
-  assetsTotal = 1 + Object.keys(models).length + Object.keys(texs).length; assetNote();
+  assetsTotal = 1 + Object.keys(models).length; assetNote();   // (the sea floor's sand, the rocks and the wreck's planks are underwater: they load after you're playing too)
   const done = () => { assetsDone++; assetNote(); if (assetsDone === assetsTotal) applyAssetsToOcean(); };
-  hdr.load('assets/sky.hdr.wasm', t => { try { applySky(t); } catch(e){} done(); }, undefined, done);
-  for (const [k, u] of Object.entries(texs)) tl.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = MAXANI; if (k.endsWith('Map')) t.colorSpace = THREE.SRGBColorSpace; TEX[k] = t; done(); }, undefined, done);
+  const phone = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900;   // (phones get a half-size sky: 1.4 MB instead of 3.6)
+  hdr.load(phone ? 'assets/sky_s.hdr.wasm' : 'assets/sky.hdr.wasm', t => { try { applySky(t); } catch(e){} done(); }, undefined, done);
   for (const [k, u] of Object.entries(models)) gl.load(u, g => { MODELS[k] = g.scene; g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); done(); }, undefined, done);
+  const wait = () => { if (!loadGone) return setTimeout(wait, 1000); for (const [k, u] of Object.entries(texs)) tl.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = MAXANI; if (k.endsWith('Map')) t.colorSpace = THREE.SRGBColorSpace; TEX[k] = t; applyAssetsToOcean(); }); for (const [k, u] of Object.entries(later)) gl.load(u, g => { MODELS[k] = g.scene; g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); applyAssetsToOcean(); }); }; setTimeout(wait, 1000);   // (after the loading screen)
 }
 function applySky(tex){
   tex.mapping = THREE.EquirectangularReflectionMapping;

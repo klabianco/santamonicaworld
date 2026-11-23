@@ -5665,7 +5665,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -6845,7 +6845,8 @@ const BLOCK1300 = [
   { side: 1, s: 665.2, t0: -503.4, t1: -487.2, h: 14.3, c: 0xd9d9d4, name: 'gray' },
   { side: -1, s: 640.8, t0: -548.4, t1: -518.0, h: 10, c: 0xf0efea, name: 'Skechers' },
   { side: -1, s: 640.8, t0: -518.4, t1: -501.4, h: 13.6, c: 0xf3f2ee, name: 'arch' },
-  { side: -1, s: 640.8, t0: -501.6, t1: -488.0, h: 12.5, c: 0xf1f0eb, name: 'tower' } ];
+  { side: -1, s: 640.8, t0: -501.6, t1: -488.0, h: 12.5, c: 0xf1f0eb, name: 'tower' },
+  { side: -1, s: 641.0, t0: -609.8, t1: -579.6, h: 12.4, ht: 12.4, c: 0xebbcb8, name: 'AMC 7' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
 function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, landH(sc, tc) + (y0 + y1)/2)); grp.add(me); return me; };
   // f: a slab on a facade (side 1 sticks out toward smaller s, side -1 toward bigger s); out: how far in front of the wall
@@ -6975,6 +6976,23 @@ function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     bx(B.s - .14, B.s, B.t0, B.t1, B.h - 1.6, B.h + .15, D, base); bx(B.s - .1, B.s, B.t0, B.t1, 4.65, 4.85, Wt, base);
     bx(B.s, B.s + 20, B.t0 - .14, B.t0, B.h - 1.6, B.h + .15, D, base); bx(B.s, B.s + 20, B.t0 - .1, B.t0, 4.65, 4.85, Wt, base);
     for (const t of [B.t0 + .2, B.t0 + 7.5, B.t0 + 15]) bx(B.s - .12, B.s, t, t + .25, 0, 4.65, Wt, base); }
+  g.add(grp); mergeStatic(grp); }
+/* AMC Santa Monica 7 (1310 3rd St, 1989), from photos (Wikimedia Commons, July 2022): pale pink stucco, the entrance under a huge teal
+   half-dome set in a teal arch with steel ribs, a window grid inside the arch over the doors, salmon tile and a teal tile dado down at the
+   street, pink tiles with yellow discs either side, and a long ribbed teal barrel roof along the top. */
+function buildAMC7(g, P3){ const B = BLOCK1300.find(b => b.name === 'AMC 7'), grp = new THREE.Group(), base = landH(B.s - 2, (B.t0 + B.t1)/2), tc = -593.5, TEAL = std(0x55bfb0, .6), TEAL2 = std(0x3fa597, .55), DK = std(0x1f6f6a, .5);
+  const bx = (s0, s1, t0, t1, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const S = B.s, R = 6, yc = 5.2;
+  { const d = new THREE.Mesh(new THREE.SphereGeometry(R - .9, 28, 12, 0, Math.PI, 0, Math.PI/2), new THREE.MeshStandardMaterial({ color: 0x55bfb0, roughness: .6, side: THREE.BackSide })); d.scale.set(1, 1, .45); d.rotation.set(0, Math.PI/2, 0); d.position.set(...P3(S, tc, base + yc)); grp.add(d); }   // the half-dome (drawn from inside, so it reads as the deep teal niche it is)
+  { const ar = new THREE.Mesh(new THREE.TorusGeometry(R - .45, .5, 8, 28, Math.PI), TEAL2); ar.position.set(...P3(S + .5, tc, base + yc)); ar.rotation.y = Math.PI/2; grp.add(ar); }   // the arch round it
+  for (let k = 1; k < 8; k++){ const a = k/8*Math.PI, rod = new THREE.Mesh(new THREE.BoxGeometry(.08, 2.2, .08), std(0x9aa3a8, .4, .6)); rod.position.set(...P3(S + .9, tc - Math.cos(a)*(R - 1.6), base + yc + Math.sin(a)*(R - 1.6))); rod.rotation.x = -(a - Math.PI/2); grp.add(rod); }   // (the steel ribs)
+  bx(S + .02, S + .1, tc - 3.2, tc + 3.2, yc, yc + 2.6, std(0x2d3d48, .2, .4)); for (let t = tc - 3.2; t <= tc + 3.3; t += 1.07) bx(S + .1, S + .16, t - .04, t + .04, yc, yc + 2.6, TEAL2); bx(S + .1, S + .16, tc - 3.2, tc + 3.2, yc + 1.25, yc + 1.33, TEAL2);   // the window grid inside the arch
+  bx(S, S + .3, tc - R - .4, tc + R + .4, yc - .6, yc, TEAL2);   // (the arch's sill, over the doors)
+  for (const [t0, t1] of [[B.t0, tc - R - .4], [tc + R + .4, B.t1]]){ bx(S, S + .12, t0, t1, 0, 3.4, std(0xe0a497, .4)); bx(S, S + .16, t0, t1, 0, 1, DK);   // salmon tile, a teal tile dado
+    for (const t of [t1 - 2.2, t1 - 4.4].map(t => t0 < tc ? t : t0 + (t1 - t))){ bx(S, S + .1, t - .8, t + .8, 4, 5.6, std(0xe7aaa0, .5)); const dsc = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .06, 16), std(0xe9c95a, .5)); dsc.rotation.z = Math.PI/2; dsc.position.set(...P3(S + .13, t, base + 4.8)); grp.add(dsc); } }   // the pink tiles with yellow discs
+  { const v = new THREE.Mesh(new THREE.CylinderGeometry(4.3, 4.3, B.t1 - B.t0 - 1, 28, 1, false, -Math.PI/2, Math.PI), TEAL); v.rotation.x = Math.PI/2; v.scale.set(1, 1, .95); v.position.set(...P3(S - 6, (B.t0 + B.t1)/2, base + B.h - .2)); grp.add(v);   // the long ribbed teal barrel roof
+    for (let k = 1; k < 18; k++){ const a = -Math.PI/2 + k/18*Math.PI, rb = new THREE.Mesh(new THREE.BoxGeometry(.07, .07, B.t1 - B.t0 - 1), TEAL2); rb.position.set(...P3(S - 6 + Math.sin(a)*4.33, (B.t0 + B.t1)/2, base + B.h - .2 + Math.cos(a)*4.1)); grp.add(rb); } }
+  bx(S - .3, S + .25, B.t0, B.t1, B.h - .3, B.h + .1, std(0xf3d3cf, .7));
   g.add(grp); mergeStatic(grp); }
 /* One of the Lalannes' two topiary sauropods (1989): ivy over a steel frame, a bronze head with its mouth open, on a raised lawn with a
    low black rail round it. About 34 ft long and 12 ft tall. dir: which way along the Promenade its head points (+1: toward Broadway). */

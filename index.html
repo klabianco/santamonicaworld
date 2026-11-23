@@ -5702,7 +5702,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g); buildVball(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7189,6 +7189,21 @@ function buildScooters(g, P3, instanceOf){ const R = mulberry(57), spots = [], z
     for (const z of [-.42, .44]){ const w = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .06, 12), dark); w.rotation.z = Math.PI/2; w.position.set(0, .11, z); sc.add(w); }
     sc.rotation.z = .12;   // (leaning on its kickstand)
     const pts = spots.filter(q => q[2] === kind).map(([s, t]) => [s, t, 1, Math.PI/2 + .25]); if (pts.length) instanceOf(sc, pts); } }
+/* Beach volleyball courts on Santa Monica Beach, where OpenStreetMap maps them (four corners each, lat/lon): the ten courts on the sand
+   below Palisades Park by Wilshire, and the big court areas up the beach toward the Annenberg Beach House, filled with courts. Each: an
+   8 x 16 m court marked with blue lines, the net across the middle at 2.43 m on two poles, its long side along the shore. */
+const VBALL = [[34.021513, -118.511380, 34.020813, -118.510219, 34.020942, -118.510082, 34.020781, -118.509826], [34.021429, -118.509547, 34.022003, -118.510337, 34.021793, -118.510560, 34.021233, -118.509781], [34.024150, -118.514921, 34.023684, -118.513772, 34.023352, -118.513968, 34.023818, -118.515118], [34.025153, -118.515425, 34.024734, -118.514603, 34.024404, -118.514848, 34.024824, -118.515670], [34.024538, -118.514067, 34.024116, -118.514355, 34.023882, -118.513857, 34.024304, -118.513569], [34.015247, -118.502406, 34.015308, -118.502489, 34.015370, -118.502572, 34.015288, -118.502660], [34.015618, -118.502335, 34.015680, -118.502418, 34.015742, -118.502501, 34.015660, -118.502589], [34.015010, -118.501824, 34.015072, -118.501907, 34.015134, -118.501990, 34.015052, -118.502078], [34.015127, -118.501684, 34.015188, -118.501767, 34.015250, -118.501850, 34.015169, -118.501938], [34.015155, -118.502034, 34.015217, -118.502117, 34.015278, -118.502200, 34.015197, -118.502288], [34.015274, -118.501896, 34.015336, -118.501979, 34.015398, -118.502062, 34.015316, -118.502150], [34.015075, -118.502195, 34.015137, -118.502278, 34.015199, -118.502360, 34.015117, -118.502448], [34.014897, -118.501956, 34.014958, -118.502039, 34.015020, -118.502121, 34.014939, -118.502210], [34.015361, -118.502274, 34.015423, -118.502357, 34.015484, -118.502439, 34.015403, -118.502527], [34.015471, -118.502134, 34.015533, -118.502217, 34.015594, -118.502300, 34.015513, -118.502388], [34.023219, -118.513381, 34.023108, -118.513473, 34.022971, -118.513239, 34.023080, -118.513150], [34.023355, -118.513260, 34.023244, -118.513352, 34.023107, -118.513118, 34.023215, -118.513029]];
+function buildVball(g, P3){ const grp = new THREE.Group(), line = std(0x2f6fb3, .6), pole = std(0xdcdcdc, .4, .5), net = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: .8, transparent: true, opacity: .55, side: THREE.DoubleSide }), band = std(0xf4f4f0, .6);
+  const court = (s, t) => { const y = landH(s, t), bx = (a0, a1, c0, c1, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, y + (y0 + y1)/2)); grp.add(me); };
+    for (const d of [-4, 4]) bx(s + d - .03, s + d + .03, t - 8, t + 8, .01, .03, line); for (const d of [-8, 8]) bx(s - 4, s + 4, t + d - .03, t + d + .03, .01, .03, line);   // the boundary lines
+    for (const d of [-5, 5]) bx(s + d - .05, s + d + .05, t - .05, t + .05, 0, 2.6, pole);   // the poles, and the net between them
+    const nm = new THREE.Mesh(new THREE.PlaneGeometry(9.6, .9), net); nm.position.set(...P3(s, t, y + 1.98)); grp.add(nm); bx(s - 4.8, s + 4.8, t - .03, t + .03, 2.38, 2.45, band); };
+  for (const q of VBALL){ const P = []; for (let k = 0; k < q.length; k += 2){ const p = geoToGame(q[k], q[k + 1]); if (!p) break; P.push(landST(p.x, p.y)); } if (P.length < 4) continue;
+    const s0 = Math.min(...P.map(p => p[0])), s1 = Math.max(...P.map(p => p[0])), t0 = Math.min(...P.map(p => p[1])), t1 = Math.max(...P.map(p => p[1]));
+    if (s1 - s0 < 25 && t1 - t0 < 32){ court((s0 + s1)/2, (t0 + t1)/2); continue; }   // a single court
+    const ns = Math.max(1, Math.floor((s1 - s0 - 4)/14)), nt = Math.max(1, Math.floor((t1 - t0 - 4)/22));   // a court area: fill it with courts
+    for (let i = 0; i < ns; i++) for (let j = 0; j < nt; j++) court(s0 + (s1 - s0)*(i + .5)/ns, t0 + (t1 - t0)*(j + .5)/nt); }
+  g.add(grp); mergeStatic(grp); }
 /* Big Blue Bus, Santa Monica's own city buses (blue since 1928), on a downtown loop: up 4th St, along Santa Monica Blvd (the buses-only
    crossing at the Promenade), down 2nd St and back along Broadway, stopping at the blue bus-stop signs. Two buses, for show (not rideable). */
 const BBB = { buses: [], route: null, stops: [], last: 0 };

@@ -8319,15 +8319,20 @@ function buildPromenade(g, P3, at, instanceOf){
   mk(clear, new THREE.MeshStandardMaterial({ color: 0xa9cfdf, transparent: true, opacity: .34, roughness: .05, metalness: .5, depthWrite: false, side: THREE.DoubleSide }));
   g.add(fr); mergeStatic(fr);
   g.add(shops); buildRooms(g, P3);
-  // the dinosaur topiaries: ivy over a frame, standing in round fountains that spout water
+  // the dinosaur topiaries: ivy over a frame, each on a raised lawn inside a low pink stone wall with a black rail and planters, spouting water from its mouth
+  // into a little half-round pool at the lawn's end (photos, 2007)
   const ivy = std(0x2f6b2a, .95), ivy2 = std(0x3d7d33, .95), stone = std(0xcfc6b4, .8), water = new THREE.MeshStandardMaterial({ color: 0x5fb6d6, roughness: .1, metalness: .2, transparent: true, opacity: .8 });
   const E = (rx, ry, rz, m, x, y, z) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 9), m); e.scale.set(rx, ry, rz); e.position.set(x, y, z); return e; };
   const leg = (m, x, z, h = 1.1) => { const l = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, h, 8), m); l.position.set(x, h/2 + .35, z); return l; };
   for (const [s, t, kind, dir] of PROM_DINOS){ const d = new THREE.Group(), base = landH(s, t);
     if (kind === 'sauro'){ buildSauro(d, dir, ivy, ivy2, E); mergeStatic(d); d.position.set(...P3(s, t, base)); g.add(d); LAND_BOXES.push([s - 2.15, t - 6.65, s + 2.15, t + 6.65, base + 3.4]); continue; }   // (the sauropods are topiary only: no fountain)
-    const basin = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.2, .6, 28, 1, true), stone); basin.position.y = .3; d.add(basin);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(3.05, .14, 8, 28), stone); rim.rotation.x = Math.PI/2; rim.position.y = .6; d.add(rim);
-    const pool = new THREE.Mesh(new THREE.CircleGeometry(3, 28), water); pool.rotation.x = -Math.PI/2; pool.position.y = .45; d.add(pool);
+    { const pink = std(0xb88a78, .8), grass = std(0x5f9a40, .95), rail = std(0x23272b, .5), red = std(0xc8283a, .9), bx = (w, h, l, m, x, y, z) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, l), m); me.position.set(x, y, z); d.add(me); return me; };   // (d's own frame: x along s, z along t)
+      bx(4.8, .5, 10.4, grass, 0, .25, 0); for (const x of [-2.55, 2.55]) bx(.3, .62, 10.4, pink, x, .31, 0); for (const z of [-5.35, 5.35]) bx(5.4, .62, .3, pink, 0, .31, z);   // the lawn and its pink stone wall
+      bx(5.9, .2, 11, pink, 0, .1, 0);   // (a step round its foot)
+      for (const x of [-2.55, 2.55]){ bx(.05, .05, 10.4, rail, x, 1.15, 0); for (let z = -5; z <= 5; z += 1.25) bx(.05, .55, .05, rail, x, .88, z); } bx(5.1, .05, .05, rail, 0, 1.15, 5.35);
+      for (const [x, z] of [[-2.2, 4.8], [2.2, 4.8], [-2.2, -4.8], [2.2, -4.8]]){ bx(.9, .7, .9, std(0xcfc6b4, .8), x, .85, z); for (let k = 0; k < 5; k++) bx(.2, .25, .2, red, x - .25 + (k % 3)*.25, 1.3, z - .2 + (k > 2 ? .35 : 0)); }   // corner planters with red flowers
+      const bw = new THREE.Mesh(new THREE.CylinderGeometry(1.7, 1.7, .55, 20, 1, true, Math.PI/2, Math.PI), stone); bw.position.set(0, .28, -5.5); d.add(bw);   // the half-round pool at the head end
+      const pool = new THREE.Mesh(new THREE.CircleGeometry(1.6, 20, 0, Math.PI), water); pool.rotation.x = -Math.PI/2; pool.position.set(0, .42, -5.5); d.add(pool); }
     const dino = new THREE.Group(); d.add(dino);
     if (kind === 'tri'){ dino.add(E(1.6, .95, .9, ivy, 0, 1.75, 0), E(.75, .6, .6, ivy2, 1.75, 1.6, 0), E(.25, .9, .95, ivy, 1.35, 2.05, 0), E(1.1, .3, .3, ivy2, -1.9, 1.35, 0));   // body, head, frill, tail
       for (const [x, y, z, rz] of [[2.35, 1.95, .28, -1.2], [2.35, 1.95, -.28, -1.2], [2.55, 1.45, 0, -1.4]]){ const h = new THREE.Mesh(new THREE.ConeGeometry(.1, .7, 6), stone); h.position.set(x, y, z); h.rotation.z = rz; dino.add(h); }
@@ -8336,11 +8341,11 @@ function buildPromenade(g, P3, at, instanceOf){
       for (let k = 0; k < 7; k++){ const pl = new THREE.Mesh(new THREE.ConeGeometry(.42 - Math.abs(k - 3)*.06, .9 - Math.abs(k - 3)*.12, 4), ivy2); pl.scale.z = .25; pl.position.set(-1.3 + k*.42, 2.85 - Math.abs(k - 3)*.12, 0); dino.add(pl); }   // the plates on its back
       for (const z of [.18, -.18]){ const sp = new THREE.Mesh(new THREE.ConeGeometry(.07, .6, 5), stone); sp.position.set(-3.1, 1.75, z); sp.rotation.x = z*4; dino.add(sp); }
       for (const [x, z] of [[1, .45], [1, -.45], [-1, .45], [-1, -.45]]) dino.add(leg(ivy2, x, z, 1.3)); }
-    dino.rotation.y = Math.PI/2 + (t % 2 ? .4 : -.4);   // (facing along the Promenade)
+    dino.rotation.y = Math.PI/2; dino.position.y = .5;   // (standing on its lawn, facing along the Promenade toward its pool)
     mergeStatic(d); d.position.set(...P3(s, t, base)); g.add(d);   // (merged first, while it's still at the middle of its own frame)
     const spray = new THREE.Group(); for (let k = 0; k < 14; k++){ const drop = new THREE.Mesh(new THREE.SphereGeometry(.07, 6, 5), water); spray.add(drop); }
     spray.position.set(...P3(s, t, base)); spray.userData.rot = dino.rotation.y; g.add(spray); dinoSpray.push(spray);
-    LAND_BOXES.push([s - 3.2, t - 3.2, s + 3.2, t + 3.2, base + .65]); }
+    LAND_BOXES.push([s - 2.75, t - 5.55, s + 2.75, t + 5.55, base + .62], [s - 1.7, t - 7.2, s + 1.7, t - 5.5, base + .55]); }
   // benches, old-fashioned lamps and planters with trees down the middle, and bollards where the cross streets are
   { const bench = new THREE.Group(), wood = std(0x8a6a48, .85), iron = std(0x2d3a35, .5); const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .08, 1.8), wood); seat.position.y = .45; bench.add(seat);
     const back = new THREE.Mesh(new THREE.BoxGeometry(.06, .45, 1.8), wood); back.position.set(-.24, .72, 0); bench.add(back); for (const z of [-.8, .8]){ const l = new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .06), iron); l.position.set(0, .22, z); bench.add(l); }
@@ -8566,7 +8571,7 @@ function updCoast(o){
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
     const dn = !!(r?.down && downIn(o)); if (dn !== !!updCoast.down){ updCoast.down = dn; if (dn) banner('Downstairs', "Kids' books, toys, games and records"); else if (r?.down) banner('Upstairs', 'Fiction, mysteries, sci-fi and New & Noteworthy'); } }   //   (and going downstairs)
   // the dinosaur fountains spout, and the people on the Promenade stroll
-  for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1; d.position.set(Math.cos(r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1), .6 + Math.sin(f*Math.PI)*2.2, Math.sin(-r)*(1.2 + f*1.6)*(k % 2 ? 1 : -1)); }); }
+  for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1, a = 2.6 + f*3; d.position.set(Math.cos(r)*a, 2.3 + Math.sin(f*Math.PI)*.8 - f*1.8, -Math.sin(r)*a); }); }   // (an arc from the mouth into the pool)
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
     partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); visitStep(dt, o); foodStep(dt, o); ballStep(dt, o); fishStep(dt, o);
     people.forEach((p, i) => { if (p.party){ const P = p.party, [x, y] = landXY(p.s, p.t), k = P.stage === 'dance' ? (o.workout?.lvl || 1) : 0, hop = k ? Math.abs(Math.sin(time*7.85 + p.ph))*.07*k : Math.abs(Math.sin(time*9 + p.ph))*.05;   // (dancing at the party)

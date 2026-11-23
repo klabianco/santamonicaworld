@@ -1556,7 +1556,7 @@ const LEAGUE_SPOTS = [GROTTO, EAGLE, EEL, TRENCH_HOUSE, JUNK];
    south (+y) are Venice and Redondo, curving out to the cliffs of Palos Verdes. Standing on the pier looking at the beach, Malibu is on your
    left, like the real thing. coastX(y) is where the water meets the sand (units); coastS is how far out to sea a point is (units, negative inland). */
 function coastX(y){   // (a plain function so the save, made near the top of the file, can already use it; Point Dume bulges out at bay y -6600, Palos Verdes at +6600)
-  y = bayY(y); if (y > 4400) y = Math.max(4400, y - 160000);   // (south of the pier the beach runs straight for 4 km, like the real one past Venice; Palos Verdes comes after)
+  y = bayY(y); if (y > 4400) y = Math.max(4400, y - 200000);   // (south of the pier the beach runs straight for 5 km, like the real one past Venice; Palos Verdes comes after)
   return 300 + 40*Math.sin(y/700) + 25*Math.sin(y/310 + 1) - 1700*Math.exp(-(((y + 6600)/1150)**2)) - 2000*Math.exp(-(((y - 6600)/1500)**2)); }
 function coastS(x, y){ const sl = (coastX(y + 5) - coastX(y - 5))/10; return (coastX(y) - x)/Math.sqrt(1 + sl*sl); }
 const shelfD = m => .15 + .32*m + .01*m*m;   // how deep the sea is m meters out from the beach
@@ -2925,7 +2925,34 @@ const XST = { colorado: -6.5, broadway: -207, smblvd: -415, arizona: -622, wilsh
 const ROAD_W = [11, 19, 15, 13, 10, 5.5, 16, 3.5, 8, 2.5, 2.2];   // how wide each kind of road is: trunk (PCH), primary, secondary, tertiary, residential, alley, the Promenade, bike path, ramp, steps, footpath
 const PROM = { s: 653, s0: 641, s1: 665, t0: XST.wilshire + 9, t1: XST.broadway - 9 };   // the 3rd Street Promenade, facade to facade
 const inPromenade = (s, t) => s > PROM.s0 && s < PROM.s1 && t > PROM.t0 && t < PROM.t1 && Math.abs(t - XST.arizona) > 9 && Math.abs(t - XST.smblvd) > 9;   // (no cars: bollards at every end)
-function smElev(s, t){   // the real ground (USGS), meters above the sea
+/* South of the pier: the real Ocean Park and Venice (south.json: every building, street and path from OpenStreetMap, the canals,
+   the shops, and the ground from the USGS survey), loaded while the game starts and added to the city, so it is built just like
+   downtown. The real coast swings out to sea south of the pier (330 m by Venice) but the game's beach runs straight, so the
+   data is moved toward land by the coast's offset at each t (C, every 50 m): the water's edge stays at s 0 and everything
+   keeps its real distance from it. Without the file, the stand-in blocks are used instead. */
+const SOUTHP = { on: false, data: null, done: false, until: performance.now() + 12000, C: null, E: null, h: null, segs: [], br: [], cells: new Map() };
+try { fetch('south.json').then(r => r.ok ? r.json() : null).then(d => { SOUTHP.data = d; SOUTHP.done = true; }).catch(() => { SOUTHP.done = true; }); } catch(e){ SOUTHP.done = true; }
+function southShift(t){ const C = SOUTHP.C; if (!C || t < 0) return 0; const f = Math.min(t/50, C.length - 1.001), j = f|0; return C[j] + (C[j + 1] - C[j])*(f - j); }
+function southElev(s, t){ const E = SOUTHP.E, fi = clamp((s - E.s0)/E.ds, 0, E.ns - 1.001), fj = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), i = fi|0, j = fj|0, u = fi - i, v = fj - j, H = SOUTHP.h, k = j*E.ns + i;
+  return (H[k]*(1 - u) + H[k + 1]*u)*(1 - v) + (H[k + E.ns]*(1 - u) + H[k + E.ns + 1]*u)*v; }
+const segD = (s, t, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx*dx + dy*dy || 1e-9, u = clamp(((s - a[0])*dx + (t - a[1])*dy)/L2, 0, 1); return Math.hypot(s - a[0] - u*dx, t - a[1] - u*dy); };
+function canalD(s, t){ const L = SOUTHP.cells.get(Math.floor(s/20) + ',' + Math.floor(t/20)); if (!L) return 99; let d = 99; for (const q of L){ const e = segD(s, t, q.a, q.b) - q.half; if (e < d) d = e; } return d; }   // (how far outside the nearest canal's bank: negative in the water)
+function onBridge(s, t){ for (const q of SOUTHP.br) if (s > q.box[0] && s < q.box[2] && t > q.box[1] && t < q.box[3] && segD(s, t, q.a, q.b) < q.half) return true; return false; }
+function mergeSouth(){ const D = SOUTHP.data; if (!D || SOUTHP.on) return; SOUTHP.on = true;
+  const pts = (arr, from) => { const out = []; let x = 0, y = 0; for (let i = from; i < arr.length; i += 2){ x += arr[i]; y += arr[i + 1]; out.push([x/5, y/5]); } return out; }, nm = i => i >= 0 ? D.N[i] : '';
+  SOUTHP.C = D.C; SOUTHP.E = D.E; { const h = new Float32Array(D.E.h.length); let a = 0; for (let i = 0; i < h.length; i++){ a += D.E.h[i]; h[i] = a/10; } SOUTHP.h = h; }
+  for (const r of D.R) CITY.roads.push({ c: r[0], name: nm(r[1]), p: pts(r, 2) });
+  for (const b of D.B) CITY.bldgs.push({ h: b[0]/10, k: b[1] % 8, yr: b[1] >= 8 ? Math.floor(b[1]/8) + 1850 : 0, name: nm(b[2]), p: pts(b, 3) });
+  for (const q of D.P) CITY.polys.push({ k: q[0], name: nm(q[1]), p: pts(q, 2) });
+  for (let i = 0; i < D.T.length; i += 2) CITY.trees.push([D.T[i]/10, D.T[i + 1]/10]);
+  for (const sh of D.S) TOWN_SHOPS.push(sh);
+  SOUTHP.canals = D.W.map(w => ({ w: w[0], p: pts(w, 1) }));
+  for (const C of SOUTHP.canals) for (let i = 0; i < C.p.length - 1; i++){ const q = { a: C.p[i], b: C.p[i + 1], half: C.w/2 }; SOUTHP.segs.push(q); const r = q.half + 4;
+    for (let a = Math.floor((Math.min(q.a[0], q.b[0]) - r)/20); a <= Math.floor((Math.max(q.a[0], q.b[0]) + r)/20); a++) for (let b = Math.floor((Math.min(q.a[1], q.b[1]) - r)/20); b <= Math.floor((Math.max(q.a[1], q.b[1]) + r)/20); b++){ const k = a + ',' + b; (SOUTHP.cells.get(k) || SOUTHP.cells.set(k, []).get(k)).push(q); } }
+  for (const r of D.BR){ const p = pts(r, 1), half = ROAD_W[r[0]]/2 + .6; for (let i = 0; i < p.length - 1; i++){ const a = p[i], b = p[i + 1]; SOUTHP.br.push({ a, b, half, box: [Math.min(a[0], b[0]) - half, Math.min(a[1], b[1]) - half, Math.max(a[0], b[0]) + half, Math.max(a[1], b[1]) + half] }); } }
+  bldIndex.done = false; bldCells.clear(); roadIndex.done = false; roadCells.clear(); SOUTH.list.length = 0; SOUTH.cells.clear(); }   // (the stand-ins go)
+function smElev(s, t){ if (t > 240 && SOUTHP.h){ const b = southElev(s, t); return t >= 275 ? b : lerp(cityElev(s, t), b, (t - 240)/35); } return cityElev(s, t); }   // (south of the pier: Ocean Park and Venice's own survey)
+function cityElev(s, t){   // the real ground (USGS), meters above the sea
   const E = CITY.E, fi = clamp((s - E.s0)/E.ds, 0, E.ns - 1.001), fj = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), i = fi|0, j = fj|0, u = fi - i, v = fj - j, H = CITY.h, k = j*E.ns + i;
   return (H[k]*(1 - u) + H[k + 1]*u)*(1 - v) + (H[k + E.ns]*(1 - u) + H[k + E.ns + 1]*u)*v; }
 // The survey smooths the bluff into a gentle ramp; the real one is a steep face you can't walk up. Find where it is along each row...
@@ -3009,8 +3036,9 @@ function landH(s, t){   // the ground (what the 3D land shows)
   const m = bluffMid(t); let h = !isNaN(m) && Math.abs(s - m) < 25 ? smElev(m + clamp((s - m)*2.2, -25, 25), t) : smElev(s, t);   // (the bluff face made steep again)
   h = Math.min(h, .3 + s*.12);   // the sand slopes up out of the water
   h += tongvaH(s, t);   // (Tongva Park's hills)
+  if (SOUTHP.segs.length && t > 3400 && t < 4800){ const d = canalD(s, t); if (d < 0 && !onBridge(s, t)) h = Math.min(h, Math.max(-.8, h - .3 + d*1.3)); }   // (the Venice canals: banks down to the water)
   const inc = inclineAt(s, t); if (inc) h = inc.d < INCLINE.w ? inc.h : lerp(inc.h, h, (inc.d - INCLINE.w)/1.5);   // the Incline, cut into the bluff (with walls each side)
-  const km = smooth(-2250, -2550, t), kp = smooth(4130, 4210, t);   // (Palos Verdes: far down the coast now, past the flat beach towns)
+  const km = smooth(-2250, -2550, t), kp = smooth(5130, 5210, t);   // (Palos Verdes: far down the coast now, past the flat beach towns)
   if (km > 0){ const to = t + STRETCH.d*U;   // past Pacific Palisades: the Malibu hills come down to a narrow beach (as before the city grew)
     const hM = .15 + Math.min(s, 8)*.1 + smooth(8, 70, s)*30*(.7 + .3*Math.sin(to*.05)) + smooth(90, 210, s)*30; h = lerp(h, hM, km); }
   h += smooth(-2150, -2500, t)*smooth(450, 900, s)*70*(.7 + .3*Math.sin(t*.011 + 1)*Math.cos(s*.008));   // the Santa Monica Mountains rise behind Pacific Palisades
@@ -3086,7 +3114,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
 function landName(x, y){
   if (inSFu(x)) return sfPlaceName(x*U, y*U);
   const [s, t] = landST(x, y);
-  if (t < -2500) return 'Malibu'; if (t > 200) return 'Palos Verdes';
+  if (t < -2500) return 'Malibu'; if (t > 5100) return 'Palos Verdes'; if (t > 200 && s > -30) return t < 2100 ? 'Ocean Park' : SOUTHP.segs.length && canalD(s, t) < 60 ? 'the Venice Canals' : s < 330 ? 'Venice Beach' : 'Venice'; if (t > 200) return 'Palos Verdes';
   if (s > HOME_APT.front - HOME_APT.steps - .2 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .3) return '3rd Street';
   if (onPierDeck(s, t)) return s > PIER_L.s1 ? 'The Pier Bridge' : 'Santa Monica Pier';
   if (s > PIER_L.s2 - 1 && s < AVES.ocean - 9 && Math.abs(t) < 9) return 'The Pier Bridge';
@@ -4427,7 +4455,7 @@ function bubble(x, y, vx, vy){ if (curDepth > .3){ sprayAt(x*U, -curDepth, y*U, 
 // The mainland in 3D: one big sheet of ground following the coast (sand, paths, roads, the bluff, grass, hills), then the things on it
 let landFogK = 1, coastGroup = null, coastCars = null, coastFill = null, homeSign = null, coastPeople = null, dinoSpray = [];
 function landColor(s, t, h, c){
-  const n = Math.sin(s*.37 + t*.21)*Math.sin(t*.29 - s*.13), wild = Math.max(smooth(-2250, -2550, t), smooth(4130, 4210, t));
+  const n = Math.sin(s*.37 + t*.21)*Math.sin(t*.29 - s*.13), wild = Math.max(smooth(-2250, -2550, t), smooth(5130, 5210, t));
   if (s < 0) return c.setHex(0xb59f74);
   if (wild > .5) return h < 1.2 ? c.setHex(0xe2cf9e) : c.setHex(n > .2 ? 0x7d7a4c : 0x6b7140).lerp(c2.setHex(0x9a7d5a), smooth(15, 2, h) * (t > 0 ? 1 : 0));   // Malibu chaparral, Palos Verdes rock
   { const mt = smooth(-2150, -2500, t)*smooth(450, 900, s); if (mt > .03) return c.setHex(0xb9b3a6).lerp(c2.setHex(0x74774a).lerp(c3.setHex(0x8c8a62), (n + 1)/2), smooth(.03, .25, mt)); }   // the mountains behind Pacific Palisades
@@ -4670,8 +4698,8 @@ const VISIT = (() => { let q; try { q = new URLSearchParams(location.search); } 
 // real latitude/longitude to the game's own map: Santa Monica (the same projection the OpenStreetMap city was built with) or San Francisco
 function geoToGame(lat, lon){
   { const LAT0 = 34.0100, LON0 = -118.4960, ML = 110940, MO = 111320*Math.cos(34.015*Math.PI/180), a = 134.8*Math.PI/180, NW = [Math.cos(a), Math.sin(a)], NE = [NW[1], -NW[0]], K = .00923;
-    const x = (lon - LON0)*MO, y = (lat - LAT0)*ML, s0 = x*NE[0] + y*NE[1], t0 = -(x*NW[0] + y*NW[1]), s = s0 + K*t0 + 222, t = t0 - K*s0 + 42.5;
-    if (s > -400 && s < 1250 && t > -2450 && t < 2900){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; } }
+    const x = (lon - LON0)*MO, y = (lat - LAT0)*ML, s0 = x*NE[0] + y*NE[1], t0 = -(x*NW[0] + y*NW[1]), t = t0 - K*s0 + 42.5, s = s0 + K*t0 + 222 - southShift(t);   // (south of the pier, moved in with the coast like the map)
+    if (s > -400 && s < 1250 && t > -2450 && t < (SOUTHP.on ? 4700 : 2900)){ const [gx, gy] = landXY(s, t); return { city: 'sm', x: gx, y: gy }; } }
   { const LAT0 = 37.8083294, LON0 = -122.4157264, x = (lon - LON0)*88060.572, y = (lat - LAT0)*110992.853;
     if (x > SF.x0 && x < SF.x0 + SF.W && y > SF.y0 && y < SF.y0 + SF.H) return { city: 'sf', x: (SF.X + x)/U, y: (SF.Z - y)/U }; }
   return null; }
@@ -4686,9 +4714,9 @@ function visitArrive(){ const V = VISIT, o = ocean; if (!V || V.done || !o) retu
       const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex(`${i + 1}. ${P.title}`, '#1d2026', '#ffc23a', 1024, 128, P.title.length > 30 ? 46 : 62), depthTest: false })); sg.scale.set(12, 1.5, 1); sg.position.y = 6; grp.add(sg);
       grp.position.set(P.g.x*U, gh, P.g.y*U); oceanScene.add(grp); V.marks.push({ ...P, i, grp, seen: false }); });
     const out = places.filter(P => !P.g).length;
-    if (!where) banner('🧭 That place isn\'t built yet', 'So far you can visit Santa Monica and San Francisco\'s Fisherman\'s Wharf. Here\'s Santa Monica!');
+    if (!where) banner('🧭 That place isn\'t built yet', 'So far you can visit Santa Monica, Venice and San Francisco\'s Fisherman\'s Wharf. Here\'s Santa Monica!');
     else banner('🧭 Try it before you go!', V.marks.length ? `${V.marks.length} stops on your trip. Follow the gold arrow` : 'Walk around and see what\'s here');
-    if (out && where) setTimeout(() => banner(`${out} of your stops aren't built yet`, 'Only Santa Monica and Fisherman\'s Wharf so far'), 4000);
+    if (out && where) setTimeout(() => banner(`${out} of your stops ${out === 1 ? 'isn\'t' : 'aren\'t'} built yet`, 'So far: Santa Monica, Venice and San Francisco\'s Fisherman\'s Wharf'), 4000);
     visitNext(); };
   const needSF = where?.city === 'sf' || places.some(P => P.g?.city === 'sf');
   if (needSF && !SF.walk) loadSF().then(go); else go(); }
@@ -4722,6 +4750,36 @@ const SOUTH = { t0: 330, t1: 2900, s0: 250, s1: 1150, bs: 70, bt: 95, cells: new
       SOUTH.list.push(B); const k = Math.floor(B.s0/50) + ',' + Math.floor(B.t0/50); for (let i = Math.floor(B.s0/50); i <= Math.floor(B.s1/50); i++) for (let j = Math.floor(B.t0/50); j <= Math.floor(B.t1/50); j++){ const kk = i + ',' + j; (SOUTH.cells.get(kk) || SOUTH.cells.set(kk, []).get(kk)).push(B); } }
       t += w; } } }
 function southBld(s, t){ const L = SOUTH.cells.get(Math.floor(s/50) + ',' + Math.floor(t/50)); if (!L) return null; for (const B of L) if (s > B.s0 && s < B.s1 && t > B.t0 && t < B.t1) return B; return null; }
+/* Venice, on top of what OpenStreetMap gave the city: water in the canals, white railings on the canal bridges, the VENICE sign
+   hanging over Windward Avenue at Pacific Avenue, and the Muscle Beach sign by the outdoor gym on the sand. */
+function buildVenice(g, P3){ const W = .35;   // (the canals' water level, a guess: about a meter below the walks)
+  { const pos = [], idx = []; for (const C of SOUTHP.canals){ const p = C.p, hw = C.w/2 - .2;
+      for (let i = 0; i < p.length; i++){ const a = p[Math.max(0, i - 1)], b = p[Math.min(p.length - 1, i + 1)], L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, ns = -(b[1] - a[1])/L*hw, nt = (b[0] - a[0])/L*hw, n = pos.length/3;
+        pos.push(...P3(p[i][0] + ns, p[i][1] + nt, W), ...P3(p[i][0] - ns, p[i][1] - nt, W)); if (i) idx.push(n - 2, n - 1, n, n - 1, n + 1, n); } }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x3f7276, roughness: .12, metalness: .2, side: THREE.DoubleSide }))); }
+  { const rails = []; for (const q of SOUTHP.br){ const L = Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]); if (L < 1 || canalD((q.a[0] + q.b[0])/2, (q.a[1] + q.b[1])/2) > 6) continue; const ns = -(q.b[1] - q.a[1])/L, nt = (q.b[0] - q.a[0])/L;
+      for (const sg of [-1, 1]){ const off = q.half - .5, ms = (q.a[0] + q.b[0])/2 + ns*off*sg, mt = (q.a[1] + q.b[1])/2 + nt*off*sg, h = landH(ms, mt); const r = new THREE.BoxGeometry(L, .9, .14); r.rotateY(-Math.atan2(q.b[1] - q.a[1], q.b[0] - q.a[0])); r.translate(...P3(ms, mt, h + .45)); rails.push(r); } }
+    if (rails.length) g.add(new THREE.Mesh(mergeGeometries(rails), std(0xf4f1ea, .6))); }
+  const at = (lat, lon) => { const p = geoToGame(lat, lon); return p ? landST(p.x, p.y) : null; };
+  { const c = at(33.9876126, -118.472361); if (c){ const [s, t] = c; let dir = 0, best = 1e9;   // the VENICE sign: lit letters in a frame, hung on wires across Windward Avenue
+      for (const r of CITY.roads) if (r.name === 'Windward Avenue') for (let i = 0; i < r.p.length - 1; i++){ const d = segD(s, t, r.p[i], r.p[i + 1]); if (d < best){ best = d; dir = Math.atan2(r.p[i + 1][1] - r.p[i][1], r.p[i + 1][0] - r.p[i][0]); } }
+      const grp = new THREE.Group(), h = landH(s, t), sign = new THREE.Mesh(new THREE.PlaneGeometry(13, 2.6), new THREE.MeshBasicMaterial({ map: labelTex('V E N I C E', '#1c1c1c', '#fff6d8', 1024, 205, 150) }));
+      sign.position.set(0, 9.5, .16); grp.add(sign); const back = sign.clone(); back.position.z = -.16; back.rotation.y = Math.PI; grp.add(back); const fr = new THREE.Mesh(new THREE.BoxGeometry(13.4, 3, .25), std(0x222222, .5)); fr.position.set(0, 9.5, 0); grp.add(fr);   // (lit on both faces)
+      for (const sx of [-1, 1]){ const pole = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 12, 8), std(0x333333, .5)); pole.position.set(sx*10, 6, 0); grp.add(pole); const wire = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 4.2, 4), std(0x111111, .5)); wire.rotation.z = Math.PI/2 + sx*.28; wire.position.set(sx*8.4, 11.3, 0); grp.add(wire); }
+      grp.position.set(...P3(s, t, h)); grp.rotation.y = -dir + Math.PI/2; g.add(grp); } }
+  { const c = at(33.98543, -118.47258); if (c){ const [s, t] = c, h = landH(s, t), grp = new THREE.Group();   // Muscle Beach: its sign on two posts by the outdoor gym
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.2), new THREE.MeshBasicMaterial({ map: labelTex('MUSCLE BEACH', '#b71c1c', '#ffffff', 1024, 176, 120), side: THREE.DoubleSide })); sg.position.y = 3.6; grp.add(sg);
+      for (const sx of [-3.2, 3.2]){ const post = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, 4.2, 8), std(0xeeeeee, .5)); post.position.set(sx, 2.1, 0); grp.add(post); }
+      grp.position.set(...P3(s + 12, t, landH(s + 12, t))); grp.rotation.y = Math.PI/2; g.add(grp); } } }
+/* The Annenberg Community Beach House (415 PCH): the 1920s marble-tiled pool from Marion Davies' beach estate, on its white deck
+   by the sand, and the sign. The buildings come from OpenStreetMap; the pool is OpenStreetMap's outline. */
+function buildAnnenberg(g, P3){ const pool = [[197.3, -2204.3], [204, -2173], [196.3, -2171.3], [189.9, -2202.9]], c = pool.reduce((a, q) => [a[0] + q[0]/4, a[1] + q[1]/4], [0, 0]), h = landH(c[0], c[1]);
+  const flat = (pts, y, mat) => { const shp = new THREE.Shape(pts.map(([s, t]) => { const [x, z] = landXY(s, t); return new THREE.Vector2(x*U, -z*U); })), q = new THREE.ShapeGeometry(shp); q.rotateX(-Math.PI/2); q.translate(0, y, 0); g.add(new THREE.Mesh(q, mat)); };
+  const grow = (pts, k) => pts.map(([s, t]) => [c[0] + (s - c[0])*k, c[1] + (t - c[1])*k]);
+  flat(grow(pool, 1.35), h + .06, std(0xf3efe6, .7)); flat(pool, h + .1, new THREE.MeshStandardMaterial({ color: 0x4fb7d4, roughness: .08, metalness: .1 }));   // (the deck round it, then the water)
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 1), new THREE.MeshBasicMaterial({ map: labelTex('ANNENBERG COMMUNITY BEACH HOUSE', '#1f4f6e', '#ffffff', 1024, 158, 62), side: THREE.DoubleSide }));
+  sg.position.set(...P3(232, -2190, landH(232, -2190) + 1.4)); sg.rotation.y = Math.PI/2 - .2; g.add(sg); }
 function buildSouth(g){ const geos = [], col = new THREE.Color(), road = [];
   for (const B of SOUTH.list){ const sc = (B.s0 + B.s1)/2, tc = (B.t0 + B.t1)/2, base = Math.min(landH(B.s0, B.t0), landH(B.s1, B.t1)) - .3; B.base = base;
     const q = new THREE.BoxGeometry(1, 1, 1); q.scale(1, 1, 1); const [x0, y0] = landXY(B.s0, B.t0), [x1, y1] = landXY(B.s1, B.t1), [xc, yc] = landXY(sc, tc);
@@ -4835,7 +4893,7 @@ function buildCoast(){
   const P3 = (s, t, y) => { const [x, z] = landXY(s, t); return [x*U, y, z*U]; };
   // ---- the ground: in tiles 200 m long (so only the ones in view are drawn), finest on the bluff and around the Incline ----
   { const S = [-7.6, -7, -6, -5, -4, -3, -2, -1.5, -1, -.5]; for (let v = 0; v < 40; v += 2) S.push(v); for (let v = 40; v < 300; v += 12) S.push(v); for (let v = 300; v < 416; v += 2.5) S.push(v); for (let v = 416; v <= 1260; v += 15) S.push(v);
-    const Tl = []; for (let v = -2700; v < -2300; v += 20) Tl.push(v); for (let v = -2300; v < -1480; v += 10) Tl.push(v); for (let v = -1480; v < -1030; v += 4) Tl.push(v); for (let v = -1030; v < 200; v += 10) Tl.push(v); for (let v = 200; v <= 420; v += 20) Tl.push(v); for (let v = 460; v <= 3000; v += 40) Tl.push(v);   // (south: Ocean Park and Venice's flat beach)
+    const Tl = []; for (let v = -2700; v < -2300; v += 20) Tl.push(v); for (let v = -2300; v < -1480; v += 10) Tl.push(v); for (let v = -1480; v < -1030; v += 4) Tl.push(v); for (let v = -1030; v < 200; v += 10) Tl.push(v); for (let v = 200; v <= 420; v += 20) Tl.push(v); for (let v = 460; v <= (SOUTHP.on ? 4800 : 3000); v += 40) Tl.push(v);   // (south: Ocean Park and Venice's flat beach)
     // stairwells down through a shop floor (Barnes & Noble): the ground must open up there, or you'd look down into... the ground
     const WELLS = promRooms().filter(r => r.down).map(r => { const a = r.fs + r.inw*r.down.o0, b = r.fs + r.inw*r.down.o1; return [Math.min(a, b), Math.max(a, b), r.down.tm - r.down.ow, r.down.tm + r.down.ow, r.down.yB - 1.5]; });
     for (const [s0, s1, t0, t1] of WELLS){ S.push(s0 - .05, s0 + .05, s1 - .05, s1 + .05); Tl.push(t0 - .05, t0 + .05, t1 - .05, t1 + .05); }
@@ -4845,9 +4903,15 @@ function buildCoast(){
     for (let j0 = 0; j0 < Tl.length - 1;){ const j1 = Math.min(Tl.length - 1, j0 + 24), NT = j1 - j0 + 1, pos = new Float32Array(NS*NT*3), col = new Float32Array(NS*NT*3);
       for (let j = 0; j < NT; j++) for (let i = 0; i < NS; i++){ const s = S[i], t = Tl[j0 + j], k = (j*NS + i)*3, [x, y] = landXY(s, t), wl = inWell(s, t), h = i === 0 ? -shelfD(7.6) - 1.2 : wl ?? landH(s, t);   // (a skirt under the edge; and dropped away under a stairwell)
         pos[k] = x*U; pos[k + 1] = h; pos[k + 2] = y*U; landColor(s, t, h, c); col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b; }
-      const idx = []; for (let j = 0; j < NT - 1; j++) for (let i = 0; i < NS - 1; i++){ const a = j*NS + i, b = a + 1, d = a + NS, e = d + 1; idx.push(a, d, b, b, d, e); }
+      const idx = []; for (let j = 0; j < NT - 1; j++) for (let i = 0; i < NS - 1; i++){ const a = j*NS + i, b = a + 1, d = a + NS, e = d + 1; if (SOUTHP.segs.length && Tl[j0 + j + 1] > 3400 && (canalD(S[i], Tl[j0 + j]) < 3 || canalD(S[i + 1], Tl[j0 + j]) < 3 || canalD(S[i], Tl[j0 + j + 1]) < 3 || canalD(S[i + 1], Tl[j0 + j + 1]) < 3)) continue; idx.push(a, d, b, b, d, e); }   // (round the canals the fine patch below takes over)
       const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere();
-      const ground = new THREE.Mesh(geo, mat); ground.receiveShadow = true; g.add(ground); j0 = j1; } }
+      const ground = new THREE.Mesh(geo, mat); ground.receiveShadow = true; g.add(ground); j0 = j1; }
+    if (SOUTHP.segs.length){ let s0 = 1e9, s1 = -1e9, t0 = 1e9, t1 = -1e9; for (const q of SOUTHP.segs) for (const [s, t] of [q.a, q.b]){ s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t); }   // the canals: ground every 2.5 m near the water, so the banks come out right
+      s0 = Math.max(0, Math.floor((s0 - 60)/2.5)*2.5); s1 += 60; t0 = Math.max(3400, Math.floor((t0 - 60)/2.5)*2.5); t1 = Math.min(4800, t1 + 60); const st = 2.5, NS2 = Math.ceil((s1 - s0)/st) + 1;
+      for (let tA = t0; tA < t1; tA += 200){ const NT2 = Math.ceil(Math.min(200, t1 - tA)/st) + 1, pos = new Float32Array(NS2*NT2*3), col = new Float32Array(NS2*NT2*3), near = new Uint8Array(NS2*NT2);
+        for (let j = 0; j < NT2; j++) for (let i = 0; i < NS2; i++){ const s = s0 + i*st, t = tA + j*st, k = (j*NS2 + i)*3, [x, y] = landXY(s, t), h = landH(s, t); pos[k] = x*U; pos[k + 1] = h; pos[k + 2] = y*U; landColor(s, t, h, c); if (h < 1 && canalD(s, t) < 0) c.setHex(0x9c9a92); col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b; near[j*NS2 + i] = canalD(s, t) < 58 ? 1 : 0; }   // (the banks: concrete)
+        const idx = []; for (let j = 0; j < NT2 - 1; j++) for (let i = 0; i < NS2 - 1; i++){ const a = j*NS2 + i; if (!near[a] && !near[a + 1] && !near[a + NS2] && !near[a + NS2 + 1]) continue; idx.push(a, a + NS2, a + 1, a + 1, a + NS2, a + NS2 + 1); }
+        if (!idx.length) continue; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); } } }
   // ---- streets, paths and the Promenade (from OpenStreetMap), draped on the ground ----
   const strips = new Map();   // material key -> [positions]
   const strip = (pts, w, key, lift = .06, hf = (s, t) => landH(s, t)) => { const out = strips.get(key) || strips.set(key, []).get(key);
@@ -5061,10 +5125,11 @@ function buildCoast(){
       ((Math.round(t/13) + (s > 380 ? 1 : 0)) % 2 === 0 ? fan : can).push([s, t, .85 + PR()*.35, PR()*TAU]); } }
     for (let t = 30; t < 200; t += 14) fan.push([248, t, .8 + PR()*.3, PR()*TAU]);   // along Ocean Front Walk
     for (let t = -2300; t > -2600; t -= 11) fan.push([40 + PR()*20, t, .7 + PR()*.3, PR()*TAU]);
+    for (const [s, t] of CITY.trees) if (t > 300 && s < 300) fan.push([s, t, .85 + PR()*.4, PR()*TAU]);   // (Ocean Park and Venice's beachfront: tall fan palms along the boardwalk)
     instanceOf(palm(10.5), fan); instanceOf(canary(6.5), can); }
   { const tree = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, 3, 6), std(0x6b5440, .9)); tr.position.y = 1.5; tree.add(tr);   // street trees (from OpenStreetMap)
     const top = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9, 0), std(0x4f7f3a, .85)); top.position.y = 3.9; top.scale.y = .8; tree.add(top);
-    const PR = mulberry(3); instanceOf(tree, CITY.trees.filter(([s, t]) => !bldAt(s, t)).map(([s, t]) => [s, t, .85 + PR()*.4, PR()*TAU])); }
+    const PR = mulberry(3); instanceOf(tree, CITY.trees.filter(([s, t]) => !bldAt(s, t) && !(t > 300 && s < 300)).map(([s, t]) => [s, t, .85 + PR()*.4, PR()*TAU])); }
   // ---- waves washing up the beach: a band of foam that runs up the sand and slides back (two of them, one after the other), all along the shore ----
   { const mk = (ph0) => { const pa = [], pb = [], ed = [], ph = [], idx = []; let n = 0;
       for (let t = -2650; t <= 900; t += 3){ if (onPierDeck(5, t) || landH(4, t) > 3) continue;   // (not where the pier is, or a cliff comes down to the water)
@@ -5145,7 +5210,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); buildSouth(g); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? buildVenice(g, P3) : buildSouth(g)); buildAnnenberg(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8154,7 +8219,7 @@ function moveClouds(list, cx, cz){ for (const s of list){ s.visible = !realSky; 
   x = ((x + 350) % 700 + 700) % 700 - 350; s.position.set(cx + x, o.y, cz + z); } }
 
 function buildOcean(){
-  oceanBuilt = true;
+  oceanBuilt = true; mergeSouth();
   oceanWaterMesh = new THREE.Mesh(new THREE.PlaneGeometry(256, 256, 256, 256), oceanWater); oceanWaterMesh.rotation.x = -Math.PI/2;
   { const p = oceanWaterMesh.geometry.attributes.position;
     for (let i=0;i<p.count;i++){ const stretch = v => Math.sign(v)*(.5*Math.abs(v) + 1936*Math.pow(Math.max(0,Math.abs(v)-96)/32,3));
@@ -9359,7 +9424,7 @@ function render3D(dt){
     underwaterLook(poolScene, [poolWater, channelWater, seaWater], camera.position.y < 0, POOL_UW, .085, POOL_FOG, .005);
     draw(poolScene);
   } else if ((mode === 'ocean' || mode === 'title' || mode === 'choose') && ocean){
-    if (!oceanBuilt) buildOcean();
+    if (!oceanBuilt){ if (!SOUTHP.done && performance.now() < SOUTHP.until) return; buildOcean(); }   // (wait a moment for Venice's map)
     updOceanWorld(ocean);
     const m = playerModel(oceanScene), px = ocean.x*U, pz = ocean.y*U, wy = waveH(px, pz, OC.amp, 1);
     const dep = ocean.depth || 0, sub = clamp(dep/.4, 0, 1); curDepth = dep;

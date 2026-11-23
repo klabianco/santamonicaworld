@@ -5465,6 +5465,7 @@ function buildCoast(){
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
+    if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
     { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
@@ -5688,7 +5689,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -6967,6 +6968,38 @@ function buildSauro(d, dir, ivy, ivy2, E){ const curb = std(0xb9b6ae, .85), gras
   for (const z of [.2, -.2]){ const ey = new THREE.Mesh(new THREE.SphereGeometry(.05, 6, 5), std(0x111111, .3)); ey.position.set(5.75, 4.93, z); s.add(ey); } }
 // a table at Michael's: walk up to the porch to eat
 const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 && s < MICHAELS.s + .5 && t > MICHAELS.t0 + .5 && t < MICHAELS.t1 - .5; };
+/* The top of the California Incline, from photos (Wikimedia Commons, Sept 2022, geotagged) and OpenStreetMap:
+   Beacon Overlook (Jody Pinto, 2000) just south of where the Incline leaves Ocean Ave: a wooden deck at the edge of the bluff with
+   cable railings on wood posts, and a tall slender green steel mast rising from a curved wooden hull, like a ship's mast and deck.
+   The park's brown wooden PALISADES PARK sign. Across Ocean Ave, Santa Monica Bay Towers (101 California Ave, 14 stories, 1964): white, with balconies. */
+const BAY_TOWERS = [424.0, -1093.8, 466.2, -1062.4, 49.6];
+const BEACON = { t0: -1043, t1: -1031, mast: [0, -1036] };
+function buildBeacon(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .85, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const B = BEACON, fs = (fenceS((B.t0 + B.t1)/2) || 370), s0 = fs + .3, s1 = s0 + 5.6, y = Math.max(landH(s0 + .5, B.t0), landH(s0 + .5, B.t1), landH(s1, (B.t0 + B.t1)/2)) + .25;
+  const box = (a0, a1, b0, b1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, b1 - b0), m || mat(hex)); me.position.set(...P3((a0 + a1)/2, (b0 + b1)/2, (y0 + y1)/2)); grp.add(me); return me; };
+  const gm = new THREE.MeshStandardMaterial({ color: 0x9fc4cc, roughness: .1, metalness: .3, transparent: true, opacity: .55 }), glassM = () => gm;
+  box(s0, s1, B.t0, B.t1, y - .25, y, 0x9a7a58);   // the deck boards (gray-brown, weathered) LAND_BOXES.push([s0, B.t0, s1, B.t1, y]);
+  for (let t = B.t0 + .15; t < B.t1; t += .55) box(s0, s1, t, t + .03, y + .001, y + .006, 0x6f5840);
+  box(s0 - .1, s1, B.t0 - .2, B.t0, y - 1.2, y, 0x9a7a58); box(s0 - .1, s1, B.t1, B.t1 + .2, y - 1.2, y, 0x9a7a58); box(s0 - .3, s0, B.t0 - .2, B.t1 + .2, y - 1.4, y, 0x8d8a83);   // (its edges, and the concrete footing along the bluff)
+  const W = 0x7e6650, C = 0x9aa2a8;   // the railings: square wood posts and a wood cap rail, with steel cables between, on the bluff side and the two ends
+  const rail = (a0, b0, a1, b1) => { const L = Math.hypot(a1 - a0, b1 - b0), n = Math.max(1, Math.round(L/1.8)); for (let k = 0; k <= n; k++){ const a = a0 + (a1 - a0)*k/n, b = b0 + (b1 - b0)*k/n; box(a - .07, a + .07, b - .07, b + .07, y, y + 1.1, W); }
+    const cap = box(Math.min(a0, a1) - .08, Math.max(a0, a1) + .08, Math.min(b0, b1) - .08, Math.max(b0, b1) + .08, y + 1.05, y + 1.15, W); for (let h = .3; h < 1; h += .22) box(Math.min(a0, a1) - .01, Math.max(a0, a1) + .01, Math.min(b0, b1) - .01, Math.max(b0, b1) + .01, y + h, y + h + .015, C); };
+  rail(s0, B.t0, s0, B.t1); rail(s0, B.t0, s1 - 1.5, B.t0); rail(s0, B.t1, s1 - 1.5, B.t1);
+  const ms = s0 + 2, mt = B.mast[1], hull = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.25, .9, 20, 1, false, 0, Math.PI*1.25), mat(0x7a5c40, .8)); hull.position.set(...P3(ms, mt, y + .45)); hull.rotation.y = 1.9; grp.add(hull);   // the curved wooden hull (a bench) round the mast's foot
+  const seat = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, .08, 20, 1, false, 0, Math.PI*1.25), mat(0x8a6a4a, .8)); seat.position.set(...P3(ms, mt, y + .92)); seat.rotation.y = 1.9; grp.add(seat);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(.06, .24, 21, 12), mat(0x4f8a72, .45, .5)); const [mx, , mz] = P3(ms - .9, mt, 0); mast.position.set(mx, y + 10.4, mz); mast.rotation.z = .05; grp.add(mast);   // (about 70 ft, green steel, leaning a little out over the sea)
+  LAND_BOXES.push([ms - 1.7, mt - 1.7, ms + 1.7, mt + 1.7, y + .95]);
+  // the PALISADES PARK sign: dark brown boards on two posts, white letters, the city's yellow circle
+  { const sg = new THREE.Group(), wood = mat(0x5a3b24, .8); for (const x of [-1.05, 1.05]){ const p = new THREE.Mesh(new THREE.BoxGeometry(.12, 1.5, .1), mat(0x8c8e8f, .5, .4)); p.position.set(x, .75, 0); sg.add(p); }
+    const bd = new THREE.Mesh(new THREE.BoxGeometry(2.9, .95, .1), wood); bd.position.y = 1.35; sg.add(bd);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(2.8, .85), new THREE.MeshBasicMaterial({ map: canvasTex(512, 156, x => { x.fillStyle = '#5a3b24'; x.fillRect(0, 0, 512, 156); x.fillStyle = 'rgba(0,0,0,.18)'; for (let k = 1; k < 4; k++) x.fillRect(0, k*39, 512, 2); x.fillStyle = '#f4f1e8'; x.font = "bold 50px 'Helvetica Neue', Arial, sans-serif"; x.fillText('PALISADES PARK', 26, 70); x.font = "20px 'Helvetica Neue', Arial, sans-serif"; x.fillText('City of Santa Monica', 250, 128); x.fillStyle = '#e6b41e'; x.beginPath(); x.arc(462, 118, 26, 0, TAU); x.fill(); }, false) }));
+    face.position.set(0, 1.35, .06); sg.add(face); const fb = face.clone(); fb.position.z = -.06; fb.rotation.y = Math.PI; sg.add(fb);
+    const st = s1 + 3, tt = B.t1 + 4; sg.position.set(...P3(st, tt, landH(st, tt))); sg.rotation.y = Math.PI/2; grp.add(sg); }
+  // Santa Monica Bay Towers' balconies: a white slab at every floor all round, with the railing's glass
+  { const [a0, b0, a1, b1, h] = BAY_TOWERS, base = landH((a0 + a1)/2, (b0 + b1)/2) - .5;
+    for (let fy = 5.5; fy < h - 1; fy += 3.3){ const yy = base + fy; box(a0 - 1.1, a0, b0 + 1, b1 - 1, yy, yy + .2, 0xf6f5f1); box(a1, a1 + 1.1, b0 + 1, b1 - 1, yy, yy + .2, 0xf6f5f1); box(a0 + 1, a1 - 1, b0 - 1.1, b0, yy, yy + .2, 0xf6f5f1); box(a0 + 1, a1 - 1, b1, b1 + 1.1, yy, yy + .2, 0xf6f5f1);
+      box(a0 - 1.1, a0 - 1.05, b0 + 1, b1 - 1, yy + .2, yy + 1.1, 0, glassM()); box(a0 + 1, a1 - 1, b0 - 1.1, b0 - 1.05, yy + .2, yy + 1.1, 0, glassM()); box(a0 + 1, a1 - 1, b1 + 1.05, b1 + 1.1, yy + .2, yy + 1.1, 0, glassM()); } }
+  g.add(grp); mergeStatic(grp); }
 /* Palisades Park details, from a Street View survey (Jul-Aug 2024) + OpenStreetMap: the Saint Monica statue at the foot of Wilshire,
    the low rope fences round the succulent beds between the two paths (Colorado to Wilshire), the 1912 pergola past Washington,
    the Idaho stone gate, the Rose Garden past Montana, the old fluted lamp posts, and the Camera Obscura building by Broadway. */

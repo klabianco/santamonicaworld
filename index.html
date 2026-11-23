@@ -2943,6 +2943,15 @@ function southElev(s, t){ const E = SOUTHP.E, fi = clamp((s - E.s0)/E.ds, 0, E.n
 const segD = (s, t, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx*dx + dy*dy || 1e-9, u = clamp(((s - a[0])*dx + (t - a[1])*dy)/L2, 0, 1); return Math.hypot(s - a[0] - u*dx, t - a[1] - u*dy); };
 function canalD(s, t){ const L = SOUTHP.cells.get(Math.floor(s/20) + ',' + Math.floor(t/20)); if (!L) return 99; let d = 99; for (const q of L){ const e = segD(s, t, q.a, q.b) - q.half; if (e < d) d = e; } return d; }   // (how far outside the nearest canal's bank: negative in the water)
 function onBridge(s, t){ for (const q of SOUTHP.br) if (s > q.box[0] && s < q.box[2] && t > q.box[1] && t < q.box[3] && segD(s, t, q.a, q.b) < q.half) return true; return false; }
+/* How the Civic Center and the hotels on the beach really look (researched from the city, the architects and photos): [s, t, reach, height m, wall, roof, sign, sign color].
+   City Hall's off-white concrete and gold letters, the Courthouse, the Public Safety Facility, the parking structure's blue glass, the white Civic Auditorium, RAND,
+   the Hilton, the Village's zinc-gray towers, the Loews (white), Shutters (gray shingle), Casa del Mar (red-brown brick, terracotta roof) and the lifeguard headquarters. */
+const LOOKS = [[663.4,174.2,36.7,12.0,"#ECEADF","#D6D5CA","CITY HALL","#C9A55C"],[660.8,335.7,48.7,9.4,"#E2E4DF","#9EA2A6","SANTA MONICA COURTHOUSE","#2b2b2b"],[730.1,209.5,35.5,22.9,"#D6CCB8","#A8A08F","",""],[739.1,325.3,45.5,21.3,"#5BB3E0","#2C3E5A","",""],[593.6,542.5,39.1,24.4,"#F1EFE8","#3B3B3B","",""],[700.4,445.8,16.9,12.5,"#C9BBA8","#3A3D42","",""],[530.3,397.7,73.6,24.0,"#E9E7E1","#F3F2EE","RAND","#5c5c5c"],[820.9,343.7,46.2,29.7,"#E6E1D6","#E6E1D6","",""],[503.5,281.8,57.0,21.0,"#7D8790","#7D8790","",""],[470.1,330.0,37.8,34.0,"#7D8790","#7D8790","",""],[522.4,319.4,25.2,20.0,"#7D8790","#7D8790","",""],[457.4,299.9,9.9,4.0,"#7D8790","#7D8790","",""],[192.0,132.0,10,5.2,"#d8d4cb","#e8e6e0","",""],[353.4,307.8,22,24.7,"#f3f2ee","#7b8792","",""],[278.6,558.2,22,24.0,"#b9bdb8","#6e737a","Shutters \u00b7 ON THE BEACH","#1a1a1a"],[245.5,632.6,22,28.2,"#8e3b2c","#c0553a","HOTEL CASA DEL MAR","#f2efe6"]].map(a => ({ s: a[0], t: a[1], r: a[2], h: a[3], wall: parseInt(a[4].slice(1), 16), roof: parseInt(a[5].slice(1), 16), sign: a[6], sc: a[7] }));
+function applyLooks(){ if (applyLooks.done) return; applyLooks.done = true;
+  for (const b of CITY.bldgs){ const P = b.p; if (!P || P.length < 3) continue; let cs = 0, ct = 0; for (const [s, t] of P){ cs += s/P.length; ct += t/P.length; }
+    const L = LOOKS.find(L => Math.hypot(cs - L.s, ct - L.t) < L.r); if (!L) continue; let area = 0; for (let i = 0; i < P.length; i++){ const a = P[i], c = P[(i + 1) % P.length]; area += a[0]*c[1] - c[0]*a[1]; } if (Math.abs(area)/2 < 40) continue;
+    b.h = L.h; b.look = L; if (!L.best || Math.abs(area) > L.bestA){ L.best = b; L.bestA = Math.abs(area); } }
+  bldIndex.done = false; bldCells.clear(); }
 function mergeSouth(){ const D = SOUTHP.data; if (!D || SOUTHP.on) return; SOUTHP.on = true;
   const pts = (arr, from) => { const out = []; let x = 0, y = 0; for (let i = from; i < arr.length; i += 2){ x += arr[i]; y += arr[i + 1]; out.push([x/5, y/5]); } return out; }, nm = i => i >= 0 ? D.N[i] : '';
   SOUTHP.C = D.C; SOUTHP.E = D.E; { const h = new Float32Array(D.E.h.length); let a = 0; for (let i = 0; i < h.length; i++){ a += D.E.h[i]; h[i] = a/10; } SOUTHP.h = h; }
@@ -4994,6 +5003,25 @@ function buildVenice(g, P3){ const W = .35;   // (the canals' water level, a gue
       grp.position.set(...P3(s + 12, t, landH(s + 12, t))); grp.rotation.y = Math.PI/2; g.add(grp); } } }
 /* The Annenberg Community Beach House (415 PCH): the 1920s marble-tiled pool from Marion Davies' beach estate, on its white deck
    by the sand, and the sign. The buildings come from OpenStreetMap; the pool is OpenStreetMap's outline. */
+/* Signs on the buildings that have them, the Chain Reaction sculpture (Paul Conrad, 1991: a mushroom cloud made of chain links, about 8 m tall, on the Civic Center lawn),
+   and the original Hot Dog on a Stick stand by the pier in its red, yellow and blue stripes. */
+function buildLooks(g, P3){
+  for (const L of LOOKS){ const b = L.best; if (!L.sign || !b) continue; const P = b.p; let bi = 0, bm = 1e9; for (let i = 0; i < P.length; i++){ const a = P[i], c = P[(i + 1) % P.length], L2 = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L2 < 6) continue; const m = (a[0] + c[0])/2; if (m < bm){ bm = m; bi = i; } }
+    const a = P[bi], c = P[(bi + 1) % P.length], ms = (a[0] + c[0])/2, mt = (a[1] + c[1])/2, w = Math.min(14, Math.hypot(c[0] - a[0], c[1] - a[1])*.8), y = (b.base ?? landH(ms, mt)) + Math.min(L.h*.6, 8);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, w/7), new THREE.MeshBasicMaterial({ map: labelTex(L.sign, '#' + L.wall.toString(16).padStart(6, '0'), L.sc || '#222', 1024, 146, L.sign.length > 16 ? 58 : 92), transparent: false })); let cs = 0, ct = 0; for (const [s2, t2] of P){ cs += s2/P.length; ct += t2/P.length; } const th = Math.atan2(c[1] - a[1], c[0] - a[0]), out = (-Math.sin(th))*(ms - cs) + Math.cos(th)*(mt - ct) > 0 ? 1 : -1;   // (facing out of the building)
+    sg.position.set(...P3(ms - Math.sin(th)*out*.3, mt + Math.cos(th)*out*.3, y)); sg.rotation.y = -th + (out > 0 ? 0 : Math.PI); g.add(sg); }
+  { const s = 595, t = 442, h = landH(s, t), copper = std(0xb07a45, .45, .5), grp = new THREE.Group(), link = new THREE.TorusGeometry(.32, .08, 6, 12);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.4, .8, 20), std(0xc8c3b8, .8)); base.position.y = .4; grp.add(base);
+    const add = (x, y, z, rx, ry) => { const m = new THREE.Mesh(link, copper); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); grp.add(m); };
+    for (let y = .9; y < 4.8; y += .5) for (let k = 0; k < 4; k++){ const a = k/4*TAU + y; add(Math.cos(a)*.55, y, Math.sin(a)*.55, (y*2 + k) % 2 ? Math.PI/2 : 0, a); }   // (the stem, link by link)
+    for (let r = 0; r < 3; r++) for (let k = 0; k < 14 + r*6; k++){ const a = k/(14 + r*6)*TAU, rr = 1.2 + r*.9, y = 5.6 + Math.cos(r/2.2*Math.PI/2)*1.8 - r*.25; add(Math.cos(a)*rr, y + Math.sin(k)*.15, Math.sin(a)*rr, k % 2 ? Math.PI/2 : 0, a); }   // (the cloud)
+    for (let k = 0; k < 10; k++){ const a = k/10*TAU; add(Math.cos(a)*.9, 7.4, Math.sin(a)*.9, Math.PI/2, a); }
+    grp.position.set(...P3(s, t, h)); g.add(grp); mergeStatic(grp); }
+  { const s = 270, t = 116, h = landH(s, t), grp = new THREE.Group(), stripes = canvasTex(256, 64, (x, w, hh) => { const C = ['#d62b2b', '#f6d21a', '#2a63c8', '#ffffff']; for (let i = 0; i < 8; i++){ x.fillStyle = C[i % 4]; x.fillRect(i*w/8, 0, w/8, hh); } }, true);
+    const box = new THREE.Mesh(new THREE.BoxGeometry(3, 2.6, 3), new THREE.MeshStandardMaterial({ map: stripes, roughness: .6 })); box.position.y = 1.3; grp.add(box);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.2, 4), new THREE.MeshStandardMaterial({ map: stripes, roughness: .6 })); roof.rotation.y = Math.PI/4; roof.position.y = 3.2; grp.add(roof);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.8, .5), new THREE.MeshBasicMaterial({ map: labelTex('HOT DOG ON A STICK', '#ffffff', '#d62b2b', 1024, 182, 92), side: THREE.DoubleSide })); sg.position.set(-1.52, 2.2, 0); sg.rotation.y = -Math.PI/2; grp.add(sg);
+    grp.position.set(...P3(s, t, h)); g.add(grp); } }
 function buildAnnenberg(g, P3){ const pool = [[197.3, -2204.3], [204, -2173], [196.3, -2171.3], [189.9, -2202.9]], c = pool.reduce((a, q) => [a[0] + q[0]/4, a[1] + q[1]/4], [0, 0]), h = landH(c[0], c[1]);
   const flat = (pts, y, mat) => { const shp = new THREE.Shape(pts.map(([s, t]) => { const [x, z] = landXY(s, t); return new THREE.Vector2(x*U, -z*U); })), q = new THREE.ShapeGeometry(shp); q.rotateX(-Math.PI/2); q.translate(0, y, 0); g.add(new THREE.Mesh(q, mat)); };
   const grow = (pts, k) => pts.map(([s, t]) => [c[0] + (s - c[0])*k, c[1] + (t - c[1])*k]);
@@ -5362,6 +5390,7 @@ function buildCoast(){
     if (pav){ pavilions.push(b); continue; }
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
+    if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
     { const lk = [...BLOCK1100, ...BLOCK1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
@@ -5559,7 +5588,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1300(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8611,7 +8640,7 @@ function moveClouds(list, cx, cz){ for (const s of list){ s.visible = !realSky; 
   x = ((x + 350) % 700 + 700) % 700 - 350; s.position.set(cx + x, o.y, cz + z); } }
 
 function buildOcean(){
-  oceanBuilt = true; mergeSouth();
+  oceanBuilt = true; mergeSouth(); applyLooks();
   oceanWaterMesh = new THREE.Mesh(new THREE.PlaneGeometry(256, 256, 256, 256), oceanWater); oceanWaterMesh.rotation.x = -Math.PI/2;
   { const p = oceanWaterMesh.geometry.attributes.position;
     for (let i=0;i<p.count;i++){ const stretch = v => Math.sign(v)*(.5*Math.abs(v) + 1936*Math.pow(Math.max(0,Math.abs(v)-96)/32,3));

@@ -7148,29 +7148,38 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
 /* Western gulls on the beach by the pier: they stand about on the sand facing the wind, and when you come running they take off, flap away,
-   circle over the beach for a while and come down somewhere else nearby (like the real ones). Instanced: four meshes for the whole flock. */
+   circle over the beach for a while and come down somewhere else nearby (like the real ones). And pigeons down the middle of the Promenade,
+   which clatter up when you run through them and settle again a few meters on. Instanced: five meshes for all the birds. */
 const GULLS = { list: [], m: null, last: 0 };
-function buildGulls(g){ const N = 26, R = mulberry(91), body = new THREE.SphereGeometry(.16, 8, 6); body.scale(1.7, .8, .8);
+function buildGulls(g){ const NG = 26, NP = 30, N = NG + NP, R = mulberry(91), body = new THREE.SphereGeometry(.16, 8, 6); body.scale(1.7, .8, .8);
   const wing = new THREE.BoxGeometry(.32, .025, .62); wing.translate(0, 0, .31); const beak = new THREE.ConeGeometry(.03, .14, 5); beak.rotateZ(-Math.PI/2); beak.translate(.33, .03, 0); const head = new THREE.SphereGeometry(.085, 8, 6); head.translate(.24, .1, 0);
-  const mk = (geo, hex) => { const m = new THREE.InstancedMesh(geo, std(hex, .7), N); m.frustumCulled = false; m.castShadow = true; g.add(m); return m; };
-  GULLS.m = { body: mk(body, 0xf4f4f2), head: mk(head, 0xf7f7f5), wl: mk(wing, 0x8e959c), wr: mk(wing, 0x8e959c), beak: mk(beak, 0xf2c230) };
-  for (let i = 0; i < N; i++){ let s, t; do { s = 40 + R()*230; t = -260 + R()*520; } while (onPierDeck(s, t) || (t > -12 && t < 95 && s < 262));
-    GULLS.list.push({ s, t, y: landH(s, t), a: R()*TAU, st: 0, vs: 0, vt: 0, vy: 0, T: 0, ph: R()*TAU, cs: 0, ct: 0 }); } }
+  const mk = geo => { const m = new THREE.InstancedMesh(geo, std(0xffffff, .7), N); m.frustumCulled = false; m.castShadow = true; g.add(m); return m; };
+  GULLS.m = { body: mk(body), head: mk(head), wl: mk(wing), wr: mk(wing), beak: mk(beak) };
+  const C = { gull: [0xf4f4f2, 0xf7f7f5, 0x8e959c, 0xf2c230], pigeon: [0x8a909a, 0x56606e, 0x7a808a, 0x3a3a3a] };   // (body, head, wings, beak)
+  for (let i = 0; i < N; i++){ const k = i < NG ? 'gull' : 'pigeon'; let s, t, blk = null;
+    if (k === 'gull') do { s = 40 + R()*230; t = -260 + R()*520; } while (onPierDeck(s, t) || (t > -12 && t < 95 && s < 262));
+    else { blk = [[PROM.t0 + 4, XST.arizona - 10], [XST.arizona + 10, XST.smblvd - 10], [XST.smblvd + 10, PROM.t1 - 4]][i % 3]; do { s = 647 + R()*12; t = blk[0] + R()*(blk[1] - blk[0]); } while (PROM_DINOS.some(d => Math.abs(d[1] - t) < 8)); }   // pigeons: down the middle of each Promenade block
+    GULLS.list.push({ k, blk, s, t, y: landH(s, t), a: R()*TAU, st: 0, vs: 0, vt: 0, vy: 0, T: 0, ph: R()*TAU, cs: 0, ct: 0 });
+    const [cb, ch, cw, ck] = C[k]; M_col(GULLS.m.body, i, cb); M_col(GULLS.m.head, i, ch); M_col(GULLS.m.wl, i, cw); M_col(GULLS.m.wr, i, cw); M_col(GULLS.m.beak, i, ck); } }
+const M_col = (m, i, hex) => m.setColorAt(i, new THREE.Color(hex));
 const _gm = new THREE.Matrix4(), _gq = new THREE.Quaternion(), _ge = new THREE.Euler(), _gv = new THREE.Vector3(), _g1 = new THREE.Vector3(1, 1, 1);
 function gullStep(o){ if (!GULLS.m) return; const dt = Math.min(.1, Math.max(0, time - GULLS.last)); GULLS.last = time; const [ps, pt] = landST(o.x, o.y); if (ps > 900 || Math.abs(pt) > 1200) return;
   const M = GULLS.m, put = (m, i, x, y, z, rx, ry, rz) => { _ge.set(rx, ry, rz, 'YXZ'); _gq.setFromEuler(_ge); _gm.compose(_gv.set(x, y, z), _gq, _g1); m.setMatrixAt(i, _gm); };
   GULLS.list.forEach((G, i) => {
-    if (G.st === 0){ const d = Math.hypot(G.s - ps, G.t - pt); if (o.onLand && d < 4.5 && Math.abs(G.y - (o.gh || 0)) < 3){ G.st = 1; G.T = 10 + (i % 5)*2; const k = 7/Math.max(d, .5); G.vs = (G.s - ps)*k; G.vt = (G.t - pt)*k; G.vy = 3.5; G.cs = G.s + (G.s - ps)*3; G.ct = G.t + (G.t - pt)*3; sfx(1400 + (i % 4)*120, .09, 'triangle', .015, 0, -500); } }   // startled: up and away
+    const pg = G.k === 'pigeon', sz = pg ? .62 : 1;
+    if (G.st === 0){ const d = Math.hypot(G.s - ps, G.t - pt); if (o.onLand && d < (pg ? 3.2 : 4.5) && Math.abs(G.y - (o.gh || 0)) < 3){ G.st = 1; G.T = pg ? 4 + (i % 4) : 10 + (i % 5)*2; const k = (pg ? 5 : 7)/Math.max(d, .5); G.vs = (G.s - ps)*k; G.vt = (G.t - pt)*k; G.vy = pg ? 4 : 3.5; G.cs = G.s + (G.s - ps)*(pg ? 1 : 3); G.ct = G.t + (G.t - pt)*(pg ? 1 : 3);
+      if (pg) sfx(300 + (i % 4)*40, .12, 'sawtooth', .012, 0, 200); else sfx(1400 + (i % 4)*120, .09, 'triangle', .015, 0, -500); } }   // startled: up and away (gulls squawk, pigeons clatter)
     else { G.T -= dt; G.ph += dt;
-      if (G.T > 0){ const ds = G.cs - G.s, dtt = G.ct - G.t, L = Math.hypot(ds, dtt) || 1; G.vs += (-dtt/L*6 + ds/L*1.5 - G.vs)*dt*.8; G.vt += (ds/L*6 + dtt/L*1.5 - G.vt)*dt*.8; G.vy += ((landH(G.s, G.t) + 7 + (i % 3)*2 - G.y)*.8 - G.vy)*dt; }   // circling over the beach
-      else { let ns = clamp(G.s + Math.sin(i + G.ph)*15, 40, 270), nt = G.t + Math.cos(i*1.7 + G.ph)*15; if (onPierDeck(ns, nt) || (nt > -12 && nt < 95 && ns < 262)) nt = nt > 40 ? 100 : -20;   // coming down on the sand
+      if (G.T > 0){ const ds = G.cs - G.s, dtt = G.ct - G.t, L = Math.hypot(ds, dtt) || 1, v = pg ? 4 : 6; G.vs += (-dtt/L*v + ds/L*1.5 - G.vs)*dt*.8; G.vt += (ds/L*v + dtt/L*1.5 - G.vt)*dt*.8; G.vy += ((landH(G.s, G.t) + (pg ? 4 + (i % 2) : 7 + (i % 3)*2) - G.y)*.8 - G.vy)*dt; }   // circling overhead
+      else { let ns, nt; if (pg){ ns = clamp(G.s + Math.sin(i + G.ph)*6, 647, 659); nt = clamp(G.t + Math.cos(i*1.7 + G.ph)*8, G.blk[0], G.blk[1]); }   // pigeons settle back down the middle of their block
+        else { ns = clamp(G.s + Math.sin(i + G.ph)*15, 40, 270); nt = G.t + Math.cos(i*1.7 + G.ph)*15; if (onPierDeck(ns, nt) || (nt > -12 && nt < 95 && ns < 262)) nt = nt > 40 ? 100 : -20; }   // gulls come down on the sand
         if (!G.land) G.land = [ns, nt]; const ds = G.land[0] - G.s, dtt = G.land[1] - G.t, L = Math.hypot(ds, dtt); G.vs += (ds/Math.max(L, 1)*5 - G.vs)*dt*1.5; G.vt += (dtt/Math.max(L, 1)*5 - G.vt)*dt*1.5;
         const gy = landH(G.s, G.t); G.vy += ((gy - G.y)*(L < 3 ? 2.5 : .3) - G.vy)*dt*2; if (L < .6 && G.y - gy < .15){ G.st = 0; G.y = gy; G.land = null; G.vs = G.vt = G.vy = 0; } }
       G.s += G.vs*dt; G.t += G.vt*dt; G.y += G.vy*dt; if (Math.hypot(G.vs, G.vt) > .3) G.a = Math.atan2(G.vt, G.vs); }
-    const [x, , z] = P3w(G.s, G.t, 0), fly = G.st === 1, fl = fly ? Math.sin(G.ph*13)*.75 : 0, h = fly ? 0 : .2, ry = -G.a;
-    put(M.body, i, x, G.y + h + .12, z, 0, ry, 0); put(M.head, i, x, G.y + h + .12, z, 0, ry, 0); put(M.beak, i, x, G.y + h + .12, z, 0, ry, 0);
-    put(M.wl, i, x, G.y + h + .16, z, fly ? fl : 1.45, ry, 0); put(M.wr, i, x, G.y + h + .16, z, fly ? Math.PI - fl : Math.PI - 1.45, ry, 0); });   // (standing: wings folded down at its sides)
-  for (const k in M) M[k].instanceMatrix.needsUpdate = true; }
+    const [x, , z] = P3w(G.s, G.t, 0), fly = G.st === 1, fl = fly ? Math.sin(G.ph*(pg ? 18 : 13))*.75 : 0, h = fly ? 0 : .2*sz, ry = -G.a; _g1.setScalar(sz);
+    put(M.body, i, x, G.y + h + .12*sz, z, 0, ry, 0); put(M.head, i, x, G.y + h + .12*sz, z, 0, ry, 0); put(M.beak, i, x, G.y + h + .12*sz, z, 0, ry, 0);
+    put(M.wl, i, x, G.y + h + .16*sz, z, fly ? fl : 1.45, ry, 0); put(M.wr, i, x, G.y + h + .16*sz, z, fly ? Math.PI - fl : Math.PI - 1.45, ry, 0); });   // (standing: wings folded down at its sides)
+  _g1.setScalar(1); for (const k in M) M[k].instanceMatrix.needsUpdate = true; }
 const P3w = (s, t, y) => { const [x, z] = landXY(s, t); return [x*U, y, z*U]; };
 /* Original Muscle Beach and the Chess Park, on the sand just south of the pier (OpenStreetMap: "Original Muscle Beach", "Old Muscle Beach"
    playground, "Chess Park" and its chess area, the swings). Muscle Beach began here in the 1930s: gymnasts, acrobats and weightlifters
@@ -8527,7 +8536,7 @@ function buildPromenade(g, P3, at, instanceOf){
     // the cross wires; gold dots by day, a glowing ceiling of light at night
     { const pos = [], lp = []; for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let k = 0; k < 11; k++){ const sv = 648.2 + k*.95;
         let prev = null; for (let t = t0 + 4; t <= t1 - 4; t += .7){ const ph = ((t - t0 - 4) % 36)/36, y = landH(PROM.s, t) + 8.6 - Math.sin(ph*Math.PI)*.9 - Math.abs(k - 5)*.06, q = P3(sv, t, y); pos.push(...q); if (prev) lp.push(...prev, ...q); prev = q; } }
-      const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); const pts = new THREE.Points(ge, new THREE.PointsMaterial({ color: 0xffcf6a, size: .16, sizeAttenuation: true })); pts.frustumCulled = false; g.add(pts);
+      const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); const dot = canvasTex(32, 32, x => { const gr = x.createRadialGradient(16, 16, 0, 16, 16, 15); gr.addColorStop(0, '#fff6d8'); gr.addColorStop(.45, '#ffd27a'); gr.addColorStop(1, 'rgba(255,200,100,0)'); x.fillStyle = gr; x.fillRect(0, 0, 32, 32); }, false), pts = new THREE.Points(ge, new THREE.PointsMaterial({ map: dot, size: .09, sizeAttenuation: true, transparent: true, depthWrite: false }));   // (round little bulbs, not squares) pts.frustumCulled = false; g.add(pts);
       const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3)); const ln = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x3a3a3a, transparent: true, opacity: .45 })); ln.frustumCulled = false; g.add(ln); }
     instanceOf(pole, pp); g.add(ban); mergeStatic(ban); }
   // the Wilshire end, from photos (July 2022, Sept 2017): no sign over the street, but a tall white pylon in the middle with THIRD STREET PROMENADE

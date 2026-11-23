@@ -8409,7 +8409,13 @@ function buildPromenade(g, P3, at, instanceOf){
     const pp = [], ban = new THREE.Group(), wireM = std(0x30363a, .6), BC = [0xf4f1ea, 0xe86a92, 0xf4f1ea, 0x2f8f9d, 0xf4f1ea, 0xf2c230];
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let t = t0 + 22; t < t1 - 10; t += 36){ pp.push([642.6, t, 1, 0], [663.4, t, 1, 0]);
       const y = landH(PROM.s, t) + 8.1, w = new THREE.Mesh(new THREE.BoxGeometry(.03, .03, 20.8), wireM); w.position.set(...P3(653, t, y)); w.rotation.y = Math.PI/2; ban.add(w);
-      for (let k = 0; k < 6; k++){ const bn = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 2.1), std(BC[(k + Math.round(t)) % BC.length], .9)); bn.material.side = THREE.DoubleSide; bn.position.set(...P3(645.5 + k*3, t, y - 1.15)); ban.add(bn); } }
+      }   // (the art banners that hung here are gone: since 2021 the wires carry the light canopy below)
+    // the light canopy (photos, 2022): strings of little warm lights run along the street high over the middle, block by block, sagging between
+    // the cross wires; gold dots by day, a glowing ceiling of light at night
+    { const pos = [], lp = []; for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let k = 0; k < 11; k++){ const sv = 648.2 + k*.95;
+        let prev = null; for (let t = t0 + 4; t <= t1 - 4; t += .7){ const ph = ((t - t0 - 4) % 36)/36, y = landH(PROM.s, t) + 8.6 - Math.sin(ph*Math.PI)*.9 - Math.abs(k - 5)*.06, q = P3(sv, t, y); pos.push(...q); if (prev) lp.push(...prev, ...q); prev = q; } }
+      const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); const pts = new THREE.Points(ge, new THREE.PointsMaterial({ color: 0xffcf6a, size: .16, sizeAttenuation: true })); pts.frustumCulled = false; g.add(pts);
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3)); const ln = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x3a3a3a, transparent: true, opacity: .45 })); ln.frustumCulled = false; g.add(ln); }
     instanceOf(pole, pp); g.add(ban); mergeStatic(ban); }
   // the Wilshire end, from photos (July 2022, Sept 2017): no sign over the street, but a tall white pylon in the middle with THIRD STREET PROMENADE
   // up the side facing the Promenade and WILSHIRE on the side facing the street, a blue directory kiosk at its foot; behind it a bed of

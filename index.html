@@ -270,7 +270,7 @@
   #sunoBar.mini #sunoFrame{height:0}#sunoBar.mini{width:200px}
   body.touch #sunoBar{left:50%;transform:translateX(-50%);bottom:auto;top:6px}
   .paintcols{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:8px 0}.paintcols button{width:30px;height:30px;border-radius:50%;border:2px solid rgba(0,0,0,.2);cursor:pointer}.paintcols button.on{outline:3px solid #082b45;outline-offset:2px}
-  .booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
+  .bq{display:block;width:100%;box-sizing:border-box;margin:10px 0 2px;padding:12px 14px;border-radius:14px;border:2px solid #cfe0ea;background:#fff;color:#1d3557;font:inherit;font-size:17px;font-weight:700}.bhead{margin:8px 2px 0;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.6}.bcities{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bcities .btn{padding:10px 12px;font-size:17px}.booths{display:grid;gap:8px;margin:10px 0}.booths .btn{width:100%;text-align:left}.booths .btn small{display:block;font-weight:700;opacity:.7}
   #zap{position:fixed;inset:0;z-index:9000;pointer-events:none;background:radial-gradient(circle,#fff 0,#fff 30%,#ffe082 60%,rgba(255,224,130,0) 100%);opacity:0;transition:opacity .35s}
   .panel.mappanel{max-width:940px;width:calc(100vw - 24px);padding:12px 14px}
   .maphead{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.maphead h2{margin:0}
@@ -645,10 +645,11 @@
     <div class="row2"><button id="paintS" class="btn secondary" type="button">Thin</button><button id="paintM" class="btn secondary" type="button">Medium</button><button id="paintL" class="btn secondary" type="button">Thick</button><button id="paintClear" class="btn secondary" type="button">Start over</button></div>
     <div class="row2"><button id="paintHang" class="btn primary" type="button">🖼️ Hang it in the museum</button><button id="paintClose" class="btn secondary" type="button">Close</button></div></div></div>
 <div id="boothPanel" class="overlay" hidden>
-  <div class="panel small"><p class="kicker">☎️ Phone booth</p><h2>Where do you want to go?</h2>
-    <p class="explain">Pick up the phone and dial another phone booth. Zap! You come out of that one.</p>
+  <div class="panel small"><p class="kicker">🌀 Teleport</p><h2>Where do you want to go?</h2>
+    <p class="explain">Pick a place. Zap! You come out of the teleport there.</p>
+    <input id="boothQ" class="bq" type="search" placeholder="🔎 Search: Kyoto, pier, Disneyland..." autocomplete="off" enterkeyhint="go">
     <div id="boothList" class="booths"></div>
-    <div class="row2"><button id="boothClose" class="btn secondary" type="button">Hang up</button></div></div>
+    <div class="row2"><button id="boothClose" class="btn secondary" type="button">Close</button></div></div>
 </div>
 <div id="storePanel" class="overlay" hidden>
   <div class="panel">
@@ -2686,7 +2687,7 @@ function mapPlaces(){ if (mapPlaces.L) return mapPlaces.L; const L = [], add = (
   add('Frost on 5th ice rink', '⛸️', (ICE.site[0] + ICE.site[1])/2, (ICE.site[2] + ICE.site[3])/2, 2); add('Dive Shop (on the beach)', '🤿', ...DIVE_SHOP, 2);
   add('Santa Monica Place (mall)', '🏬', 700, -105, 2); add('Palisades Park', '🌴', 385, -900, 2); add('California Incline', '🛣️', 360, -1250, 1); add('Santa Monica Beach', '🏖️', 120, -300, 2);
   for (const r of BIKE_RACKS) add(`🚲 Rent a bike: ${r.name}`, '🚲', r.s, r.t, 2);
-  if (typeof PHONE_BOOTHS !== 'undefined') for (const b of PHONE_BOOTHS) add(`☎️ Phone booth: ${b.name}`, '☎️', b.s, b.t, 2, 'teleport');
+  if (typeof PHONE_BOOTHS !== 'undefined') for (const b of PHONE_BOOTHS) add(`🌀 Teleport: ${b.name}`, '🌀', b.s, b.t, 2, 'teleport');
   for (const r of promRooms()){ if (!r.name || r.cat === 'vacant' || r.cat === 'soon' || /For Lease/.test(r.name)) continue; add(r.name, MAP_CAT_E[r.cat] || '🏬', r.fs + r.inw*Math.min(4, r.D/2), (r.t0 + r.t1)/2, 0); }
   for (const Lm of LANDMARKS) L.push({ name: Lm.name, e: '⭐', x: Lm.x, y: Lm.y, big: 1, sea: true });
   return mapPlaces.L = L; }
@@ -3814,7 +3815,7 @@ function updOcean(dt){
   const ashore = o.onLand && (onMainland(o.x, o.y) || onPierNow(o));
   const inSF = inSFu(o.x), farP = placeAtX(o.x*U); $('hudLbl').textContent = farP ? farP.name : inSF ? 'San Francisco' : ashore ? 'Santa Monica' : 'World'; $('hudVal').textContent = ashore ? landName(o.x, o.y) : ZONES[o.zone].name; $('hudVal').className = 'big name';
   $('hudProg').hidden = true;
-  $('hudSub').textContent = inSF ? 'Fisherman\'s Wharf · the phone booth zaps you home' : `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
+  $('hudSub').textContent = inSF ? 'Fisherman\'s Wharf · the teleport zaps you home' : `Places ${save.worlds.length}/7 · Map ${(save.mapPieces || []).length}/${MAP_N} · ${ZONES[o.zone].where}`;
 }
 
 /* minimap: zones you've found are colored in */
@@ -4972,7 +4973,7 @@ const CITY_LIST = [['sm', 'Santa Monica'], ['venice', 'Venice'], ['bergamot', 'B
 function trackCity(o){ if (!o || mode !== 'ocean' || paused || ((trackCity.t = (trackCity.t || 0) + 1) % 30)) return;   // (only while you're really playing, never on the title screen)
   let c = cityOf(o); if (c === 'sm' && o.onLand){ const [s, t] = landST(o.x, o.y); if (s > 2600) c = 'bergamot'; else if (t > 2100) c = 'venice'; }
   if (c === 'sm' && !o.onLand) return; const L = save.cities || (save.cities = []); if (!L.includes(c)){ L.push(c); persist(); } }
-function visitNext(){ const V = VISIT, here = ocean ? cityOf(ocean) : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in another city', 'Get there from a ☎️ phone booth'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
+function visitNext(){ const V = VISIT, here = ocean ? cityOf(ocean) : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in another city', 'Get there from a 🌀 teleport'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
 function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { const c = cityOf(o); if (V.city && V.city !== c) visitNext(); V.city = c; }   // (teleported to the other city: point to its stops)
   for (const M of V.marks){ M.grp.children[0].material.opacity = .25 + .15*Math.sin(time*3 + M.i);
     if (!M.seen && Math.hypot(M.g.x - o.x, M.g.y - o.y) < 12*METERS){ M.seen = true; [523, 659, 784].forEach((f, k) => sfx(f, .1, 'triangle', .04, k*.08)); const left = V.marks.filter(m => !m.seen).length;
@@ -6665,16 +6666,42 @@ const PHONE_BOOTHS = [
   (() => { const [x, y] = [(SF.X + 8)/U, (SF.Z - 6)/U], [s, t] = landST(x, y); return { id: 'sf', name: "San Francisco: Fisherman's Wharf", s, t, face: 0, more: 'at the crab wheel sign, Jefferson & Taylor', city: 'San Francisco' }; })() ];
 for (const P of PLACES) for (const pk of P.packs){ const [s, t] = landST((P.X + pk.booth[0])/U, (P.Z - pk.booth[1])/U); PHONE_BOOTHS.push({ id: P.id + '-' + pk.id, name: `${P.name}: ${pk.name}`, s, t, face: 0, more: pk.more, pack: pk }); }   // (a booth in each faraway place)
 const boothAt = o => { const [s, t] = landST(o.x, o.y); return PHONE_BOOTHS.find(b => !b.soon && Math.abs(s - b.s) < 1.1 && Math.abs(t - b.t) < 1.1 && Math.abs((o.gh ?? 0) - groundAt(...landXY(b.s, b.t))) < 1.5); };
-function openBooth(from){ const o = ocean; if (!o) return; paused = true; $('boothPanel').querySelector('.kicker').textContent = '☎️ Phone booth'; $('boothPanel').querySelector('h2').textContent = 'Where do you want to go?'; $('boothPanel').querySelector('.explain').textContent = 'Pick up the phone and dial another phone booth. Zap! You come out of that one.'; $('boothClose').textContent = 'Hang up'; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12)); const box = $('boothList'); box.innerHTML = '';
-  for (const b of PHONE_BOOTHS){ if (b === from) continue; const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + (b.soon ? 'secondary' : 'primary'); bt.disabled = !!b.soon;
-    bt.innerHTML = `${b.soon ? '🚧' : '☎️'} ${htmlText(b.name)}<small>${htmlText(b.more)}</small>`; bt.onclick = () => zapTo(b); box.appendChild(bt); }
+/* The booth menu: a search box, the 3 booths nearest you, then one button per city (tap one to see its booths). It stays short when there are thousands of booths. */
+const BOOTH_CITIES = { sm: ['🏖️', 'Santa Monica'], sf: ['🌉', 'San Francisco'], kyoto: ['⛩️', 'Kyoto'], getty: ['🏛️', 'The Getty'], disney: ['🎢', 'Disneyland'] };
+const boothCity = b => b.pack ? b.id.split('-')[0] : b.id === 'sf' ? 'sf' : 'sm';
+const boothShort = b => b.name.replace(/^[^:]+:\s*/, '');
+const bnorm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const BOOTH = { from: null, city: null };
+function openBooth(from){ const o = ocean; if (!o) return; paused = true; $('boothPanel').querySelector('.kicker').textContent = '🌀 Teleport'; $('boothPanel').querySelector('h2').textContent = 'Where do you want to go?'; $('boothPanel').querySelector('.explain').textContent = 'Pick a place. Zap! You come out of the teleport there.'; $('boothClose').textContent = 'Close'; initAudio(); [1209, 1336, 1477].forEach((f, i) => sfx(f, .09, 'sine', .04, i*.12));
+  BOOTH.from = from; BOOTH.city = null; const q = $('boothQ'); q.hidden = false; q.value = ''; boothRender();
   $('boothPanel').hidden = false; resetPick(); }
+function boothRender(){ const o = ocean, box = $('boothList'); box.innerHTML = ''; if (!o) return;
+  const here = cityOf(o), [s0, t0] = landST(o.x, o.y), d2 = b => (b.s - s0)**2 + (b.t - t0)**2;
+  const all = PHONE_BOOTHS.filter(b => b !== BOOTH.from && !b.soon), q = bnorm($('boothQ').value).trim();
+  const head = t => { const h = document.createElement('p'); h.className = 'bhead'; h.textContent = t; box.appendChild(h); };
+  const mk = (html, fn, cls = 'primary', into = box) => { const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn ' + cls; bt.innerHTML = html; bt.onclick = fn; into.appendChild(bt); return bt; };
+  const one = (b, short) => mk(`🌀 ${htmlText(short ? boothShort(b) : b.name)}<small>${htmlText(b.more)}</small>`, () => zapTo(b));
+  if (q){ const words = q.split(/\s+/), hits = all.filter(b => { const h = bnorm(`${b.name} ${b.more} ${BOOTH_CITIES[boothCity(b)][1]}`); return words.every(w => h.includes(w)); });
+    hits.sort((a, b) => (bnorm(a.name).startsWith(q) ? 0 : 1) - (bnorm(b.name).startsWith(q) ? 0 : 1) || d2(a) - d2(b));
+    if (!hits.length){ head('No teleport there yet'); return; }
+    for (const b of hits.slice(0, 8)) one(b); if (hits.length > 8) head(`${hits.length - 8} more: type a bit more`); return; }
+  if (BOOTH.city){ const c = BOOTH.city, list = all.filter(b => boothCity(b) === c); head(`${BOOTH_CITIES[c][0]} ${BOOTH_CITIES[c][1]}`);
+    for (const b of list.slice(0, 12)) one(b, true); if (list.length > 12) head(`${list.length - 12} more: search for them`);
+    mk('← All places', () => { BOOTH.city = null; boothRender(); resetPick(); }, 'secondary'); return; }
+  const near = all.filter(b => boothCity(b) === here).sort((a, b) => d2(a) - d2(b)).slice(0, 3);
+  if (near.length){ head('Near you'); for (const b of near) one(b); }
+  head(near.length ? 'Other places' : 'Places'); const grid = document.createElement('div'); grid.className = 'bcities'; box.appendChild(grid);
+  for (const [c, [em, nm]] of Object.entries(BOOTH_CITIES)){ const list = all.filter(b => boothCity(b) === c); if (!list.length || (c === here && list.length <= near.length)) continue;
+    const label = c === here ? `More in ${nm}` : nm, sub = list.length === 1 ? boothShort(list[0]) : `${list.length} teleports`;
+    mk(`${em} ${htmlText(label)}<small>${htmlText(sub)}</small>`, () => { if (list.length === 1) zapTo(list[0]); else { BOOTH.city = c; boothRender(); resetPick(); } }, 'secondary', grid); } }
+$('boothQ').addEventListener('input', () => { BOOTH.city = null; boothRender(); });
+$('boothQ').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const b = $('boothList').querySelector('.btn'); if (b) b.click(); } });
 function closeBooth(){ $('boothPanel').hidden = true; paused = false; graceAfterPause(); }
 $('boothClose').onclick = closeBooth;
 function zapTo(b){ const o = ocean; $('boothPanel').hidden = true; let z = $('zap'); if (!z){ z = document.createElement('div'); z.id = 'zap'; document.body.appendChild(z); }
   z.style.opacity = '1'; [523, 784, 1046, 1568].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.05)); sfx(200, .5, 'sawtooth', .03, 0, 1400);
   const go = () => setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
-    paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`☎️ ${b.name}`, b.more); }, 120); }, 380);
+    paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`🌀 ${b.name}`, b.more); }, 120); }, 380);
   if (b.pack) loadPack(b.pack).then(go); else if (b.id === 'sf' && !SF.walk) loadSF().then(go); else go(); }
 /* 3rd Street between Wilshire and California (the 1100 block), building by building from Google Street View (Jul 2025,
    the middle of the block Feb 2022) and listings. side 1 = the inland side (fronts face the ocean), -1 = the ocean side. */
@@ -7709,7 +7736,7 @@ function pierDo(o){ if (!onPierNow(o)) return null; const [s, t] = landST(o.x, o
   if (k === 'arcade') return { label, go: () => openArcadeMenu() };
   if (k === 'bikes') return o.bike ? null : { label: label + ' · 10 coins', go: () => bikeOn(o, 10, 'BLAZING SADDLES') };
   return { label, go: () => startRide2(o, k) }; }
-function openArcadeMenu(){ const o = ocean; if (!o || paused) return; paused = true; const box = $('boothList'); box.innerHTML = ''; $('boothPanel').querySelector('.kicker').textContent = '🕹️ Playland Arcade'; $('boothPanel').querySelector('h2').textContent = 'Pick a game (5 coins)'; $('boothPanel').querySelector('.explain').textContent = `You have ${save.coins || 0} coins.`;
+function openArcadeMenu(){ const o = ocean; if (!o || paused) return; paused = true; $('boothQ').hidden = true; const box = $('boothList'); box.innerHTML = ''; $('boothPanel').querySelector('.kicker').textContent = '🕹️ Playland Arcade'; $('boothPanel').querySelector('h2').textContent = 'Pick a game (5 coins)'; $('boothPanel').querySelector('.explain').textContent = `You have ${save.coins || 0} coins.`;
   for (const [id, G] of Object.entries(GAMES)){ const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.innerHTML = `${htmlText(G.name)}<small>${htmlText(G.help || '')}</small>`; b.onclick = () => { $('boothPanel').hidden = true; paused = false; openArcade(id); }; box.appendChild(b); }
   $('boothClose').textContent = 'Not now'; $('boothPanel').hidden = false; resetPick(); }
 // more Pacific Park rides from the survey: Sea Dragon, the Pacific Plunge drop tower, the bumper cars, Wave Jumper, Frog Hopper and two little spinning rides
@@ -7826,7 +7853,7 @@ function hangPaint(){ const small = document.createElement('canvas'); small.widt
   for (const [id, sz] of [['paintS', 4], ['paintM', 10], ['paintL', 24]]) $(id).onclick = () => { paintSize = sz; };
   $('paintClear').onclick = () => { paintCtx.fillStyle = '#fffdf7'; paintCtx.fillRect(0, 0, cv.width, cv.height); }; $('paintHang').onclick = hangPaint; $('paintClose').onclick = closePaint; }
 function showArt(sp){ const A = SMAM_ART[sp.art]; if (!A) return; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about}`); }
-function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPHONE', '#111111', '#ffffff', 512, 96, 60) });
+function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.MeshStandardMaterial({ color: 0xcfe8f5, roughness: .1, metalness: .1, transparent: true, opacity: .35, depthWrite: false }), signM = new THREE.MeshBasicMaterial({ map: labelTex('TELEPORT', '#111111', '#ffffff', 512, 96, 60) });
   for (const b of PHONE_BOOTHS){ if (b.soon || b.pack) continue; const gh = b.deck ? pierDeckH(b.s) : landH(b.s, b.t), bg = new THREE.Group(); bg.position.set(...P3(b.s, b.t, gh));
     { const [x1, y1] = landXY(b.s + 1, b.t), [x0, y0] = landXY(b.s, b.t); bg.rotation.y = -Math.atan2(y1 - y0, x1 - x0) + b.face*Math.PI/2; }
     const bx = (w, h, d, x, y, z, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); me.position.set(x, y, z); me.castShadow = m !== glass; bg.add(me); return me; };
@@ -7869,7 +7896,7 @@ function vrStep(o, dt){ const V = vrSwim; if (!V || !o) return; o.air = airMax()
   F.instanceMatrix.needsUpdate = true; }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
-  { const b = !o.workout && boothAt(o); if (b) return { label: '☎️ Use the phone booth', go: () => openBooth(b) }; }
+  { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   { const d = !o.workout && (kyotoAct(o) || disneyAct(o)); if (d) return d; }   // (Kyoto: shrines, fortunes, food, the stage... and the rides at Disneyland)
   if (BERG.signAt && !o.workout){ const [s, t] = landST(o.x, o.y); if (Math.hypot(s - BERG.signAt[0], t - BERG.signAt[1]) < 40) return { label: '🖼️ Look around the galleries', go: () => { const k = (bergArt = (bergArt + 1) % SMAM_ART.length), A = SMAM_ART[k]; sfx(660, .08, 'triangle', .04); banner(`🖼️ ${A.title}`, `${A.kind}. ${A.about} (Bergamot's galleries change their shows all the time; this one is made up for the game)`); } }; }
@@ -10710,7 +10737,7 @@ $('viewBtn').onclick = () => { initAudio(); nextView(); };
 document.querySelectorAll('[data-shark]').forEach(b => b.onclick = () => { save.sharkMode = b.dataset.shark; persist(); flushCloud(); renderPanel(); sfx(700, .08, 'triangle');
   if (ocean && save.sharkMode === 'friendly') for (const s of ocean.sharks) if (s.state !== 'patrol'){ s.state = 'retreat'; s.t = 0; } });
 $('resumeBtn').onclick = closePanel;
-$('goBtn').onclick = () => { closePanel(); openBooth(null); $('boothPanel').querySelector('.kicker').textContent = '🧭 Go somewhere'; $('boothPanel').querySelector('.explain').textContent = 'Pick a place and zap, you\'re there. (Phone booths do this too.)'; };
+$('goBtn').onclick = () => { closePanel(); openBooth(null); $('boothPanel').querySelector('.kicker').textContent = '🧭 Go somewhere'; $('boothPanel').querySelector('.explain').textContent = 'Pick a place and zap, you\'re there. (Teleports do this too.)'; };
 $('exitBtn').onclick = () => { persist(); flushCloud(); setMode('title'); titleNote(account ? 'Saved to your account.' : 'Saved on this device.'); };
 
 { const d = $('diveBtn'), on = v => { diveBtnHeld = v; d.classList.toggle('on', v); };

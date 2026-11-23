@@ -5702,7 +5702,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7175,6 +7175,29 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* Big Blue Bus, Santa Monica's own city buses (blue since 1928), on a downtown loop: up 4th St, along Santa Monica Blvd (the buses-only
+   crossing at the Promenade), down 2nd St and back along Broadway, stopping at the blue bus-stop signs. Two buses, for show (not rideable). */
+const BBB = { buses: [], route: null, stops: [], last: 0 };
+function buildBBB(g){ const r = BBB.route = laneRoute([[AVES.fourth, XST.broadway], [AVES.fourth, XST.smblvd], [AVES.second, XST.smblvd], [AVES.second, XST.broadway], [AVES.fourth, XST.broadway]], 2.8);
+  const at = d => { d = ((d % r.L) + r.L) % r.L; const sg = r.segs.find(q => d >= q.at && d <= q.at + q.l) || r.segs[r.segs.length - 1], f = (d - sg.at)/(sg.l || 1); return [lerp(sg.a[0], sg.b[0], f), lerp(sg.a[1], sg.b[1], f), Math.atan2(sg.b[1] - sg.a[1], sg.b[0] - sg.a[0])]; }; BBB.at = at;
+  const blue = std(0x1f5fbf, .45, .1), light = std(0x6fb3ff, .5), dark = std(0x182028, .25, .3), white = std(0xf4f6f8, .6);
+  const side = new THREE.MeshBasicMaterial({ transparent: true, map: canvasTex(1024, 96, x => { x.fillStyle = '#ffffff'; x.font = "bold 60px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('BIG BLUE BUS', 512, 52); }, false) });
+  const sign = new THREE.MeshBasicMaterial({ map: canvasTex(512, 64, x => { x.fillStyle = '#111'; x.fillRect(0, 0, 512, 64); x.fillStyle = '#ffb300'; x.font = "bold 40px monospace"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('1  DOWNTOWN SM', 256, 34); }, false) });
+  for (let k = 0; k < 2; k++){ const b = new THREE.Group(), add = (geo, m, x, y, z, rx = 0) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.rotation.x = rx; b.add(me); return me; };
+    add(new THREE.BoxGeometry(12, 2.6, 2.55), blue, 0, 1.75, 0); add(new THREE.BoxGeometry(12.02, 1.05, 2.57), dark, 0, 2.15, 0); add(new THREE.BoxGeometry(12.04, .35, 2.59), light, 0, 1.1, 0); add(new THREE.BoxGeometry(11.6, .2, 2.4), white, 0, 3.12, 0);   // body, window band, light stripe, white roof
+    add(new THREE.BoxGeometry(.06, 1.7, 2.3), dark, 6.01, 1.95, 0); for (const x of [-4, 4.2]) for (const z of [-1.28, 1.28]) add(new THREE.CylinderGeometry(.5, .5, .32, 14), dark, x, .5, z, Math.PI/2);
+    for (const z of [-1.29, 1.29]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, .55), side); sg.position.set(-.5, 1.3, z); sg.rotation.y = z < 0 ? Math.PI : 0; b.add(sg); }
+    const fs = new THREE.Mesh(new THREE.PlaneGeometry(2, .25), sign); fs.position.set(6.05, 2.85, 0); fs.rotation.y = Math.PI/2; b.add(fs);
+    g.add(b); BBB.buses.push({ m: b, d: k*r.L/2, v: 0, wait: 0, ang: null }); }
+  const near = (sv, t) => { let best = 0, bd = 1e9; for (let q = 0; q < 2000; q++){ const d = q/2000*r.L, [a, c] = at(d), e = Math.hypot(a - sv, c - t); if (e < bd){ bd = e; best = d; } } return best; };
+  for (const [sv, t] of [[AVES.fourth + 4, -300], [600, XST.smblvd - 4], [AVES.second - 4, -300]]){ const d = near(sv, t), [ps, pt, h] = at(d), nx = -Math.sin(h), ny = Math.cos(h), qs = ps + nx*3.4, qt = pt + ny*3.4;   // the stops: a blue sign on a pole at the curb
+    BBB.stops.push(d); const p = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x666666, .5)); pole.position.y = 1.5; p.add(pole);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(.8, .8), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: canvasTex(128, 128, x => { x.fillStyle = '#1f5fbf'; x.fillRect(0, 0, 128, 128); x.fillStyle = '#fff'; x.font = "bold 22px sans-serif"; x.textAlign = 'center'; x.fillText('BIG BLUE', 64, 46); x.fillText('BUS', 64, 72); x.font = "40px sans-serif"; x.fillText('🚌', 64, 114); }, false) })); sg.position.y = 2.75; p.add(sg);
+    const [x, y] = landXY(qs, qt); p.position.set(x*U, landH(qs, qt), y*U); g.add(p); } }
+function bbbStep(){ if (!BBB.route) return; const dt = Math.min(.1, Math.max(0, time - BBB.last)); BBB.last = time; const L = BBB.route.L;
+  BBB.buses.forEach((B, k) => { if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { const d0 = ((B.d % L) + L) % L; B.v = Math.min(8, B.v + dt*2); B.d += B.v*dt; const d1 = ((B.d % L) + L) % L;
+      for (const S of BBB.stops) if (S !== B.left && ((d0 < S && d1 >= S) || (d0 > d1 && (S > d0 || S <= d1)))){ B.d = S; B.wait = 9; B.left = S; break; } if (B.left != null && Math.abs(d1 - B.left) > 30) B.left = null; }
+    const [sv, t, h] = BBB.at(B.d), [x, y] = landXY(sv, t); B.m.position.set(x*U, landH(sv, t), y*U); const want = -h; B.ang = B.ang == null ? want : lerpAngle(B.ang, want, Math.min(1, dt*3)); B.m.rotation.y = B.ang; }); }
 /* Western gulls on the beach by the pier: they stand about on the sand facing the wind, and when you come running they take off, flap away,
    circle over the beach for a while and come down somewhere else nearby (like the real ones). And pigeons down the middle of the Promenade,
    which clatter up when you run through them and settle again a few meters on. Instanced: five meshes for all the birds. */
@@ -8786,7 +8809,7 @@ function updCoast(o){
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
     const dn = !!(r?.down && downIn(o)); if (dn !== !!updCoast.down){ updCoast.down = dn; if (dn) banner('Downstairs', "Kids' books, toys, games and records"); else if (r?.down) banner('Upstairs', 'Fiction, mysteries, sci-fi and New & Noteworthy'); } }   //   (and going downstairs)
   // the dinosaur fountains spout, and the people on the Promenade stroll
-  gullStep(o);
+  gullStep(o); bbbStep();
   for (const sp of dinoSpray){ const r = sp.userData.rot; sp.children.forEach((d, k) => { const f = (time*.55 + k/14) % 1, a = 2.6 + f*3; d.position.set(Math.cos(r)*a, 2.3 + Math.sin(f*Math.PI)*.8 - f*1.8, -Math.sin(r)*a); }); }   // (an arc from the mouth into the pool)
   if (coastPeople && Math.abs(pt - (PROM.t0 + PROM.t1)/2) < 700 && ps > 300){ const { people, mb, mh, ml } = coastPeople;
     partyStep(dt, o); kidStep(dt, o); iceStep(dt, o); attnStep(dt, o); visitStep(dt, o); foodStep(dt, o); ballStep(dt, o); fishStep(dt, o);

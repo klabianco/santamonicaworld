@@ -5702,7 +5702,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7204,6 +7204,14 @@ function buildBeachBits(g, P3){ const grp = new THREE.Group(), steel = std(0x9aa
     { const sl = new THREE.Mesh(new THREE.BoxGeometry(.7, .06, 3.2), yel), y = landH(s, t); sl.position.set(...P3(s, t + 2.9, y + .75)); sl.rotation.x = -.45; grp.add(sl); }
     for (const d of [-1.6, 1.6]) bx(s + 2.4, t + d, -.05, .05, -.05, .05, 0, 2.3, blue); bx(s + 2.4, t, -.05, .05, -1.6, 1.6, 2.25, 2.35, blue); for (const d of [-.6, .6]) bx(s + 2.4, t + d, -.15, .15, -.25, .25, .5, .55, std(0x222222, .6)); }
   g.add(grp); mergeStatic(grp); }
+/* Ocean Avenue's bike lanes: bright green paint just inside each curb, with a white line on the traffic side (they show in the photos of
+   1299 Ocean and of the Georgian), from Colorado to California. */
+function buildOceanBikeLanes(g, P3){ const oc = t => { const E = CITY.E, f = clamp((t - E.t0)/E.dt, 0, E.nt - 1.001), j = Math.floor(f); return lerp(OCEAN_C[j], OCEAN_C[j + 1], f - j); };
+  const road = CITY.roads.find(r => r.name === 'Ocean Avenue'), half = ROAD_W[road ? road.c : 2]/2, pos = [], wpos = [];
+  const strip = (arr, d0, d1, t0, t1) => { for (let t = t0; t < t1; t += 4){ const tb = Math.min(t1, t + 4), q = [[oc(t) + d0, t], [oc(t) + d1, t], [oc(tb) + d1, tb], [oc(tb) + d0, tb]].map(([sv, tv]) => P3(sv, tv, landH(sv, tv) + .045)); arr.push(...q[0], ...q[1], ...q[2], ...q[0], ...q[2], ...q[3]); } };
+  for (const side of [-1, 1]){ const d0 = side*(half - 2.1), d1 = side*(half - .3); for (const [t0, t1] of [[XST.california + 10, XST.wilshire - 10], [XST.wilshire + 10, XST.arizona - 10], [XST.arizona + 10, XST.smblvd - 10], [XST.smblvd + 10, XST.broadway - 10], [XST.broadway + 10, XST.colorado - 10]]){ strip(pos, Math.min(d0, d1), Math.max(d0, d1), t0, t1); strip(wpos, side*(half - 2.25), side*(half - 2.1), t0, t1); } }
+  for (const [arr, hex] of [[pos, 0x3fae5a], [wpos, 0xf4f4f0]]){ const ge = new THREE.BufferGeometry(); ge.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); ge.computeVertexNormals();
+    const me = new THREE.Mesh(ge, new THREE.MeshStandardMaterial({ color: hex, roughness: .8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 })); me.receiveShadow = true; g.add(me); } }
 function buildVball(g, P3){ const grp = new THREE.Group(), line = std(0x2f6fb3, .6), pole = std(0xdcdcdc, .4, .5), net = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: .8, transparent: true, opacity: .55, side: THREE.DoubleSide }), band = std(0xf4f4f0, .6);
   const court = (s, t) => { const y = landH(s, t), bx = (a0, a1, c0, c1, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, y + (y0 + y1)/2)); grp.add(me); };
     for (const d of [-4, 4]) bx(s + d - .03, s + d + .03, t - 8, t + 8, .01, .03, line); for (const d of [-8, 8]) bx(s - 4, s + 4, t + d - .03, t + d + .03, .01, .03, line);   // the boundary lines

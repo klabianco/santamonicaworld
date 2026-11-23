@@ -5465,7 +5465,7 @@ function buildCoast(){
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
     if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
-    { const H = OCEAN_HOTELS.find(H => Math.abs(s0 - H.box[0]) < 1.5 && Math.abs(t0 - H.box[1]) < 1.5); if (H){ extrude(H.round ? roundCorner(b.p, H.round) : b.p, b.base, b.top, H.c, H.c, true); continue; } }   // (the Georgian and the Shangri-La: see buildOceanHotels)
+    { const H = OCEAN_HOTELS.find(H => Math.abs(s0 - H.box[0]) < 1.5 && Math.abs(t0 - H.box[1]) < 1.5); if (H){ extrude(H.round ? roundCorner(b.p, H.round) : b.p, b.base, H.ht ? b.base + H.ht : b.top, H.c, H.c, true); continue; } }   // (the Georgian and the Shangri-La: see buildOceanHotels)
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7031,7 +7031,8 @@ const nearMichaels = o => { const [s, t] = landST(o.x, o.y); return s > 660.5 &&
    Hotel Shangri-La (1939, 1301 Ocean at Arizona): white streamline moderne, its round corner at Arizona, rows of windows with speed lines
    between, a tall strip of dark glass by the corner over the entrance, the black SHANGRI-LA marquee, and the top floor set back behind rails. */
 const OCEAN_HOTELS = [{ name: 'georgian', box: [424.6, -352.0, 455.6, -333.6], c: 0x5ebcc5 }, { name: 'shangrila', box: [422.0, -609.6, 467.2, -564.8], c: 0xf3f3ef, round: [422.0, -609.6, 6] },
-  { name: 'pacific', box: [420.6, -320.2, 458.4, -273.8], c: 0xf4f4f0 }, { name: 'oceanview', box: [420.8, -265.4, 467.0, -233.4], c: 0xe8d8b8 }];   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
+  { name: 'pacific', box: [420.6, -320.2, 458.4, -273.8], c: 0xf4f4f0 }, { name: 'oceanview', box: [420.8, -265.4, 467.0, -233.4], c: 0xe8d8b8 },
+  { name: 'clocktower', box: [594.0, -457.8, 610.4, -426.8], c: 0xefeadf, ht: 32 }];   // (the Clock Tower Building on Santa Monica Blvd: see buildClockTower)   // (Pacific Plaza, 1431 Ocean, 1963, 15 stories: white, a stack of balconies at its north end, a blue crown; the Ocean View Hotel, 1447 Ocean: cream with balconies, a green awning)
 function buildOceanHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const txt = (text, w, h, fg, font, bg) => new THREE.MeshBasicMaterial({ transparent: !bg, map: canvasTex(1024, Math.round(1024*h/w), x => { const H = Math.round(1024*h/w); if (bg){ x.fillStyle = bg; x.fillRect(0, 0, 1024, H); } x.font = font; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = fg; x.fillText(text, 512, H/2 + 4); }, false) });
@@ -7071,6 +7072,30 @@ function buildOceanHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (
   { const [s0, t0, s1, t1] = H('oceanview').box, base = landH(s0 - 1, (t0 + t1)/2), CR = 0xd9c49c, GL = 0x34495a, fs = 423.2;   // the Ocean View Hotel: balconies across the front, a green awning at the door
     for (let y = 4.4; y < 15; y += 3.1) for (let t = t0 + 4.5; t < t1 - 3; t += 4.3){ bx(fs - .1, fs + .3, t, t + 2.6, y, y + 2.1, GL, base); bx(fs - 1.3, fs, t - .4, t + 3, y - .2, y, CR, base); bx(fs - 1.32, fs - 1.26, t - .4, t + 3, y, y + 1, 0xf2f2ee, base); }
     bx(fs - 2.4, fs, t0 + 13, t0 + 19, 3, 3.3, 0x1f5a3a, base); const sg = new THREE.Mesh(new THREE.PlaneGeometry(5.8, .7), txt('Ocean View Hotel', 5.8, .7, '#f3efe2', "italic bold 80px Georgia, serif", '#1f5a3a')); sg.position.set(...P3(fs - 2.42, t0 + 16, base + 2.75)); sg.rotation.y = FACE; grp.add(sg); }
+  g.add(grp); mergeStatic(grp); }
+/* The Clock Tower Building (1929-31, Santa Monica Blvd between 2nd and 3rd, OSM 44 m), from photos (Wikimedia Commons, 2011 and Sept 2022):
+   white Art Deco, fluted piers running the full height between strips of windows with dark spandrels, black granite at the street, the
+   top stepping in to a slim tower with a clock on each side; and The Misfit's tall maroon blade sign in red and gold neon, with its
+   black awnings, at the foot. */
+function buildClockTower(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const H = OCEAN_HOTELS.find(h => h.name === 'clocktower'), [s0, t0, s1, t1] = H.box, b = CITY.bldgs.find(b => Math.abs(b.box[0] - s0) < 1.5 && Math.abs(b.box[1] - t0) < 1.5); if (!b) return;
+  const base = b.base, W = 0xf1ece0, D = 0x8e8c84, GR = 0x161718, top = b.top - b.base, sc = (s0 + s1)/2, f1 = t1;   // (the front faces Santa Monica Blvd, toward bigger t)
+  const bx = (a0, a1, c0, c1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m || mat(hex)); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  bx(s0 + .5, s1 - .3, f1, f1 + .12, 0, 4.2, GR, mat(GR, .25, .3)); bx(s1 - .3, s1 + .12, t0 + 1, f1, 0, 4.2, GR, mat(GR, .25, .3));   // black granite at the street
+  for (let s = s0 + 1.2; s < s1 - 1; s += 2.55){ bx(s - .45, s + .45, f1, f1 + .4, 4.2, H.ht + .6, W); for (const d of [-.25, 0, .25]) bx(s + d - .06, s + d + .06, f1 + .4, f1 + .46, 4.6, H.ht + .2, 0xe4ded0); }   // fluted piers up the front
+  for (let s = s0 + 1.65; s < s1 - 1.6; s += 2.55) for (let y = 5; y < H.ht - 1; y += 3.3){ bx(s, s + 1.65, f1, f1 + .1, y - .5, y + 2.8, 0xe9e3d5); bx(s + .3, s + 1.35, f1 + .08, f1 + .14, y, y + 1.9, 0x2b3640, mat(0x2b3640, .25, .4)); bx(s + .3, s + 1.35, f1 + .08, f1 + .13, y + 2, y + 2.5, D); }   // windows with dark spandrels between the piers
+  for (let t = t0 + 1.5; t < f1 - 1; t += 2.8){ bx(s1, s1 + .35, t - .4, t + .4, 4.2, H.ht + .6, W); bx(s1 - .05, s1 + .1, t + .5, t + 2.2, 5, H.ht - 1, 0x2b3640, mat(0x2b3640, .25, .4)); }   // the side toward 3rd St
+  const T = [[s0 + 1.5, s1 - 1.5, t0 + 9, f1 - 3, H.ht, H.ht + 4.5], [sc - 4, sc + 4, f1 - 13, f1 - 5, H.ht + 4.5, top - 6], [sc - 3.2, sc + 3.2, f1 - 12.2, f1 - 5.8, top - 6, top - 1.5], [sc - 1.8, sc + 1.8, f1 - 10.8, f1 - 7.2, top - 1.5, top + .6]];   // the top steps in to the slim clock tower
+  for (const [a0, a1, c0, c1, y0, y1] of T){ bx(a0, a1, c0, c1, y0, y1, W); for (const a of [a0, a1]) for (const c of [c0, c1]) bx(a - .3, a + .3, c - .3, c + .3, y0, y1 + .5, 0xf6f2e8); }
+  { const p = new THREE.Mesh(new THREE.ConeGeometry(.5, 3, 4), mat(W)); p.position.set(...P3(sc, f1 - 9, base + top + 2.1)); p.rotation.y = Math.PI/4; grp.add(p); }
+  const clock = canvasTex(256, 256, x => { x.fillStyle = '#f4f0e4'; x.fillRect(0, 0, 256, 256); x.fillStyle = '#121212'; x.beginPath(); x.arc(128, 128, 112, 0, TAU); x.fill(); x.fillStyle = '#f4f0e4'; for (let k = 0; k < 12; k++){ const a = k/12*TAU; x.fillRect(128 + Math.sin(a)*92 - 5, 128 - Math.cos(a)*92 - 9, 10, 18); }
+    x.strokeStyle = '#f4f0e4'; x.lineCap = 'round'; x.lineWidth = 10; x.beginPath(); x.moveTo(128, 128); x.lineTo(128 + 50, 128 - 30); x.stroke(); x.lineWidth = 7; x.beginPath(); x.moveTo(128, 128); x.lineTo(128 - 10, 128 - 85); x.stroke(); }, false);
+  { const [a0, a1, c0, c1, y0, y1] = T[1], yc = y1 - 3, cm = new THREE.MeshBasicMaterial({ map: clock }), cs = (a0 + a1)/2, ct = (c0 + c1)/2;   // a clock on each side
+    for (const [s, t, ry] of [[cs, c1 + .03, 0], [cs, c0 - .03, Math.PI], [a1 + .03, ct, Math.PI/2], [a0 - .03, ct, -Math.PI/2]]){ const c = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), cm); c.position.set(...P3(s, t, base + yc)); c.rotation.y = ry; grp.add(c); } }
+  // The Misfit: the maroon blade sign at the corner, and black awnings along the street
+  { const bl = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 6.6), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: canvasTex(128, 768, x => { x.fillStyle = '#6e1f2a'; x.fillRect(0, 0, 128, 768); x.textAlign = 'center'; x.fillStyle = '#ffd36b'; x.font = 'italic bold 44px Georgia, serif'; x.fillText('The', 64, 70); x.font = 'bold 70px Georgia, serif'; [...'MISFIT'].forEach((ch, i) => x.fillText(ch, 64, 160 + i*78)); x.fillStyle = '#ff3a3a'; x.font = 'bold 26px sans-serif'; x.fillText('GOOD FOOD', 64, 670); x.fillText('FULLY', 64, 702); x.fillText('LICENSED', 64, 734); }, false) }));
+    bl.position.set(...P3(s1 - .6, f1 + 1.1, base + 7.6)); bl.rotation.y = Math.PI/2; grp.add(bl); bx(s1 - .65, s1 - .55, f1, f1 + .6, 7, 7.1, 0x333333); }
+  for (const [a, c] of [[s0 + 1, s0 + 6], [s0 + 7.5, s0 + 12.5]]){ const aw = new THREE.Mesh(new THREE.BoxGeometry(c - a, .08, 1.4), mat(0x151515, .7)); aw.position.set(...P3((a + c)/2, f1 + .75, base + 3.6)); aw.rotation.x = -.35; grp.add(aw); }
   g.add(grp); mergeStatic(grp); }
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right

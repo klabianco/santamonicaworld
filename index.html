@@ -764,12 +764,13 @@
 <div id="panel" class="overlay" hidden>
   <div class="panel">
     <div class="row2">
-      <button id="resumeBtn" class="btn primary" type="button">Keep swimming</button>
-      <button id="shopBtn" class="btn primary" type="button">Dive Shop</button>
+      <button id="resumeBtn" class="btn primary" type="button">Keep exploring</button>
+      <button id="goBtn" class="btn primary" type="button">🧭 Go somewhere</button>
       <button id="homeBtn" class="btn primary" type="button" hidden>Go to my island</button>
       <button id="promBtn" class="btn primary" type="button" hidden>Back to the Promenade</button>
       <button id="aptWayBtn" class="btn primary" type="button" hidden>Show me the way home</button>
       <button id="aptBtn" class="btn secondary" type="button" hidden>Go home</button>
+      <button id="shopBtn" class="btn secondary" type="button">🤿 Swim gear shop</button>
       <button id="tripBtn" class="btn secondary" type="button">📋 Copy trip report</button>
       <button id="exitBtn" class="btn secondary" type="button">Exit to title</button>
       <button id="moveBtn" class="btn secondary" type="button">Play on another device</button>
@@ -777,15 +778,18 @@
       <button id="shareBtn" class="btn secondary" type="button" hidden>Share a clone code</button>
       <button id="logoutBtn" class="btn secondary" type="button" hidden>Log out</button>
     </div>
+    <h2>You</h2>
+    <div class="stats" id="stats"></div>
+    <h2>Places you've been</h2>
+    <div class="worlds" id="cityChips"></div>
+    <h2>In the ocean</h2>
     <div class="sharkset"><span>Sharks</span>
       <button class="btn seg" type="button" data-shark="friendly">Friendly<small>Never bite</small></button>
       <button class="btn seg" type="button" data-shark="gentle">Gentle<small>A bite costs coins</small></button>
       <button class="btn seg" type="button" data-shark="dangerous">Dangerous<small>A bite ends the swim</small></button>
     </div>
-    <h2>Your swimmer</h2>
-    <div class="stats" id="stats"></div>
     <div class="worlds" id="worldChips"></div>
-    <h2>Choose who swims</h2>
+    <h2>Be someone else</h2>
     <div class="chars" id="chars"></div>
     <p class="savechip" id="saveInfo"></p>
   </div>
@@ -4875,6 +4879,10 @@ function visitArrive(){ const V = VISIT, o = ocean; if (!V || V.done || !o) retu
   Promise.all([needSF && !SF.walk ? loadSF() : null, ...packs.map(loadPack)]).then(go); }
 // (the gold arrow only points to stops in the city you're in)
 const cityOf = o => placeAtX(o.x*U)?.id || (inSFu(o.x) ? 'sf' : 'sm');
+// the places you've been, for the Menu
+const CITY_LIST = [['sm', 'Santa Monica'], ['venice', 'Venice'], ['bergamot', 'Bergamot Station'], ['sf', 'San Francisco'], ['kyoto', 'Kyoto'], ['getty', 'The Getty']];
+function trackCity(o){ if (!o || ((trackCity.t = (trackCity.t || 0) + 1) % 30)) return; let c = cityOf(o); if (c === 'sm' && o.onLand){ const [s, t] = landST(o.x, o.y); if (s > 2600) c = 'bergamot'; else if (t > 2100) c = 'venice'; }
+  if (c === 'sm' && !o.onLand) return; const L = save.cities || (save.cities = []); if (!L.includes(c)){ L.push(c); persist(); } }
 function visitNext(){ const V = VISIT, here = ocean ? cityOf(ocean) : 'sm', M = V?.marks.find(m => !m.seen && m.g.city === here); if (!M){ if (V?.marks.length) mapGuide = null; if (V?.marks.some(m => !m.seen)) banner('More stops in another city', 'Get there from a ☎️ phone booth'); return; }    mapGuide = { x: M.g.x, y: M.g.y, name: `${M.i + 1}. ${M.title}` }; }
 function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { const c = cityOf(o); if (V.city && V.city !== c) visitNext(); V.city = c; }   // (teleported to the other city: point to its stops)
   for (const M of V.marks){ M.grp.children[0].material.opacity = .25 + .15*Math.sin(time*3 + M.i);
@@ -8083,7 +8091,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); elineStep(dt); vrStep(o, dt);   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); elineStep(dt); vrStep(o, dt); trackCity(o);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
@@ -9895,8 +9903,8 @@ function renderPanel(){
   document.querySelectorAll('[data-shark]').forEach(b => b.classList.toggle('on', b.dataset.shark === sharkMode()));
   const stat = (lbl, v, extra='') => `<div class="stat"><div class="lbl">${lbl}</div><div class="v">${v}</div>${extra}</div>`;
   $('stats').innerHTML =
-    stat('Rank', RANKS[rankOf()].n, xpBarHtml()) + stat('XP', xpNow().toLocaleString()) + stat('Top speed', speedMul().toFixed(2) + '×') + stat('Meters swum', Math.round(save.dist).toLocaleString()) +
-    stat('Best race', save.bestTime ? save.bestTime.toFixed(2) + ' s' : '—') + stat('Map pieces', `${(save.mapPieces || []).length} of ${MAP_N}`) + stat('Pearls', save.pearls);
+    stat('Rank', RANKS[rankOf()].n, xpBarHtml()) + stat('XP', xpNow().toLocaleString()) + stat('Coins', (save.coins || 0).toLocaleString()) + stat('Places', `${(save.cities || []).length} of ${CITY_LIST.length}`) + stat('Meters swum', Math.round(save.dist).toLocaleString()) + stat('Pearls', save.pearls);
+  $('cityChips').innerHTML = CITY_LIST.map(([k, n]) => (save.cities || []).includes(k) ? `<span class="wchip on" style="background:#2f8f6f">✓ ${n}</span>` : `<span class="wchip">${n}</span>`).join('');
   $('worldChips').innerHTML = true
     ? ZONES.map((z,i) => save.worlds.includes(i)
       ? `<span class="wchip on" style="background:rgb(${z.water.join(',')})">${z.name}</span>` : `<span class="wchip">??? world</span>`).join('')
@@ -9929,6 +9937,7 @@ $('viewBtn').onclick = () => { initAudio(); nextView(); };
 document.querySelectorAll('[data-shark]').forEach(b => b.onclick = () => { save.sharkMode = b.dataset.shark; persist(); flushCloud(); renderPanel(); sfx(700, .08, 'triangle');
   if (ocean && save.sharkMode === 'friendly') for (const s of ocean.sharks) if (s.state !== 'patrol'){ s.state = 'retreat'; s.t = 0; } });
 $('resumeBtn').onclick = closePanel;
+$('goBtn').onclick = () => { closePanel(); openBooth(null); $('boothPanel').querySelector('.kicker').textContent = '🧭 Go somewhere'; $('boothPanel').querySelector('.explain').textContent = 'Pick a place and zap, you\'re there. (Phone booths do this too.)'; };
 $('exitBtn').onclick = () => { persist(); flushCloud(); setMode('title'); titleNote(account ? 'Saved to your account.' : 'Saved on this device.'); };
 
 { const d = $('diveBtn'), on = v => { diveBtnHeld = v; d.classList.toggle('on', v); };

@@ -2824,7 +2824,7 @@ const predName = s => PRED[s.k || 'white'].name;
 // so a hard swerve at the last moment makes them overshoot and swing wide to come back.
 const SHARK_SPD = { patrol:70, chase:150, lunge:260, recover:60, retreat:130 };
 // the Sharks setting in the Menu: friendly sharks just cruise by, gentle ones are fewer and slower and a bite only costs coins
-const sharkMode = () => save.sharkMode || 'gentle';
+const sharkMode = () => vrSwim ? 'friendly' : save.sharkMode || 'gentle';   // (in VR the sharks are friendly)
 const SHARK_GENTLE = { chase:.75, lunge:.78 };
 const SHARK_TURN = { patrol:1.2, chase:.85, lunge:.1, recover:1.3, retreat:1.2 };
 function steerTo(s, tx, ty, dt){
@@ -3742,7 +3742,7 @@ function updOcean(dt){
   if (rb.hidden === showRide) rb.hidden = !showRide;
   if (showRide){ const t = o.bison ? 'Get off the bison' : bis ? 'Ride the bison' : o.onShip || o.onBoat ? 'Jump into the sea' : ladder ? 'Climb aboard' : boat ? 'Climb into the boat' : o.ride ? 'Let go' : 'Ride the dolphin'; if (rb.firstChild.textContent !== t) rb.firstChild.textContent = t; }
 
-  const z = o.onLand && (onMainland(o.x, o.y) || onPierNow(o)) ? o.zone : zoneAt(o.x,o.y);   // (on land you're still in the last place you swam)
+  const z = vrSwim ? o.zone : o.onLand && (onMainland(o.x, o.y) || onPierNow(o)) ? o.zone : zoneAt(o.x,o.y);   // (in VR you haven't really gone anywhere)   // (on land you're still in the last place you swam)
   if (z !== o.zone){ o.zone = z;
     const Z = ZONES[z], fact = Z.facts[(save.worlds.length + (time|0)) % Z.facts.length];
     if (!save.worlds.includes(z)){ save.worlds.push(z); persist(); flushCloud(); buildMinimap();
@@ -6871,6 +6871,36 @@ function buildBooths(g, P3){ const red = std(0xc62828, .45), glass = new THREE.M
     for (const y of [.75, 1.45]) for (const sd of [[0, -.5, .9, .04], [-.5, 0, .04, .9], [.5, 0, .04, .9]]) bx(sd[2], .05, sd[3], sd[0], y, sd[1], red);   // the window bars
     bx(.26, .4, .1, 0, 1.35, -.44, std(0x263238, .4, .4)); bx(.06, .2, .06, .09, 1.42, -.37, std(0x111111, .5));   // the phone, and its handset
     g.add(bg); } }
+/* The Cube VR: put the headset on and you're out in the deep blue off the pier, swimming with a humpback mom and her calf,
+   dolphins, sea turtles, a bat ray and a school of fish, for 90 seconds. Then the headset comes off and you're back in the shop.
+   (It's "virtual": the sharks are friendly and you never run out of air.) */
+let vrSwim = null;
+function startVR(o){ if (!o || vrSwim) return; initAudio(); const C = landXY(-220, -1250);   // (open water off Palisades Park, away from the wreck)
+  vrSwim = { back: { x: o.x, y: o.y, gh: o.gh, ang: o.ang }, until: time + 90, cx: C[0], cy: C[1], g: new THREE.Group(), crit: [] };
+  o.workout = null; o.x = C[0]; o.y = C[1]; o.vx = o.vy = 0; o.onLand = false; o.depth = 1.2; o.vd = 0; o.air = airMax(); walkRef = 1e9;
+  const add = (m, kind, r, depth, sp, ph, sc = 1) => { m.scale.multiplyScalar(sc); vrSwim.g.add(m); vrSwim.crit.push({ m, kind, r, depth, sp, ph }); };
+  add(buildWhale(), 'whale', 16, 4, .07, 0); add(buildWhale(), 'whale', 12.5, 3, .07, .06, .35);   // (mom and calf, side by side, coming up to breathe)
+  for (let i = 0; i < 3; i++) add(buildDolphin(), 'dolphin', 6.5 + i*1.4, .8, .32 + i*.05, i*.33);
+  for (let i = 0; i < 2; i++) add(buildTurtle(), 'turtle', 3.6 + i*1.5, 1.4, .16, i*.5);
+  add(buildManta(), 'manta', 9, 3, .12, .7);
+  { const n = 90, geo = new THREE.ConeGeometry(.12, .5, 6); geo.rotateZ(-Math.PI/2); const fish = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ roughness: .4, metalness: .3 }), n), col = new THREE.Color();
+    for (let i = 0; i < n; i++) fish.setColorAt(i, col.setHSL([.13, .55, .58, .08][i % 4], .85, .55)); vrSwim.fish = fish; vrSwim.g.add(fish); }
+  oceanWorld.add(vrSwim.g); document.body.classList.add('vrOn'); vrHud(true);
+  [392, 523, 659, 784, 1046].forEach((f, i) => sfx(f, .25, 'sine', .04, i*.12)); banner('🥽 You\'re in VR!', 'Swim with the whales. Hold Dive to go under and look around'); }
+function endVR(){ const V = vrSwim, o = ocean; if (!V) return; vrSwim = null; oceanWorld.remove(V.g); document.body.classList.remove('vrOn'); vrHud(false);
+  if (o){ o.x = V.back.x; o.y = V.back.y; o.vx = o.vy = 0; o.onLand = true; o.depth = 0; o.ang = V.back.ang; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3; }
+  sfx(523, .2, 'sine', .04); banner('🥽 Headset off', 'Back in The Cube VR on the Promenade. Real gray whales swim past Santa Monica Bay every winter and spring, and whale-watching boats go out to see them'); }
+function vrHud(on){ let h = $('vrHud'); if (!h){ h = document.createElement('div'); h.id = 'vrHud'; h.innerHTML = '<span id="vrTime"></span><button type="button" id="vrOff">Take off headset</button>'; document.body.appendChild(h); $('vrOff').onclick = endVR;
+    const st = document.createElement('style'); st.textContent = '#vrHud{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:40;display:flex;gap:10px;align-items:center;background:rgba(40,16,80,.82);color:#fff;font:800 15px var(--body,system-ui);padding:8px 10px 8px 16px;border-radius:999px}#vrHud button{font:inherit;border:0;border-radius:999px;padding:6px 12px;background:#fff;color:#2a1050;cursor:pointer}body.vrOn::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:30;box-shadow:inset 0 0 120px 40px rgba(60,20,120,.55);border-radius:28px}'; document.head.appendChild(st); }
+  h.hidden = !on; }
+function vrStep(o, dt){ const V = vrSwim; if (!V || !o) return; o.air = airMax(); const left = V.until - time; $('vrTime').textContent = `🥽 VR · ${Math.max(0, Math.ceil(left))} s`; if (left <= 0) return endVR();
+  const px = o.x*U, pz = o.y*U;   // (they all swim round you, wherever you go)
+  for (const c of V.crit){ const big = c.kind === 'whale' || c.kind === 'manta', a = time*c.sp + c.ph*TAU, ox = px, oz = pz, x = ox + Math.cos(a)*c.r, z = oz + Math.sin(a)*c.r;
+    let y = -c.depth; if (c.kind === 'dolphin') y = -c.depth + Math.sin(time*1.7 + c.ph*6)*1.8; if (big && c.kind === 'whale') y = -c.depth + Math.max(0, Math.sin(time*.25 + c.ph))*(c.depth - .3);   // (dolphins leap; the whales come up to breathe now and then)
+    c.m.position.set(x, Math.min(y, waveH(x, z, OC.amp, 1) - .2), z); c.m.rotation.y = -(a + Math.PI/2); poseModel(c.m, null, time*(c.kind === 'whale' ? 1.1 : 2.2) + c.ph); }
+  const F = V.fish, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), s1 = new THREE.Vector3(1, 1, 1);
+  for (let i = 0; i < F.count; i++){ const a = time*.6 + i*.37, r = 4 + (i % 9)*.6, y = -1.5 - (i % 5)*.5 + Math.sin(time + i)*.3; v.set(px + Math.cos(a)*r, y, pz + Math.sin(a)*r); q.setFromAxisAngle(up, -(a + Math.PI/2)); m4.compose(v, q, s1); F.setMatrixAt(i, m4); }
+  F.instanceMatrix.needsUpdate = true; }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   { const b = !o.workout && boothAt(o); if (b) return { label: '☎️ Use the phone booth', go: () => openBooth(b) }; }
@@ -6893,7 +6923,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
   if (best?.k === 'golf') return { label: `⛳ Hole ${best.hole + 1}: ${r.golf[best.hole].name}`, go: () => startGolf(r, best) };
   if (best?.k === 'elevator') return { label: dn ? '🛗 Elevator up' : '🛗 Elevator down', go: () => rideElevator(r, !dn) };
-  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'art' ? showArt(best) : best.k === 'paint' ? openPaint() : best.k === 'vr' ? playMovie('The Cube VR: swimming with whales in virtual reality') : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
+  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'art' ? showArt(best) : best.k === 'paint' ? openPaint() : best.k === 'vr' ? startVR(o) : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
   if (r.cat === 'gym' || r.cat === 'vacant' || r.cat === 'soon' || r.cat === 'gallery' || r.cat === 'illusions' || r.cat === 'pickle') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
@@ -7098,6 +7128,7 @@ function renderStore(){
     card(`<div class="em">${it.slot === 'shades' && it.col ? `<svg viewBox="0 0 64 32" width="52" height="26"><path d="M2 8h60M30 10q2-3 4 0" stroke="#333" stroke-width="3" fill="none"/><ellipse cx="16" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><ellipse cx="48" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><path d="M8 12q5-4 10-1M40 12q5-4 10-1" stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"/></svg>` : it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
       if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, it.slot === 'shades' ? 'Tap View for your eyes: everything looks tinted' : 'Looking good'); return; }
+      if (it.act === 'movie' && r.name === 'The Cube VR'){ closeStore(); startVR(ocean); return; }   // (a real VR swim, not a film)
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
       if (it.act === 'tattoo'){ save.tattoo = it.e; persist(); flushCloud(); closeStore(); heartsAt = time; banner(`${it.e} New tattoo!`, 'Look at your arm! (It\'s only temporary)'); return; }
       treat = { ...it, bites: it.bites || (it.act === 'drink' ? 4 : 3) }; closeStore(); banner(`You got the ${it.n.toLowerCase()}!`, ACT_SAY[it.act] || ''); }, on); }
@@ -7814,7 +7845,7 @@ function updCoast(o){
   drawCar(o, dt);
   if (!coastCars || !o) return; const { cars, routes, body, cab, lights } = coastCars, [ps, pt] = landST(o.x, o.y);
   if (coastFill) coastFill.intensity = underNow || ps < -160 ? 0 : .75*smooth(-160, -60, ps);   // (only near the beach, and never under water)
-  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt);   // (the tour bus keeps going round, even while you're away)
+  if (SF.group) sfStep(dt); busStep(dt); signalStep(); visitStep(o); bergStep(dt); vrStep(o, dt);   // (the tour bus keeps going round, even while you're away)
   if (pt > 700 || pt < -3000 || ps < -400) return;   // (far away: the cars can wait)
   if (Math.abs(pt) < 400 && ps < 700) parkStep(dt);   // (the Ferris wheel turns and the coaster runs)
   { const r = o.onLand && !o.car ? roomAt(ps, pt, true) : null; if (r !== updCoast.shop){ updCoast.shop = r; if (song?.from === 'store') stopSong(); if (r) banner(r.name, STORE_HELLO[r.cat] || ''); }   // walking into a shop
@@ -9590,7 +9621,7 @@ function madeItHome(o){
 }
 // Running out of air or getting caught by a shark ends your swim.
 function die(cause){
-  if (mode === 'dead') return;
+  if (mode === 'dead' || vrSwim) return;   // (nothing can hurt you in VR)
   if (cause !== 'air' && mode === 'ocean' && hasGear('armor')) return;   // the armor shell keeps a turtle safe from everything except running out of air
   deadIn = mode; const where = mode, lesson = race && race.lesson;
   $('airChip').hidden = true; $('rideBtn').hidden = true; limbQueue.length = 0;

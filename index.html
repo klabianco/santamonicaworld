@@ -6892,12 +6892,8 @@ function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     win(B, ac - 1.2, ac + 1.2, 9.4, 11.8, 1, 0xf4f4f0, 0x2c3a44);
     for (const t of [B.t0 + .3, ac + 2.5, B.t1 - .3]) for (const y of [8.6, 12.4]) diamond(B, t, y, .21); diamond(B, ac - 2.4, 4.95); diamond(B, ac + 2.4, 4.95);
     f(B, B.t0, B.t1, B.h - .4, B.h + .05, 0xe2e0d9, .3); }
-  { const B = L('tower'), tc = (B.t0 + B.t1)/2, sc = 634, W = 0xf6f5f1, D = 0x2a3138;   // white Art Deco: its tower steps up behind the front, with tall slit windows
-    for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25);
-    bx(sc - 2.1, sc + 2.1, tc - 2.1, tc + 2.1, 8, 21, W); bx(sc - 1.7, sc + 1.7, tc - 1.7, tc + 1.7, 21, 24, W); bx(sc - 1.2, sc + 1.2, tc - 1.2, tc + 1.2, 24, 26.4, W); bx(sc - .6, sc + .6, tc - .6, tc + .6, 26.4, 28, W);
-    for (const [y0, y1] of [[21, 22.2], [24, 24.9]]) for (const [ds, dt] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) bx(sc + ds*2 - .2, sc + ds*2 + .2, tc + dt*2 - .2, tc + dt*2 + .2, y0, y1, W);   // (stepped corners)
-    for (const d of [-.9, 0, .9]){ bx(sc + 2.1, sc + 2.16, tc + d - .13, tc + d + .13, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc - 2.16, tc - 2.1, 13.5, 20.3, D); bx(sc + d - .13, sc + d + .13, tc + 2.1, tc + 2.16, 13.5, 20.3, D); }
-    for (const d of [-.5, .5]) bx(sc + 1.7, sc + 1.76, tc + d - .1, tc + d + .1, 21.6, 23.4, D); }
+  { const B = L('tower');   // a white front with two rows of windows (the stepped Art Deco tower once drawn here belongs to the old AMC Broadway 4 in the 1400 block: see buildBlock1400)
+    for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25); }
   g.add(grp); mergeStatic(grp); }
 /* 3rd St, the Wilshire end of the 1200 block, from photos (Wikimedia Commons, Sept 2017 and July 2022): the 1935 streamline corner at 1201
    (the old Barnes & Noble, its round corner, speed lines and the steel lattice sign tower on the tall block behind), the Santa Monica Art
@@ -6956,7 +6952,8 @@ function buildBlock1200(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
    an attic with sunk panels; on the inland corner (1401) a plain charcoal box with white-framed shop windows. */
 const BLOCK1400 = [
   { side: -1, s: 641.0, t0: -402.8, t1: -387.4, h: 14, c: 0xd4b67a, name: 'arches' },
-  { side: 1, s: 665.0, t0: -402.8, t1: -372.0, h: 9.9, c: 0x3b3f43, name: 'charcoal' } ];
+  { side: 1, s: 665.0, t0: -402.8, t1: -372.0, h: 9.9, c: 0x3b3f43, name: 'charcoal' },
+  { side: 1, s: 662.2, t0: -281.2, t1: -219.8, h: 12.5, ht: 12.5, c: 0xf4f3ee, name: 'broadway' } ];   // (the old AMC Broadway 4, 1441: 1989, closed Sept 2024 and for lease)
 function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1400.find(b => b.name === n);
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const add = (geo, hex, s, t, y, ry, m) => { const me = new THREE.Mesh(geo, m || mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
@@ -6976,6 +6973,19 @@ function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     bx(B.s - .14, B.s, B.t0, B.t1, B.h - 1.6, B.h + .15, D, base); bx(B.s - .1, B.s, B.t0, B.t1, 4.65, 4.85, Wt, base);
     bx(B.s, B.s + 20, B.t0 - .14, B.t0, B.h - 1.6, B.h + .15, D, base); bx(B.s, B.s + 20, B.t0 - .1, B.t0, 4.65, 4.85, Wt, base);
     for (const t of [B.t0 + .2, B.t0 + 7.5, B.t0 + 15]) bx(B.s - .12, B.s, t, t + .25, 0, 4.65, Wt, base); }
+  // the old AMC Broadway 4 (1441, 1989; closed Sept 2024, boarded up and for lease), from photos (Commons, July 2022): white postmodern Art Deco,
+  // black tile at the street, a white marquee (its red amc letters gone), the BROADWAY sign of stacked white fins edged in red neon, and the
+  // white tower stepping up behind the front with tall dark slits
+  { const B = L('broadway'), base = landH(B.s - 3, (B.t0 + B.t1)/2), W = 0xf6f5f1, D = 0x2a3138, mt = -255.7, sc = B.s + 4, tc = mt;
+    bx(B.s - .1, B.s, B.t0, B.t1, 0, .9, 0x1c1d1f, base); bx(B.s - .3, B.s, B.t0, B.t1, B.h - .4, B.h + .2, 0xe6e4de, base);
+    for (let y = 5.6; y < B.h - 1.5; y += 3.2) for (let t = B.t0 + 2; t < B.t1 - 2; t += 4.2) if (Math.abs(t + 1 - mt) > 5){ bx(B.s - .08, B.s, t, t + 2, y, y + 1.9, 0xf4f4f0, base); bx(B.s - .1, B.s - .02, t + .12, t + 1.88, y + .12, y + 1.78, 0x2c3a44, base); }
+    bx(B.s - 2.6, B.s, mt - 4.5, mt + 4.5, 3.7, 4.7, W, base); bx(B.s - 2.62, B.s, mt - 4.5, mt + 4.5, 3.62, 3.7, 0x1c1d1f, base);   // the marquee (blank now)
+    for (let k = 0; k < 8; k++){ const y = 5.1 + k*.75, d = .7 + k*.22; bx(B.s - d, B.s, mt - .6, mt + .6, y, y + .16, W, base); bx(B.s - d - .03, B.s - d + .03, mt - .6, mt + .6, y, y + .16, 0xe0283a, base, new THREE.MeshBasicMaterial({ color: 0xff3048 })); }   // the stacked fins of the BROADWAY sign, edged in red neon
+    { const sg = new THREE.Mesh(new THREE.PlaneGeometry(5.6, .55), new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, map: canvasTex(1024, 100, x => { x.font = "bold 78px 'Futura', 'Century Gothic', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#b3141f'; x.fillText('B R O A D W A Y', 512, 54); }, false) })); sg.position.set(...P3(B.s - 1.6, mt - .62, base + 8.1)); sg.rotation.set(0, 0, Math.atan2(5.25, 1.54)); grp.add(sg); }
+    bx(sc - 2.1, sc + 2.1, tc - 2.1, tc + 2.1, 8, 21, W, base); bx(sc - 1.7, sc + 1.7, tc - 1.7, tc + 1.7, 21, 24, W, base); bx(sc - 1.2, sc + 1.2, tc - 1.2, tc + 1.2, 24, 26.4, W, base); bx(sc - .6, sc + .6, tc - .6, tc + .6, 26.4, 28, W, base);   // the stepped tower
+    for (const [y0, y1] of [[21, 22.2], [24, 24.9]]) for (const [ds, dt] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) bx(sc + ds*2 - .2, sc + ds*2 + .2, tc + dt*2 - .2, tc + dt*2 + .2, y0, y1, W, base);
+    for (const d of [-.9, 0, .9]){ bx(sc - 2.16, sc - 2.1, tc + d - .13, tc + d + .13, 13.5, 20.3, D, base); bx(sc + d - .13, sc + d + .13, tc - 2.16, tc - 2.1, 13.5, 20.3, D, base); bx(sc + d - .13, sc + d + .13, tc + 2.1, tc + 2.16, 13.5, 20.3, D, base); }
+    for (const d of [-.5, .5]) bx(sc - 1.76, sc - 1.7, tc + d - .1, tc + d + .1, 21.6, 23.4, D, base); }
   g.add(grp); mergeStatic(grp); }
 /* AMC Santa Monica 7 (1310 3rd St, 1989), from photos (Wikimedia Commons, July 2022): pale pink stucco, the entrance under a huge teal
    half-dome set in a teal arch with steel ribs, a window grid inside the arch over the doors, salmon tile and a teal tile dado down at the

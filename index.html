@@ -5702,7 +5702,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildBBB(g);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7175,6 +7175,20 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* Rental e-scooters (shared scooters started in Santa Monica in 2017): the city makes riders park them in painted drop zones, white boxes
+   on the sidewalk near the corners, so that's where they stand, two to four at a time, green-and-white and black ones. None on the
+   Promenade, where they aren't allowed. */
+function buildScooters(g, P3, instanceOf){ const R = mulberry(57), spots = [], zones = [];
+  for (const av of [AVES.second, AVES.fourth, AVES.fifth]) for (const xs of [XST.wilshire, XST.arizona, XST.smblvd, XST.broadway]) for (const side of [-1, 1]) if (R() < .45){ const s = av + side*8.6, t = xs + (R() < .5 ? -1 : 1)*(13 + R()*4);
+    if (bldAt(s, t)) continue; zones.push([s, t]); const n = 2 + Math.floor(R()*3); for (let k = 0; k < n; k++) spots.push([s, t - .9 + k*.62, R() < .55 ? 0 : 1]); }
+  for (const [s, t] of zones){ const z = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.8), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, map: canvasTex(64, 128, x => { x.strokeStyle = '#ffffff'; x.lineWidth = 5; x.strokeRect(3, 3, 58, 122); x.fillStyle = 'rgba(255,255,255,.85)'; x.font = '26px sans-serif'; x.textAlign = 'center'; x.fillText('🛴', 32, 74); }, false) }));
+    z.rotation.x = -Math.PI/2; z.position.set(...P3(s, t, landH(s, t) + .03)); g.add(z); }
+  const C = [[0x7ac943, 0xf4f4f0], [0x1c1c1c, 0x3a3a3a]];
+  for (const kind of [0, 1]){ const sc = new THREE.Group(), body = std(C[kind][0], .5), dark = std(0x222222, .6), trim = std(C[kind][1], .5), add = (geo, m, x, y, z, rz = 0) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.rotation.z = rz; sc.add(me); };
+    add(new THREE.BoxGeometry(.12, .07, .95), body, 0, .16, 0); add(new THREE.CylinderGeometry(.025, .025, 1.05, 6), trim, 0, .66, .46, 0); add(new THREE.CylinderGeometry(.018, .018, .48, 6), dark, 0, 1.18, .46, Math.PI/2);   // deck, stem, handlebar
+    for (const z of [-.42, .44]){ const w = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .06, 12), dark); w.rotation.z = Math.PI/2; w.position.set(0, .11, z); sc.add(w); }
+    sc.rotation.z = .12;   // (leaning on its kickstand)
+    const pts = spots.filter(q => q[2] === kind).map(([s, t]) => [s, t, 1, Math.PI/2 + .25]); if (pts.length) instanceOf(sc, pts); } }
 /* Big Blue Bus, Santa Monica's own city buses (blue since 1928), on a downtown loop: up 4th St, along Santa Monica Blvd (the buses-only
    crossing at the Promenade), down 2nd St and back along Broadway, stopping at the blue bus-stop signs. Two buses, for show (not rideable). */
 const BBB = { buses: [], route: null, stops: [], last: 0 };

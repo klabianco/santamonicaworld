@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -5770,6 +5770,7 @@ const STORE_MENU = {
   movies: [M('🎟️', 'Ticket: Ocean Wonders', 10, 'movie'), M('🍿', 'Popcorn', 8), M('🥤', 'Soda', 5, 'drink'), M('🍫', 'Movie candy', 5)],
   theatre: [M('🎟️', 'Ticket to the show', 10, 'movie'), M('🍪', 'Cookie', 5)] };
 const BRAND_MENU = {   // what the real places sell (a few favorites each)
+  'Farmers Market': [M('🍓', 'Basket of strawberries', 6), M('🍊', 'Bag of oranges', 5), M('🥑', 'Avocado', 3), M('🥕', 'Bunch of carrots', 3), M('🍑', 'Peach', 2), M('🍯', 'Jar of honey', 8, 'play', { say: 'Honey from bees just up the coast!' }), M('🌻', 'Sunflowers', 10, 'play', { say: 'Fresh from the farm this morning!' })],   // (the Downtown Farmers Market on Arizona Ave: see MARKET)
   'Crab Station': [M('🦀', 'Dungeness crab cocktail', 14), M('🥣', 'Clam chowder in a sourdough bread bowl', 12), M('🍤', 'Shrimp cocktail', 10)], "Frankie's Crab Stand": [M('🦀', 'Steamed Dungeness crab', 16), M('🥣', 'Clam chowder bread bowl', 12)], 'Supreme Crab': [M('🦀', 'Crab sandwich on sourdough', 15), M('🥣', 'Clam chowder', 9)],
   'Boudin Bakery': [M('🍞', 'Sourdough loaf', 8), M('🐢', 'Turtle-shaped sourdough', 10), M('🥣', 'Clam chowder in a bread bowl', 12)], 'In-N-Out Burger': [M('🍔', 'Double-Double', 8), M('🍟', 'Fries', 4), M('🥤', 'Chocolate shake', 5, 'drink')],
   'Ghirardelli': [M('🍨', 'Hot fudge sundae', 12), M('🍫', 'Chocolate squares', 6), M('☕', 'Hot cocoa', 5, 'drink')], 'Buena Vista Cafe': [M('🍳', 'Breakfast', 12), M('☕', 'Hot cocoa', 5, 'drink')], "Alioto's": [M('🐟', 'Fish and chips', 15), M('🦀', 'Cioppino', 20)], "Scoma's": [M('🐟', 'Sand dabs', 18), M('🦀', 'Crab cakes', 16)],
@@ -7146,6 +7147,28 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* The Santa Monica Downtown Farmers Market, on Arizona Ave (city of Santa Monica; Wednesdays and Saturdays, 8 AM to 1 PM): it's there when it's
+   really there, by the time in Santa Monica. Wednesdays it fills Arizona from 2nd St to 4th St, Saturdays from 2nd to the Promenade. Rows of
+   white pop-up canopies down both sides of the street with tables of fruit, vegetables and flowers, and a banner at the 2nd St end. Walk up
+   to it to shop. (?market=1 or 2 shows it any time, for testing.) */
+const MARKET = { t: -621.6, s0: AVES.second + 9, s1: AVES.fourth - 9, gap: [PROM.s0 - 4, PROM.s1 + 4], force: +(new URLSearchParams(location.search).get('market') || 0), parts: null };
+const marketDay = () => { if (MARKET.force) return MARKET.force; try { const P = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', hour: 'numeric', hourCycle: 'h23' }).formatToParts(new Date()), wd = P.find(x => x.type === 'weekday').value, h = +P.find(x => x.type === 'hour').value;
+  return h >= 8 && h < 13 ? (wd === 'Wed' ? 2 : wd === 'Sat' ? 1 : 0) : 0; } catch(e){ return 0; } };   // (2: Wednesday's long market, 1: Saturday's, 0: closed)
+const marketAt = o => { const d = MARKET.parts ? MARKET.parts.day : 0; if (!d) return false; const [s, t] = landST(o.x, o.y); return Math.abs(t - MARKET.t) < 6.5 && s > MARKET.s0 - 3 && s < (d === 2 ? MARKET.s1 : MARKET.gap[0]) + 3 && !(s > MARKET.gap[0] && s < MARKET.gap[1]); };
+function buildMarket(g, P3){ const sat = new THREE.Group(), wed = new THREE.Group(), white = std(0xf6f6f2, .8), leg = std(0x9aa0a4, .4, .5), table = std(0xe9e6dc, .8), crate = std(0x9a7348, .9);
+  const FRUIT = [0xd7263d, 0xf28c28, 0x5aa832, 0x6b2d6b, 0xf2d230, 0x2f7d32, 0xe85d9a, 0xc0392b], CAN = [0xf6f6f2, 0xf6f6f2, 0xf6f6f2, 0xf6f6f2, 0xf6f6f2, 0xf6f6f2, 0x2f6fb3, 0x2e8b57], R = mulberry(77);
+  const stall = (grp, s, side) => { const t = MARKET.t + side*3.4, y = landH(s, t), st = new THREE.Group(), add = (geo, m, x, yy, z, ry = 0) => { const me = new THREE.Mesh(geo, m); me.position.set(x, yy, z); me.rotation.y = ry; st.add(me); return me; };   // (its own frame: x along s, z along t; the aisle is toward -side)
+    for (const [x, z] of [[-1.45, -1.45], [1.45, -1.45], [-1.45, 1.45], [1.45, 1.45]]) add(new THREE.CylinderGeometry(.03, .03, 2.3, 5), leg, x, 1.15, z);
+    add(new THREE.ConeGeometry(2.15, .7, 4), std(CAN[Math.floor(R()*CAN.length)], .8), 0, 2.65, 0, Math.PI/4); add(new THREE.BoxGeometry(3, .25, 3), white, 0, 2.2, 0);   // the canopy
+    const tz = -side*1.05; add(new THREE.BoxGeometry(2.7, .06, .8), table, 0, .8, tz); for (const x of [-1.2, 1.2]) add(new THREE.BoxGeometry(.06, .8, .7), leg, x, .4, tz);
+    for (let k = 0; k < 4; k++){ const x = -.95 + k*.63; add(new THREE.BoxGeometry(.55, .16, .5), crate, x, .91, tz); add(new THREE.BoxGeometry(.48, .1, .42), std(FRUIT[Math.floor(R()*FRUIT.length)], .7), x, 1.03, tz); }   // crates of fruit and vegetables
+    if (R() < .5) for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(.5, .3, .4), crate, -1 + k*.8, .15, side*.9);
+    st.position.set(...P3(s, t, y)); grp.add(st); };
+  for (let s = MARKET.s0; s < MARKET.s1; s += 3.4){ if (s > MARKET.gap[0] - 1.7 && s < MARKET.gap[1] + 1.7) continue; const grp = s < MARKET.gap[0] ? sat : wed; for (const side of [-1, 1]) stall(grp, s, side); }
+  { const s = MARKET.s0 - 4, y = landH(s, MARKET.t); for (const d of [-6.5, 6.5]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 5, 6), leg); p.position.set(...P3(s, MARKET.t + d, y + 2.5)); sat.add(p); }   // the banner at the 2nd St end
+    for (const ry of [Math.PI/2, -Math.PI/2]){ const b = new THREE.Mesh(new THREE.PlaneGeometry(10, 1.1), new THREE.MeshBasicMaterial({ map: canvasTex(1024, 112, x => { x.fillStyle = '#2e7d32'; x.fillRect(0, 0, 1024, 112); x.fillStyle = '#fff'; x.font = "bold 64px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('SANTA MONICA FARMERS MARKET', 512, 60); }, false) })); b.position.set(...P3(s + (ry > 0 ? -.02 : .02), MARKET.t, y + 4.2)); b.rotation.y = ry; sat.add(b); } }
+  mergeStatic(sat); mergeStatic(wed); g.add(sat, wed);
+  const upd = () => { const d = marketDay(); sat.visible = d >= 1; wed.visible = d === 2; MARKET.parts.day = d; }; MARKET.parts = { sat, wed, day: 0 }; upd(); setInterval(upd, 60000); }
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right
    round the building, round its rounded corners; the wing stands on white piers over a glass lobby. box: the OSM footprint [s0, t0, s1, t1] */
@@ -7609,6 +7632,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o.workout && !o.bike && rackAt(o)){ const r = rackAt(o); return { label: `🚲 Rent a bike · ${r.cost || 0} coins`, go: () => bikeOn(o, r.cost || 0, r.shop) }; }
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
+  if (!o.workout && marketAt(o)) return { label: '🥕 Shop the farmers market', go: () => openPlaceMenu('Farmers Market', 'food') };
   if (!o.workout && nearMichaels(o)) return { label: "🍽️ Eat at Michael's", go: () => openPlaceMenu("Michael's", 'food') };
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y); return s > 657 && s < 666 && t > -890.4 && t < -877.6; })()) return { label: '☕ Demitasse coffee', go: () => openPlaceMenu('Demitasse', 'food') };
   if (o.workout?.key === 'eline') return ELINE.wait > 1 && ELINE.at?.end ? { label: '🚉 Get off at ' + ELINE.at.name, go: () => elineOff(o) } : null;

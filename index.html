@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3); buildBuskers(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7147,6 +7147,23 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* Street performers on the Promenade (the city licenses them; they play every day along the blocks, an open case for tips at their feet):
+   a violinist, a guitarist and a keyboard player. Tip one a coin and they play you a tune (public-domain songs on the game's synth). */
+const BUSKERS = [{ s: 647.6, t: -447, who: 'violinist', e: '🎻', song: 1, shirt: 0x1d1d1f, say: 'Beethoven, on the Promenade!' }, { s: 658.6, t: -668, who: 'guitarist', e: '🎸', song: 0, shirt: 0xd33a2c, say: 'A little song for you!' },
+  { s: 647.6, t: -338, who: 'keyboard player', e: '🎹', song: 6, shirt: 0x3f9fd2, say: 'Scott Joplin: The Entertainer!' }];
+const buskerAt = o => { const [s, t] = landST(o.x, o.y); return BUSKERS.find(B => Math.hypot(s - B.s, t - B.t) < 3.8) || null; };
+function tipBusker(B){ if (!(save.coins >= 1)){ banner(`${B.e} The ${B.who} smiles`, 'No coins? Listen anyway! (Coins come from quests and treasure)'); return; }
+  save.coins -= 1; persist(); playSong(B.song, 'busker'); banner(`${B.e} Thank you!`, B.say); }
+function buildBuskers(g, P3){ const grp = new THREE.Group(), skin = std(0xc99a74, .7), dark = std(0x2d3d58, .8), wood = std(0x8a4f2a, .5), black = std(0x1a1a1a, .6), gold = std(0xe9c24a, .4, .6), red = std(0x7a1f2b, .8);
+  for (const B of BUSKERS){ const d = new THREE.Group(), add = (geo, m, x, y, z, rx = 0, rz = 0) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.rotation.set(rx, 0, rz); d.add(me); return me; };   // (its own frame: facing +x, toward the middle of the street)
+    add(new THREE.CylinderGeometry(.22, .26, 1.05, 8), std(B.shirt, .8), 0, .95 + .45, 0); add(new THREE.SphereGeometry(.17, 10, 8), skin, 0, 1.66 + .45, 0); add(new THREE.CylinderGeometry(.2, .16, .9, 8), dark, 0, .45, 0);
+    if (B.who === 'violinist'){ add(new THREE.BoxGeometry(.12, .07, .38), wood, .12, 1.78, .2, 0, .3); add(new THREE.CylinderGeometry(.008, .008, .7, 4), std(0xdddddd, .5), .25, 1.85, .05, 1.2, 0); }
+    else if (B.who === 'guitarist'){ add(new THREE.BoxGeometry(.12, .5, .38), wood, .25, 1.3, 0, 0, .6); add(new THREE.BoxGeometry(.05, .5, .06), wood, .38, 1.65, .25, -.9, 0); }
+    else { add(new THREE.BoxGeometry(.4, .06, 1.1), black, .5, 1.05, 0); for (const z of [-.45, .45]) add(new THREE.BoxGeometry(.05, 1, .05), black, .5, .5, z); add(new THREE.BoxGeometry(.3, .01, 1), std(0xf4f4f0, .5), .52, 1.085, 0); }
+    add(new THREE.BoxGeometry(.5, .12, .9), black, .9, .06, .55); add(new THREE.BoxGeometry(.44, .04, .84), red, .9, .12, .55); for (let k = 0; k < 6; k++) add(new THREE.CylinderGeometry(.04, .04, .01, 8), gold, .8 + (k % 3)*.1, .15, .3 + Math.floor(k/3)*.4);   // the open case with a few coins
+    add(new THREE.BoxGeometry(.35, .45, .3), black, -.15, .22, -.6);   // (a little amp)
+    d.rotation.y = B.s < PROM.s ? 0 : Math.PI; d.position.set(...P3(B.s, B.t, landH(B.s, B.t))); grp.add(d); LAND_BOXES.push([B.s - .35, B.t - .35, B.s + .35, B.t + .35, landH(B.s, B.t) + 1.9]); }
+  g.add(grp); mergeStatic(grp); }
 /* The Santa Monica Downtown Farmers Market, on Arizona Ave (city of Santa Monica; Wednesdays and Saturdays, 8 AM to 1 PM): it's there when it's
    really there, by the time in Santa Monica. Wednesdays it fills Arizona from 2nd St to 4th St, Saturdays from 2nd to the Promenade. Rows of
    white pop-up canopies down both sides of the street with tables of fruit, vegetables and flowers, and a banner at the 2nd St end. Walk up
@@ -7632,6 +7649,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o.workout && !o.bike && rackAt(o)){ const r = rackAt(o); return { label: `🚲 Rent a bike · ${r.cost || 0} coins`, go: () => bikeOn(o, r.cost || 0, r.shop) }; }
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
+  { const B = !o.workout && buskerAt(o); if (B) return { label: `${B.e} Tip the ${B.who} (1 coin)`, go: () => tipBusker(B) }; }
   if (!o.workout && marketAt(o)) return { label: '🥕 Shop the farmers market', go: () => openPlaceMenu('Farmers Market', 'food') };
   if (!o.workout && nearMichaels(o)) return { label: "🍽️ Eat at Michael's", go: () => openPlaceMenu("Michael's", 'food') };
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y); return s > 657 && s < 666 && t > -890.4 && t < -877.6; })()) return { label: '☕ Demitasse coffee', go: () => openPlaceMenu('Demitasse', 'food') };

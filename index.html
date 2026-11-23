@@ -3126,7 +3126,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
   if (t > SOUTH.t0 - 5 && s > SOUTH.s0 - 5){ const b = southBld(s, t); if (b && b.base != null) h = Math.max(h, b.base + b.h); }   // (Ocean Park and Venice's stand-in buildings)
-  for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3]) h = Math.max(h, b[4]);
+  for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3] && !(b[5] != null && walkRef < b[5])) h = Math.max(h, b[4]);   // (b[5]: a box only up on the pier deck, not down on the sand under it)
   if (s > -222 && s < -190 && t > -26 && t < 2){ const m = mariH(s, t); if (m != null) h = m; }   // (Mariasol's floors and walls)
   if (s > HOME_APT.front - HOME_APT.steps - .1 && s < HOME_APT.front + HOME_APT.deep && Math.abs(t - HOME_APT.mid) < HOME_APT.len/2 + .1){ const L = homeLayers(s, t);   // home's floors and stairs: the one you're on
     if (L.length){ L.push(h); const below = L.filter(v => v <= walkRef + .6); h = below.length ? Math.max(...below) : Math.min(...L); } }
@@ -5691,7 +5691,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3); buildBuskers(g, P3);
+  buildPalisades(g, P3); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -7147,6 +7147,60 @@ function buildO1299(g, P3){ const grp = new THREE.Group(), W = std(0xefede6, .75
   { const B = H('o1299b'), [a0, c0, a1, c1] = B.box, bB = CITY.bldgs.find(b => Math.abs(b.box[0] - a0) < 1.5 && Math.abs(b.box[1] - c0) < 1.5);
     if (bB) for (let k = 0; k < 12; k++){ const y0 = k*F; bx(a0 + .8, a1 - .8, c0 - .06, c0 + .2, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a0 + .8, a1 - .8, c1 - .2, c1 + .06, y0 + 1.1, y0 + 3.1, GL, bB.base); bx(a1 - .2, a1 + .06, c0 + .8, c1 - .8, y0 + 1.1, y0 + 3.1, GL, bB.base); } }
   g.add(grp); mergeStatic(grp); }
+/* Heal the Bay Aquarium (the Santa Monica Pier Aquarium, 1600 Ocean Front Walk): a little aquarium of Santa Monica Bay's own animals at
+   beach level under the pier by the carousel, run by Heal the Bay. Open Wednesday to Sunday, noon to 4, Santa Monica time (listings
+   disagree: some say Thursday). Walk in from the beach on the land side under the deck. Tanks round the walls and a touch tank in the middle.
+   (?aqua=1 opens it any time, for testing.) */
+const AQUA = { s0: 206, s1: 232, t0: 14, t1: 34, door: 24, force: +(new URLSearchParams(location.search).get('aqua') || 0), open: false, doorBox: null, k: 0 };
+const AQUA_TANKS = [   // [which wall: 'n' (t0), 's' (t1), 'w' (s0); where along it; the animal; what to know]
+  ['n', 210.5, '🦈 Horn shark', 'Horn sharks rest in rock caves by day and hunt crabs and urchins at night. Their eggs come in spiral cases they wedge into the rocks.'],
+  ['n', 218, '🐙 Two-spot octopus', 'The California two-spot octopus has a blue ring "eye spot" on each side of its head, to look bigger. It can squeeze through any hole bigger than its beak.'],
+  ['n', 225.5, '🐟 Garibaldi', "The garibaldi is California's state marine fish: bright orange, living in kelp forests. Daddy garibaldi keep a little nest garden of red algae."],
+  ['s', 210.5, '🐍 California moray eel', 'Moray eels open and close their mouths to breathe, not to bite. They hide in rock cracks with just their heads out.'],
+  ['s', 225.5, '🦞 Spiny lobster', 'California spiny lobsters have no big claws. They squeak by rubbing their antennae to scare off predators!'],
+  ['w', 11, '🦈 Swell shark', 'Swell sharks gulp water to puff up to twice their size, wedging themselves in a crack so nothing can pull them out.'],
+  ['w', 19, '🪼 Moon jellies', 'Moon jellies drift in the bay. They have no brain, no heart and no bones, and they are 95% water.'] ];
+const TOUCH_FACTS = ['🖐️ Two fingers, gently! That is the touch-tank rule.', '⭐ Bat stars and ochre stars live on the bay\'s rocks. A sea star can grow back a lost arm!', '🟣 Purple urchins eat kelp. Sheephead fish and sea otters eat urchins, which keeps the kelp forests healthy.', '🥒 Warty sea cucumbers clean the sand by eating it. Gross and great!', '🐌 Sea hares are big slugs. When scared, they squirt purple ink.', '🦀 Hermit crabs move into bigger shells as they grow.'];
+const inAqua = o => { const A = AQUA; if (A.base == null) return false; const [s, t] = landST(o.x, o.y); return s > A.s0 && s < A.s1 && t > A.t0 && t < A.t1 && o.gh < A.base + 2; };
+const aquaOpenNow = () => { if (AQUA.force) return true; try { const P = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', hour: 'numeric', hourCycle: 'h23' }).formatToParts(new Date()), wd = P.find(x => x.type === 'weekday').value, h = +P.find(x => x.type === 'hour').value;
+  return ['Wed', 'Thu', 'Fri', 'Sat', 'Sun'].includes(wd) && h >= 12 && h < 16; } catch(e){ return false; } };
+function aquaAct(o){ const [s, t] = landST(o.x, o.y), A = AQUA; if (s < A.s0 - 4 || s > A.s1 + 4 || t < A.t0 - 2 || t > A.t1 + 2 || o.gh > landH(s, t) + 2) return null;
+  if (!A.open && s > A.s1 - .5 && s < A.s1 + 4 && Math.abs(t - A.door) < 3) return { label: '🐠 Heal the Bay Aquarium', go: () => banner('🐠 Heal the Bay Aquarium: closed right now', 'Open Wednesday to Sunday, noon to 4 (Santa Monica time). Come back then!') };
+  if (s < A.s0 || s > A.s1 || t < A.t0 || t > A.t1) return null;
+  const sc = (A.s0 + A.s1)/2 - 2, tc = (A.t0 + A.t1)/2; if (Math.abs(s - sc) < 3.6 && Math.abs(t - tc) < 2.8) return { label: '🖐️ Touch the touch tank', go: () => { banner('Touch tank', TOUCH_FACTS[A.k++ % TOUCH_FACTS.length]); sfx(880, .08, 'sine', .04); } };
+  for (const [w, at, name, fact] of AQUA_TANKS){ const d = w === 'n' ? Math.hypot(s - at, t - A.t0) : w === 's' ? Math.hypot(s - at, t - A.t1) : Math.hypot(s - A.s0, t - at); if (d < 3.2) return { label: `👀 ${name}`, go: () => banner(name, fact) }; }
+  return null; }
+function buildAqua(g, P3){ const A = AQUA, grp = new THREE.Group(), base = A.base = landH((A.s0 + A.s1)/2, (A.t0 + A.t1)/2), H = 3.9, M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const bx = (a0, a1, c0, c1, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(a1 - a0, y1 - y0, c1 - c0), m); me.position.set(...P3((a0 + a1)/2, (c0 + c1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const mural = canvasTex(512, 128, x => { const gr = x.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#5ec8e5'); gr.addColorStop(1, '#0d4f8b'); x.fillStyle = gr; x.fillRect(0, 0, 512, 128); x.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 512; i += 40){ x.beginPath(); x.arc(i + 20, 18, 16, Math.PI, 0); x.fill(); }
+    const F = ['#ff8a2a', '#ffd23f', '#f2f2f2', '#ff5d8f']; for (let k = 0; k < 14; k++){ const fx = (k*71) % 500, fy = 40 + (k*37) % 76; x.fillStyle = F[k % 4]; x.beginPath(); x.ellipse(fx, fy, 14, 7, 0, 0, TAU); x.fill(); x.beginPath(); x.moveTo(fx - 12, fy); x.lineTo(fx - 22, fy - 7); x.lineTo(fx - 22, fy + 7); x.fill(); }
+    x.fillStyle = '#2e7d32'; for (let i = 6; i < 512; i += 55){ x.fillRect(i, 70, 5, 58); } }, true); mural.repeat.set(3, 1);
+  const wallOut = new THREE.MeshStandardMaterial({ map: mural, roughness: .8 }), wallIn = mat(0x0f3b5c, .9);
+  const wall = (a0, a1, c0, c1) => { bx(a0, a1, c0, c1, 0, H, wallOut); };
+  wall(A.s0, A.s1, A.t0 - .3, A.t0); wall(A.s0, A.s1, A.t1, A.t1 + .3); wall(A.s0 - .3, A.s0, A.t0, A.t1); wall(A.s1, A.s1 + .3, A.t0, A.door - 1.6); wall(A.s1, A.s1 + .3, A.door + 1.6, A.t1); bx(A.s1, A.s1 + .3, A.door - 1.6, A.door + 1.6, 2.6, H, wallOut);
+  for (const [a0, a1, c0, c1] of [[A.s0, A.s1, A.t0, A.t0 + .02], [A.s0, A.s1, A.t1 - .02, A.t1], [A.s0, A.s0 + .02, A.t0, A.t1]]) bx(a0, a1, c0, c1, 0, H, wallIn);
+  const ft = Math.max(...[[A.s0, A.t0], [A.s1, A.t0], [A.s0, A.t1], [A.s1, A.t1]].map(([a, c]) => landH(a, c))) - base + .03; A.floor = base + ft;
+  bx(A.s0, A.s1, A.t0, A.t1, -.4, ft, mat(0x3a4650, .6)); bx(A.s0 - .3, A.s1 + .3, A.t0 - .3, A.t1 + .3, H, H + .15, mat(0x22303a, .9)); LAND_BOXES.push([A.s0, A.t0, A.s1, A.t1, base + ft]);   // a flat floor over the sand, and the ceiling
+  LAND_BOXES.push([A.s0 - .3, A.t0 - .3, A.s1 + .3, A.t0, base + H], [A.s0 - .3, A.t1, A.s1 + .3, A.t1 + .3, base + H], [A.s0 - .3, A.t0, A.s0, A.t1, base + H], [A.s1, A.t0, A.s1 + .3, A.door - 1.6, base + H], [A.s1, A.door + 1.6, A.s1 + .3, A.t1, base + H]);
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, .9), new THREE.MeshBasicMaterial({ map: canvasTex(1024, 154, x => { x.fillStyle = '#0d4f8b'; x.fillRect(0, 0, 1024, 154); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = "bold 62px 'Helvetica Neue', Arial, sans-serif"; x.fillText('HEAL THE BAY AQUARIUM', 512, 62); x.font = "34px 'Helvetica Neue', Arial, sans-serif"; x.fillText('Santa Monica Bay\'s own sea life', 512, 120); }, false) })); sg.position.set(...P3(A.s1 + .32, A.door, base + 3.2)); sg.rotation.y = Math.PI/2; grp.add(sg); }
+  const glass = new THREE.MeshStandardMaterial({ color: 0x4fb3d9, roughness: .05, metalness: .1, transparent: true, opacity: .55 }), rock = mat(0x6d6a63, .95), kelp = mat(0x6b7d2a, .9), FISH = [0xff8a2a, 0xc9a27e, 0x8e8e8e, 0x6a3f2a, 0xb04a2a, 0xe9e2d2, 0xd9d0ff];
+  AQUA_TANKS.forEach(([w, at, name], i) => { const L = w === 'w' ? 6 : 6.5, d = 1.1, y0 = .7, y1 = 2.5;   // a tank set into the wall
+    const [a0, a1, c0, c1] = w === 'n' ? [at - L/2, at + L/2, A.t0, A.t0 + d] : w === 's' ? [at - L/2, at + L/2, A.t1 - d, A.t1] : [A.s0, A.s0 + d, at - L/2, at + L/2];
+    bx(a0, a1, c0, c1, 0, y0, mat(0x1c2a33, .7)); bx(a0, a1, c0, c1, y1, y1 + .3, mat(0x1c2a33, .7)); bx(a0, a1, c0, c1, y0, y1, glass);
+    for (let k = 0; k < 4; k++){ const u = k/3.2 + .08; const rs = w === 'w' ? a0 + d/2 : a0 + (a1 - a0)*u, rt = w === 'w' ? c0 + (c1 - c0)*u : (c0 + c1)/2; const r = new THREE.Mesh(new THREE.DodecahedronGeometry(.35 + (k % 2)*.15, 0), rock); r.position.set(...P3(rs, rt, base + y0 + .25)); grp.add(r);
+      bx(rs + .3, rs + .38, rt - .04, rt + .04, y0, y1 - .2, kelp); }
+    for (let k = 0; k < 3; k++){ const u = .2 + k*.28, fs = w === 'w' ? a0 + d/2 : a0 + (a1 - a0)*u, ft = w === 'w' ? c0 + (c1 - c0)*u : (c0 + c1)/2, f = new THREE.Mesh(new THREE.SphereGeometry(.22, 8, 6), mat(FISH[(i + k) % FISH.length], .5)); f.scale.set(w === 'w' ? .6 : 1.8, .7, w === 'w' ? 1.8 : .6); f.position.set(...P3(fs, ft, base + 1.3 + k*.3)); grp.add(f); }
+    const lab = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .3), new THREE.MeshBasicMaterial({ map: canvasTex(512, 86, x => { x.fillStyle = '#0b2233'; x.fillRect(0, 0, 512, 86); x.fillStyle = '#fff'; x.font = "bold 40px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(name.replace(/^\S+\s/, ''), 256, 46); }, false) }));
+    const ls = w === 'w' ? a1 + .02 : (a0 + a1)/2, lt = w === 'n' ? c1 + .02 : w === 's' ? c0 - .02 : (c0 + c1)/2; lab.position.set(...P3(ls, lt, base + .45)); lab.rotation.y = w === 'n' ? 0 : w === 's' ? Math.PI : Math.PI/2; grp.add(lab);
+    LAND_BOXES.push([a0, c0, a1, c1, base + y1 + .3]); });
+  { const sc = (A.s0 + A.s1)/2 - 2, tc = (A.t0 + A.t1)/2; bx(sc - 2.2, sc + 2.2, tc - 1.3, tc + 1.3, 0, .85, mat(0x2a3a44, .6)); bx(sc - 2, sc + 2, tc - 1.1, tc + 1.1, .85, .9, new THREE.MeshStandardMaterial({ color: 0x5fb6d6, roughness: .1, transparent: true, opacity: .75 }));   // the touch tank
+    const STAR = [0xe8732a, 0x7a3f9a, 0xd94a2a, 0xe8a02a]; for (let k = 0; k < 6; k++){ const ss = sc - 1.6 + (k % 3)*1.4, st = tc - .5 + Math.floor(k/3)*1, star = new THREE.Group(); for (let a = 0; a < 5; a++){ const arm = new THREE.Mesh(new THREE.BoxGeometry(.32, .04, .09), mat(STAR[k % 4], .8)); arm.position.set(Math.cos(a/5*TAU)*.15, 0, Math.sin(a/5*TAU)*.15); arm.rotation.y = -a/5*TAU; star.add(arm); } star.position.set(...P3(ss, st, base + .8)); grp.add(star); }
+    for (let k = 0; k < 4; k++){ const u = new THREE.Mesh(new THREE.IcosahedronGeometry(.12, 0), mat(0x5b2a6e, .7)); u.position.set(...P3(sc - 1.2 + k*.8, tc + (k % 2 ? .6 : -.7), base + .82)); grp.add(u); }
+    LAND_BOXES.push([sc - 2.2, tc - 1.3, sc + 2.2, tc + 1.3, base + .9]); }
+  const door = new THREE.Group(); { const dm = mat(0x1a3a5a, .5, .2); const d1 = new THREE.Mesh(new THREE.BoxGeometry(.1, 2.6, 3.2), dm); d1.position.set(0, 1.3, 0); door.add(d1); const cs = new THREE.Mesh(new THREE.PlaneGeometry(2, .5), new THREE.MeshBasicMaterial({ map: canvasTex(512, 128, x => { x.fillStyle = '#fff'; x.fillRect(0, 0, 512, 128); x.fillStyle = '#b3141f'; x.font = "bold 56px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('CLOSED', 256, 50); x.fillStyle = '#333'; x.font = "24px sans-serif"; x.fillText('Open Wed-Sun, 12-4', 256, 102); }, false) })); cs.position.set(.07, 1.6, 0); cs.rotation.y = Math.PI/2; door.add(cs); }
+  door.position.set(...P3(A.s1 + .15, A.door, base)); g.add(door);
+  g.add(grp); mergeStatic(grp);
+  const upd = () => { const o = aquaOpenNow(); A.open = o; door.visible = !o; if (!o && !A.doorBox){ A.doorBox = [A.s1, A.door - 1.6, A.s1 + .3, A.door + 1.6, base + H]; LAND_BOXES.push(A.doorBox); } if (o && A.doorBox){ LAND_BOXES.splice(LAND_BOXES.indexOf(A.doorBox), 1); A.doorBox = null; } }; upd(); setInterval(upd, 60000); }
 /* Street performers on the Promenade (the city licenses them; they play every day along the blocks, an open case for tips at their feet):
    a violinist, a guitarist and a keyboard player. Tip one a coin and they play you a tune (public-domain songs on the game's synth). */
 const BUSKERS = [{ s: 647.6, t: -447, who: 'violinist', e: '🎻', song: 1, shirt: 0x1d1d1f, say: 'Beethoven, on the Promenade!' }, { s: 658.6, t: -668, who: 'guitarist', e: '🎸', song: 0, shirt: 0xd33a2c, say: 'A little song for you!' },
@@ -7283,7 +7337,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
   // a box on the deck, by real coordinates (A0..A1 along, off0..off1 across), from y0 to y1 above the deck
   let solid = true;   // (buildings on the deck are solid: you go round them, or in at a door where there is one)
   const bx = (A0, A1, o0, o1, y0, y1, hex, m) => { const s0 = S(A1), s1 = S(A0), t0 = -Math.max(o0, o1), t1 = -Math.min(o0, o1), sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), m || mat(hex)); me.position.set(...P3(sc, tc, dh(sc) + (y0 + y1)/2)); grp.add(me);
-    if (solid && y0 <= .05 && y1 >= 2 && s1 - s0 > 1.2 && t1 - t0 > 1.2) LAND_BOXES.push([s0, t0, s1, t1, dh(sc) + y1]); return me; };
+    if (solid && y0 <= .05 && y1 >= 2 && s1 - s0 > 1.2 && t1 - t0 > 1.2) LAND_BOXES.push([s0, t0, s1, t1, dh(sc) + y1, dh(sc) - 1.5]); return me; };
   // a sign: a plane at (A, off) facing 'n' (north, -t), 's', 'e' (toward land, +s) or 'w' (out to sea)
   const sign = (A, off, y, w, h, text, bg, fg, face, size) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.max(64, Math.round(1024*h/w)), size || Math.round(Math.min(150, 1024*h/w*.62))) })); const s = S(A); m.position.set(...P3(s, -off, dh(s) + y)); m.rotation.y = { n: Math.PI, s: 0, e: Math.PI/2, w: -Math.PI/2 }[face]; grp.add(m); return m; };
   const cyl = (A, off, y, r, h, hex, seg = 12, rt) => { const s = S(A), me = new THREE.Mesh(new THREE.CylinderGeometry(rt ?? r, r, h, seg), mat(hex)); me.position.set(...P3(s, -off, dh(s) + y + h/2)); grp.add(me); return me; };
@@ -7294,7 +7348,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
   //      arched doors with rainbow fanlights, paired arched windows upstairs, a pale tent roof with a navy drum on top
   { const A0 = 155, A1 = 188, o0 = -43, o1 = -12, salmon = 0xe7a98c, navy = 0x1f2d5a;
     { const a = A0 + 3, b = A1 - 3, n = o1 - 3, so = o0 + 3, doors = []; for (let A = A0 + 7; A < A1 - 6; A += 3.4) doors.push(A);   // (hollow: walls, the arched doors on the north side open, a wood floor and ceiling inside, the carousel in the middle)
-      const wall = (A0, A1, oa, ob) => { LAND_BOXES.push([S(A1), -ob, S(A0), -oa, dh(S((A0 + A1)/2)) + 9.2]); };   // (solid walls, open doors)
+      const wall = (A0, A1, oa, ob) => { LAND_BOXES.push([S(A1), -ob, S(A0), -oa, dh(S((A0 + A1)/2)) + 9.2, dh(S((A0 + A1)/2)) - 1.5]); };   // (solid walls, open doors)
       { let pv = a; for (const d of doors){ wall(pv, d, n - .4, n + .1); pv = d + 1.8; } wall(pv, b, n - .4, n + .1); wall(a, b, so - .1, so + .4); wall(a - .1, a + .4, so, n); wall(b - .4, b + .1, so, n);
         for (const [A, o] of [[A0 + 3, o0 + 3], [A0 + 3, o1 - 3], [A1 - 3, o0 + 3], [A1 - 3, o1 - 3]]) wall(A - 3.2, A + 3.2, o - 3.2, o + 3.2); }
       let prev = a; for (const d of doors){ bx(prev, d, n - .3, n, 0, 2.6, salmon); prev = d + 1.8; } bx(prev, b, n - .3, n, 0, 2.6, salmon); bx(a, b, n - .3, n, 2.6, 9.2, salmon);
@@ -7649,6 +7703,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (!o.workout && !o.bike && rackAt(o)){ const r = rackAt(o); return { label: `🚲 Rent a bike · ${r.cost || 0} coins`, go: () => bikeOn(o, r.cost || 0, r.shop) }; }
   { const pd = !o.workout && pierDo(o); if (pd) return pd; }
   if (!o.workout && (() => { const [s, t] = landST(o.x, o.y), [os, ot] = SMP.oval; return Math.hypot((s - os)/10, (t - ot)/7) < 1; })()) return { label: '🍽️ Up to the Dining Deck', go: () => openPlaceMenu('Dining Deck', 'food') };
+  { const A = !o.workout && aquaAct(o); if (A) return A; }
   { const B = !o.workout && buskerAt(o); if (B) return { label: `${B.e} Tip the ${B.who} (1 coin)`, go: () => tipBusker(B) }; }
   if (!o.workout && marketAt(o)) return { label: '🥕 Shop the farmers market', go: () => openPlaceMenu('Farmers Market', 'food') };
   if (!o.workout && nearMichaels(o)) return { label: "🍽️ Eat at Michael's", go: () => openPlaceMenu("Michael's", 'food') };
@@ -10217,6 +10272,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
     const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
     const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
     if (rr){ const cy = downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + 3.25; if (_tp.y > cy) _tp.y = cy; }
+    if (ocean?.onLand && inAqua(ocean)){ const A = AQUA, [cs, ct] = landST(_tp.x/U, _tp.z/U), [nx, nz] = landXY(clamp(cs, A.s0 + .5, A.s1 - .5), clamp(ct, A.t0 + .5, A.t1 - .5)); _tp.x = nx*U; _tp.z = nz*U; _tp.y = Math.min(_tp.y, A.base + 3.5); }   // (in the aquarium under the pier: the camera stays inside, under its ceiling)
     if (ocean?.onLand){ const [cs, ct] = landST(_tp.x/U, _tp.z/U), cA = 390 - cs, cO = -ct; if (cA > MARI.A0 && cA < MARI.A1 && cO > MARI.o0 && cO < MARI.oPatio){ const dk = pierDeckH(cs); _tp.y = Math.min(_tp.y, dk + (walkRef - dk > 2.5 ? MARI.up + 3.2 : MARI.up - .35)); } if (cA > 158 && cA < 185 && cO > -40 && cO < -15 && walkRef > PIER_L.h1 - 2){ const dk = pierDeckH(cs), dc = Math.hypot(cA - CAROUSEL.A, cO - CAROUSEL.off); _tp.y = Math.min(_tp.y, dk + (dc < CAROUSEL.R + .6 ? 3.7 : 8.5)); } } }   // (in the Hippodrome: under its ceiling, and under the carousel's canopy)
   const k = camInit ? 1 - Math.exp(-dt*(kind === 'ocean' && camAir > .5 ? 14 : 5)) : 1; camPos.lerp(_tp, k); camLook.lerp(_tl, k); camInit = true;   // follow fast during a big leap
   camera.position.copy(camPos); camera.lookAt(camLook);

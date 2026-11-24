@@ -7046,6 +7046,7 @@ $('boothClose').onclick = closeBooth;
 function zapTo(b){ const o = ocean; $('boothPanel').hidden = true; let z = $('zap'); if (!z){ z = document.createElement('div'); z.id = 'zap'; document.body.appendChild(z); }
   z.style.opacity = '1'; [523, 784, 1046, 1568].forEach((f, i) => sfx(f, .1, 'triangle', .05, i*.05)); sfx(200, .5, 'sawtooth', .03, 0, 1400);
   const go = () => setTimeout(() => { const [x, y] = landXY(b.s, b.t); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; o.onLand = true; mapGuide = null;
+    if (updPending && !updGoing){ paused = false; return updNow(); }   // (a new version is waiting: it loads during the jump, and you arrive in it)
     paused = false; graceAfterPause(); setTimeout(() => { z.style.opacity = '0'; banner(`🌀 ${b.name}`, b.more); }, 120); }, 380);
   if (b.pack) loadPack(b.pack).then(go); else if (b.id === 'sf' && !SF.walk) loadSF().then(go); else go(); }
 /* 3rd Street between Wilshire and California (the 1100 block), building by building from Google Street View (Jul 2025,
@@ -11707,10 +11708,14 @@ async function checkUpdate(){ if (document.hidden || updPending) return;
   try { const r = await fetch(location.pathname + '?u=' + Date.now(), { method: 'HEAD', cache: 'no-store' }), tag = r.ok && (r.headers.get('etag') || r.headers.get('last-modified')); if (!tag) return;
     if (updTag == null) updTag = tag; else if (tag !== updTag) updPending = true; } catch(e){} }
 setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 20000);
-function updStep(){ if (!updPending || updGoing || !loadGone) return; if (mode !== 'title' && (paused || menuEl())) return;   // (not while you're reading, shopping or in the menu)
+// It never interrupts play: in the game it waits for a natural break, the next time you teleport (the new version loads during the jump)
+// or while you're away in another tab or app. On the title screen it loads straight away.
+function updStep(){ if (!updPending || updGoing || !loadGone) return; if (mode === 'ocean') return; if (mode !== 'title' && (paused || menuEl())) return; updNow(); }
+addEventListener('visibilitychange', () => { if (document.hidden && updPending && !updGoing && loadGone && mode === 'ocean' && ocean && !ocean.workout) updNow(true); });
+function updNow(quiet){
   updGoing = true; try { persist(); flushCloud(); } catch(e){}
   if (mode === 'ocean' && ocean){ const o = ocean; try { sessionStorage.setItem(UPD_KEY, JSON.stringify({ at: Date.now(), sid: account?.sid || save.sid || null, x: o.x, y: o.y, ang: o.ang, onLand: !!o.onLand, gh: o.gh, depth: o.depth || 0, walkRef, camHead, skates: !!o.skates, treat: treat && !treat.scoops ? treat : treat ? { ...treat } : null, bike: o.bike ? { color: o.bike.color } : null })); } catch(e){} }
-  if (mode === 'ocean'){ snapWant = url => { try { sessionStorage.setItem('smw.freeze', url); } catch(e){} location.reload(); }; setTimeout(() => location.reload(), 1500); }   // (a picture of right now, to show while the new version loads)
+  if (mode === 'ocean' && !quiet){ snapWant = url => { try { sessionStorage.setItem('smw.freeze', url); } catch(e){} location.reload(); }; setTimeout(() => location.reload(), 1500); }   // (a picture of right now, to show while the new version loads)
   else location.reload(); }
 function unfreeze(){ const f = $('freeze'); if (!f) return; f.style.opacity = '0'; setTimeout(() => f.remove(), 600); }
 function resumeAfterUpdate(){ let R = null; try { R = JSON.parse(sessionStorage.getItem(UPD_KEY) || 'null'); sessionStorage.removeItem(UPD_KEY); } catch(e){} if (!R || Date.now() - R.at > 5*60*1000) return unfreeze();

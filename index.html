@@ -5168,7 +5168,7 @@ MATTER.railHit = (xa, ya, xb, yb) => { const pk = MATTER.pk; if (!pk) return fal
   return false; };
 // "walk to the front": you walk along the line by yourself, all the way to the loading platform (move the stick to stop)
 function matterAutoWalk(o, dt){ const M = MATTER; if (!M.autoWalk || !M.pk || o.workout) return; if (stick.active || ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some(k2 => keys[k2])){ M.autoWalk = false; return; }   /* (steer yourself and it stops) */
-  const P = M.pk.place, [x, y] = placeLocal(P, o.x*U, o.y*U), Q = M.queue; let k = M.autoWalk.k; const [tx, ty] = Q[k], dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy), step = 2.4*dt;
+  const P = M.pk.place, [x, y] = placeLocal(P, o.x*U, o.y*U), Q = M.queue; let k = M.autoWalk.k; const [tx, ty] = Q[k], dx = tx - x, dy = ty - y, d = Math.hypot(dx, dy), step = 3.6*dt;
   if (d < .4){ if (k >= Q.length - 1){ M.autoWalk = false; banner('🎢 At the front of the line', 'Tap Board a bobsled'); return; } M.autoWalk.k = k + 1; return; }
   const nx = x + dx/d*Math.min(step, d), ny = y + dy/d*Math.min(step, d); o.x = (P.X + nx)/U; o.y = (P.Z - ny)/U; o.ang = Math.atan2(-dy, dx); o.walking = true; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3; }
 function matterAct(o){ if (!MATTER.pk) return null; const P = MATTER.pk.place; if (placeAtX(o.x*U) !== P || o.workout) return null; const [x, y] = placeLocal(P, o.x*U, o.y*U), Q = MATTER.queue;

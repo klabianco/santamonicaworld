@@ -6576,16 +6576,34 @@ function buildPacificPark(g, P3){
     bxs(S0, S1, T0, 77.2, 0, 1.25, 0x8d6e63); bxs(S0, S1, 78.6, T1, 0, 1.25, 0x8d6e63); bxs(S0 - .3, S1 + .3, T0 - .3, T1 + .3, 4.4, 4.7, 0xd32f2f); bxs(S0, S1, T1 - .25, T1, 1.25, 4.4, 0xf4ead2);
     for (const ss of [S0 + .2, S1 - .2]) for (const tt of [T0 + .2, 77.1]) bxs(ss - .12, ss + .12, tt - .12, tt + .12, 1.25, 4.4, 0xf4f4f0);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(6, 1), new THREE.MeshBasicMaterial({ map: labelTex('WEST COASTER', '#d32f2f', '#ffeb3b', 1024, 170, 120), side: THREE.DoubleSide })); sg.position.set(...P3(-26, T0 - .35, dk + 5.3)); sg.rotation.y = Math.PI; g.add(sg); }
-  // a little spinning ride, Inkie's Scrambler
-  let scrCup = null; const scr = new THREE.Group(); scr.position.set(...P3(-54, 52, pierDeckH(-54))); g.add(scr); const scrSpin = new THREE.Group(); scrSpin.position.y = 1.2; scr.add(scrSpin);
-  scr.add(new THREE.Mesh(new THREE.CylinderGeometry(.4, .5, 2.4, 10), std(0x8e24aa, .5)));
-  for (let k = 0; k < 3; k++){ const arm = new THREE.Group(); arm.rotation.y = k*TAU/3; scrSpin.add(arm); const bar = new THREE.Mesh(new THREE.BoxGeometry(4, .15, .15), std(0xfdd835, .5)); bar.position.x = 2; arm.add(bar);
-    const star = new THREE.Group(); star.position.x = 4; arm.add(star); const post = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .7, 6), std(0xfdd835, .5)); post.position.y = -.3; star.add(post);
-    for (let j = 0; j < 4; j++){ const a = j*TAU/4, cup = new THREE.Group(), cm = std([0x1e88e5, 0xe53935, 0x43a047, 0xff7043][j], .5); cm.side = THREE.DoubleSide;   // (an open tub with a bench, so you can see who's in it)
-      const wall = new THREE.Mesh(new THREE.CylinderGeometry(.68, .55, .6, 14, 1, true), cm), flr = new THREE.Mesh(new THREE.CircleGeometry(.55, 14), cm), bench = new THREE.Mesh(new THREE.BoxGeometry(.9, .14, .35), std(0x222222, .7));
-      flr.rotation.x = -Math.PI/2; flr.position.y = -.29; bench.position.set(0, -.12, -.25); cup.add(wall, flr, bench);
-      const sp = new THREE.Mesh(new THREE.BoxGeometry(1.15, .08, .08), std(0xfdd835, .5)); sp.position.set(Math.cos(a)*.58, -.62, Math.sin(a)*.58); sp.rotation.y = -a; star.add(sp);
-      cup.position.set(Math.cos(a)*1.25, -.6, Math.sin(a)*1.25); star.add(cup); if (!k && !j) scrCup = cup; } }
+  // Inkie's Scrambler, built like a real Eli Bridge Scrambler: a center tower, three long arms running LOW, under the cars, each ending in
+  // a hub with four sweeps, and a two-seat car on the end of every sweep. The arms turn one way and the hubs the other, so the cars whip
+  // past each other at the corners. Nothing passes over the cars, so nothing ever goes through you. (Colors are a guess.)
+  let scrCup = null; const scr = new THREE.Group(); scr.position.set(...P3(-54, 52, pierDeckH(-54))); g.add(scr); const scrSpin = new THREE.Group(); scrSpin.position.y = .5; scr.add(scrSpin);
+  { const purple = std(0x6a1b9a, .45, .2), yellow = std(0xfdd835, .45, .3), steel = std(0x9aa0a6, .35, .7);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, .45, 16), purple); base.position.y = .22; scr.add(base);
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 3.4, 12), purple); tower.position.y = 1.7; scr.add(tower);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(1.1, .9, 12), yellow); cap.position.y = 3.85; scr.add(cap);
+    const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.06, 6, 4), new THREE.MeshBasicMaterial({ color: 0xfff1b8 }), 24), m4 = new THREE.Matrix4(); for (let k = 0; k < 24; k++){ const a = k/24*TAU; m4.makeTranslation(Math.cos(a)*1.05, 3.42, Math.sin(a)*1.05); bulbs.setMatrixAt(k, m4); } scr.add(bulbs);
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, .3, 16), yellow); ring.position.y = .05; scrSpin.add(ring);
+    const CC = [0xe53935, 0x1e88e5, 0x43a047, 0xff7043];
+    for (let k = 0; k < 3; k++){ const arm = new THREE.Group(); arm.rotation.y = k*TAU/3; scrSpin.add(arm);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(4.4, .22, .3), yellow); bar.position.set(2.2, 0, 0); arm.add(bar);   // (the long arm, at knee height under everything)
+      const star = new THREE.Group(); star.position.set(4.4, 0, 0); arm.add(star);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(.32, .38, .5, 10), purple); hub.position.y = .1; star.add(hub);
+      for (let j = 0; j < 4; j++){ const a = j*TAU/4, sweep = new THREE.Mesh(new THREE.BoxGeometry(1.55, .14, .16), steel); sweep.position.set(Math.cos(a)*.78, .02, -Math.sin(a)*.78); sweep.rotation.y = a; star.add(sweep);
+        const car = new THREE.Group(); car.position.set(Math.cos(a)*1.6, .08, -Math.sin(a)*1.6); car.rotation.y = a - Math.PI/2; star.add(car);   // (the car faces out, its back to the hub)
+        const shell = std(CC[(k + j) % 4], .35, .15), blk = std(0x2a2a2a, .7);
+        const add = (geo, m, x, y, z) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); me.castShadow = true; car.add(me); return me; };
+        add(new THREE.BoxGeometry(1.45, .12, 1.05), shell, 0, .06, 0);   // floor
+        add(new THREE.BoxGeometry(1.35, .38, .5), shell, 0, .31, -.22);   // seat box
+        add(new THREE.BoxGeometry(1.25, .07, .46), blk, 0, .53, -.2);   // cushion
+        add(new THREE.BoxGeometry(1.45, .85, .12), shell, 0, .55, -.5);   // the high curved back
+        for (const sx of [-.7, .7]) add(new THREE.BoxGeometry(.08, .5, 1.0), shell, sx, .37, -.03);   // sides
+        add(new THREE.BoxGeometry(1.45, .35, .08), shell, 0, .22, .5);   // front
+        add(new THREE.BoxGeometry(1.2, .05, .05), steel, 0, .82, .12);   // the lap bar
+        for (const sx of [-.6, .6]) add(new THREE.BoxGeometry(.05, .3, .05), steel, sx, .68, .12);
+        if (!k && !j){ scrCup = new THREE.Object3D(); scrCup.position.set(-.3, .57, -.12); car.add(scrCup); } } } }   // (your seat: the left one in the first car)
   // signs: PACIFIC PARK over the way in, and Route 66's End of the Trail
   const sign = (txt, w, h, s, t, y, bg, fg, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(txt, bg, fg, 1024, Math.round(1024*h/w), Math.round(1024*h/w*.62)), side: THREE.DoubleSide })); m.position.set(...P3(s, t, y)); m.rotation.y = ry; g.add(m); return m; };
   sign('PACIFIC PARK', 9, 1.6, 70, 62, pierDeckH(70) + 5.2, '#1565c0', '#ffeb3b', Math.PI/2);
@@ -6601,7 +6619,7 @@ function parkStep(dt){ const P = pacPark; if (!P) return; const w = ocean?.worko
   P.ang += dt*.11; P.spin.rotation.z = P.ang; const W = PP.wheel;
   P.gond.forEach((gp, k) => { const a = P.ang + k/W.n*TAU; gp.position.set(Math.cos(a)*W.R, Math.sin(a)*W.R, 0); });   // (the cars hang straight down as the wheel turns)
   { const rw = w?.k === 'ride2' && w.key === 'scrambler' ? w.p?.sp ?? 0 : 1; P.scrV = lerp(P.scrV ?? 1, rw, Math.min(1, dt*2)); P.scrSpin.rotation.y += dt*1.6*P.scrV; P.scrPh = (P.scrPh || 0) + dt*2.6*P.scrV;   // (it stops to let you on, then whips you round)
-    P.scrSpin.children.forEach(a => { a.children[1].rotation.y = -P.scrPh; }); }
+    P.scrSpin.children.forEach(a => { if (a.children[1]) a.children[1].rotation.y = -P.scrPh; }); }
   if (w?.k !== 'coaster'){ coasterMove(P, dt); }
   placeTrain(P); }
 function coasterSpeed(P, u){ const p = P.curve.getPointAt(u % 1); if ((u % 1) < .012) return 2.2; if ((u % 1) < P.top.u) return P.liftV || 2; if ((u % 1) > .95) return 2.6;   // (out of the station, up the lift hill on the chain, gravity, then the brakes)
@@ -8066,7 +8084,7 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
     const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(PARK_ANIM.dragon.parent.quaternion); o.ang = Math.atan2(fw.z, fw.x); return; }
   if (w.key === 'carousel' && PARK_ANIM.carousel){ const c = carouselSeat(), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px);   // (on a horse, going round and up and down, with the band organ playing)
     if ((w.orgT = (w.orgT ?? 0) - dt) <= 0){ const N = [392, 523, 659, 523, 587, 494, 392, 440, 523, 440, 494, 392]; w.orgT = .36; const n = N[(w.orgN = (w.orgN || 0) + 1) % N.length]; sfx(n, .3, 'triangle', .035); if (w.orgN % 3 === 1) sfx(n/2, .2, 'sine', .04); } return; }
-  if (w.key === 'scrambler' && pacPark?.scrCup){ const c = pacPark.scrCup.getWorldPosition(new THREE.Vector3()), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y - .2; o.gh = w.py; w.p = p; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px); return; }   // (you sit in a real cup, flung round with it)
+  if (w.key === 'scrambler' && pacPark?.scrCup){ const S = pacPark.scrCup, c = S.getWorldPosition(new THREE.Vector3()), f = new THREE.Vector3(0, 0, 1).applyQuaternion(S.getWorldQuaternion(new THREE.Quaternion())); o.x = c.x/U; o.y = c.z/U; w.py = c.y - .35; o.gh = w.py; w.p = p; o.ang = Math.atan2(f.z, f.x); return; }   // (you sit in your car, facing the way it faces, flung round with it)
   const s = 390 - p.A, t = -p.off, [x, y] = landXY(s, t), px = o.x, py = o.y; o.x = x; o.y = y; w.py = pierDeckH(s) + p.y; o.gh = w.py; w.p = p;   // (the camera follows you up)
   if (p.ang != null) o.ang = p.ang; else if (Math.hypot(x - px, y - py) > .02*METERS) o.ang = Math.atan2(y - py, x - px);
   if (w.key === 'dragon' && PARK_ANIM.dragon) PARK_ANIM.dragon.rotation.z = p.swing; if (w.key === 'plunge' && PARK_ANIM.plunge) PARK_ANIM.plunge.position.y = p.y + .6;
@@ -8463,7 +8481,7 @@ function drawKite(o, m, hand){
   kiteObj.lookAt(hand.x, hand.y, hand.z); kiteObj.rotateX(-.5); kiteObj.rotateZ(Math.sin(time*1.7)*.35);
   U2.tail.forEach((b, k) => { b.position.set(Math.sin(time*4 - k*.8)*.08*(k + 1), -.42 - k*.16, -k*.05); b.rotation.z = Math.sin(time*5 - k)*.6; });
   const P = U2.line.geometry.attributes.position, n = P.count; for (let k = 0; k < n; k++){ const f = k/(n - 1), sag = Math.sin(f*Math.PI)*.12*hand.distanceTo(U2.pos)*.15; P.setXYZ(k, lerp(hand.x, U2.pos.x, f), lerp(hand.y, U2.pos.y, f) - sag, lerp(hand.z, U2.pos.z, f)); } P.needsUpdate = true; }
-let treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
+let biteT = -9, treat = null, treatObj = null, storeAt = null, storeDown = false, cone = [];
 const DOWN_MENU = [M('🧸', 'Plush toy', 20, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧩', 'Puzzle', 20, 'puzzle'), M('💿', 'Vinyl record', 20, 'tune'), M('📀', 'DVD: Ocean Wonders', 15, 'movie')];   // (downstairs at Barnes & Noble)
 const storeMenu = r => r.cat === 'froyo' ? 'froyo' : (SCOOPS[r.name] || r.cat === 'icecream') ? 'scoops' : BRAND_MENU[r.name] || STORE_MENU[r.cat] || STORE_MENU.gift;
 function atCounter(o){   // the shop whose counter you're standing at (or null)
@@ -8521,7 +8539,7 @@ function renderStore(){
 function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o); if (o?.workout && o.workout.k !== 'sit') return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it && o.workout?.k === 'sit'){ o.workout.seat?.order?.(); return; } if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
   if (it.act === 'roast') return roastTap(o, it);
-  if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)) feed(it.act);
+  if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)){ feed(it.act); biteT = time; }   // (and up it goes to your mouth: see drawTreat)
   if (it.act === 'froyo'){ it.licks++; sfx(700 + Math.random()*150, .07, 'sine', .04); if (it.licks % 2 === 0){ it.scoops.pop(); if (!it.scoops.length) return done('All gone! Yum', 'That froyo was delicious'); } return; }
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
@@ -8556,14 +8574,16 @@ function drawTreat(o, m){   // hold what you bought in your hand (and show the b
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(.068, .048, .09, 16), std(0xf8e1ee, .6)); cup.position.y = -.01; treatObj.add(cup);
     const sp = sprite(null, .3, .3); treatObj.add(sp); treatObj.userData = { cn, sc, sp, cup }; }
   if (treatObj.parent !== oceanScene) oceanScene.add(treatObj);
-  const show = !!treat && o.onLand && !o.car && !w && m.visible; treatObj.visible = show; if (kiteObj){ kiteObj.visible = false; kiteObj.userData.line.visible = false; } if (ballObj) ballObj.visible = false; if (!show) return;
+  const show = !!treat && o.onLand && !o.car && (!w || w.k === 'sit') && m.visible; /* (sitting down, you still have it in your hand) */ treatObj.visible = show; if (kiteObj){ kiteObj.visible = false; kiteObj.userData.line.visible = false; } if (ballObj) ballObj.visible = false; if (!show) return;
   const { cn, sc, sp, cup } = treatObj.userData, u = m.userData, human = u.kind === 'swimmer', cone3 = treat.act === 'lick' || treat.act === 'froyo';
   cn.visible = cone3 && !treat.cup; cup.visible = cone3 && !!treat.cup; sc.forEach((s, i) => { s.visible = cone3 && i < treat.scoops.length; if (s.visible) s.material.color.set(treat.scoops[i]); }); sp.visible = !cone3;
   if (!cone3){ if (!treatTex[treat.e]) treatTex[treat.e] = canvasTex(96, 96, (c, w, h) => emo(c, treat.e, w/2, h/2 + 4, 76), false); if (sp.material.map !== treatTex[treat.e]){ sp.material.map = treatTex[treat.e]; sp.material.needsUpdate = true; } }
-  if (human && !(o.hugT > time) && o.sitting == null){ const a = u.arms.ra; a.sh.rotation.set(0, 0, Math.PI + .6); a.el.rotation.set(0, 0, 1.2); }   // hold it up in front of you
+  const bite = clamp(1 - Math.abs(time - biteT - .25)/.25, 0, 1);   // (a lick, a bite or a sip: hand up to your mouth and back, half a second)
+  if (human && !(o.hugT > time) && o.sitting == null){ const a = u.arms.ra; a.sh.rotation.set(0, 0, Math.PI + .6 + bite*.75); a.el.rotation.set(0, 0, 1.2 + bite*.9); }   // hold it up in front of you
   m.updateMatrixWorld(true);
   if (human) _cv.set(.33, 0, 0).applyMatrix4(u.arms.ra.el.matrixWorld); else _cv.set(m.position.x + Math.cos(o.ang)*.45, m.position.y + .35, m.position.z + Math.sin(o.ang)*.45);
   treatObj.position.copy(_cv); treatObj.position.y += cone3 ? .1 : .14;
+  if (bite > 0 && human && u.body){ const mouth = u.body.localToWorld(new THREE.Vector3(.64, .01, 0)); mouth.x += Math.cos(o.ang)*.13; mouth.z += Math.sin(o.ang)*.13; mouth.y -= cone3 ? .16 : .06; treatObj.position.lerp(mouth, bite); }   // (the top of the cone right at your mouth)
   if (treat.act === 'kite'){ sp.visible = false; drawKite(o, m, _cv); }
   if (treat.act === 'ball'){ sp.visible = false; drawBall(o, m, _cv); }
   if (treat.act === 'spritz' && time - heartsAt < 2.6) drawHearts(m.position.x, m.position.y + 1, m.position.z, 0); }

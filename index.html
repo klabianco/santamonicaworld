@@ -942,7 +942,7 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT' 
   if (k === 'q' && !e.repeat && mode === 'ocean'){ if ($('questPanel').hidden) openQuests(); else closeQuests(); }
   if (k === 'l' && !e.repeat && mode === 'ocean'){ if ($('leaguePanel').hidden) openLeague(); else closeLeague(); }
   if (k === 'c' && playing() && !paused) nextView();
-  if (k === 'j' && !e.repeat){ if (ocean?.skating) iceJump(ocean); else dolphinJump(); }
+  if (k === 'j' && !e.repeat) jumpKey();
   if (k === 'b' && !e.repeat && !paused) toggleSurf();
   if (/^[1-3]$/.test(k) && !e.repeat && mode === 'ocean' && !paused){ const id = ownedGadgets()[+k - 1]; if (id) holdGadget(id); }
   if (k === 'f' && heldGadget){ gadgetHeld = true; $('gadgetUse').classList.add('on'); }
@@ -1132,6 +1132,7 @@ const SHOP = [
   { id:'turbotail',who:'dolphin', name:'Turbo Tail',       lv: curve(100, 5), inf: true, say: fastSay },
   { id:'blowhole', who:'dolphin', name:'Big Blowhole',     lv: curve(80, 5), inf: true, say: breathSay },
   { id:'rocketfin',who:'dolphin', name:'Rocket Fin',       lv: curve(200, 8, 1.4), legend: true, say: n => `Jump ${timesTxt(jumpAt(n))} as high. (Dolphins can jump, and so can anyone with Spring Fins.)` },
+  { id:'doublejump',who:'all',    name:'Double Jump',      lv:[400], say: () => 'Jump again in the middle of a jump: press J (or Jump) twice to go twice as high. Works on land and out of the water.' },
   { id:'springfins',who:'all',    name:'Spring Fins',      lv:[0], found: 'the Hidden Sea Cave', say: () => 'Every animal can jump (J), and you jump twice as high!' },
   { id:'sonar',    who:'dolphin', name:'Sonar',            lv: curve(250, 5, 1.5), legend: true, say: n => `Press Sonar (or P) to ping: nearby pearls and treasure chests show up on your minimap. Recharges in ${SONAR_WAIT[n - 1]} second${SONAR_WAIT[n - 1] === 1 ? '' : 's'}.` },
   { id:'rainbow',  who:'dolphin', name:'Rainbow Stripes',  lv:[120],                        say: () => 'Just for looks: shows on the Dolphin. Very fancy.' },
@@ -1159,7 +1160,7 @@ const legendTiers = () => save.legend || 0;
 const maxLv = it => it.inf ? Infinity : it.lv.length + (it.legend ? legendTiers() : 0);
 const SPEED_GEAR = ['fins', 'turbotail', 'flippers', 'paws'], BREATH_GEAR = ['snorkel', 'blowhole', 'bubblefur'];   // (Deep Lungs multiplies instead)
 // the shop is grouped by what gear does (all of it works for every animal); `who` only says which animal's model shows looks-only gear
-const SHOP_GROUPS = [['Found in secret places', ['springfins']], ['Gadgets', ['paraglider', 'grapple', 'jetpack']], ['Boosters', ['turbo']], ['Go faster', ['fins', 'turbotail', 'flippers', 'paws']],
+const SHOP_GROUPS = [['Found in secret places', ['springfins']], ['Jumping', ['doublejump']], ['Gadgets', ['paraglider', 'grapple', 'jetpack']], ['Boosters', ['turbo']], ['Go faster', ['fins', 'turbotail', 'flippers', 'paws']],
   ['Hold your breath longer', ['snorkel', 'blowhole', 'bubblefur', 'lungs', 'scuba']], ['Special powers', ['magnet', 'chestmag', 'pouch', 'armor', 'sonar', 'light', 'whiskers', 'rocketfin']],
   ['Just for looks', ['goldcap', 'rainbow', 'crown', 'bowtie']], ['Boats & submarines', ['kayak', 'canoe', 'sailboat', 'motorboat', 'sub', 'ship']]];
 // the level you own (0 = not bought); older saves only listed gear in save.gear, which counts as level 1
@@ -1897,6 +1898,15 @@ function drawGadgets(o, px, py, pz){
 }
 // dolphins can always jump; Spring Fins (from the Hidden Sea Cave) let everyone jump, and twice as high (√2 the speed = 2× the height)
 const canJump = () => curChar().id === 'dolphin' || hasGear('springfins');
+// Jumping: on land anyone can jump (J, or Jump); spring shoes from the shoe stores make it about three times as high, and Double Jump from
+// the dive shop gives you a second jump in mid-air
+function jumpKey(){ const o = ocean; if (mode !== 'ocean' || !o || paused) return; if (o.skating) return iceJump(o);
+  if (o.jumpY > 0){ if (hasGear('doublejump') && (o.jumps || 1) < 2 && !o.glide && !o.jetOn){ o.jumps = 2; o.jumpV = Math.max(o.jumpV, (o.landJump ? landJumpV() : 5.5)); sfx(520, .18, 'sine', .05, 0, 500); for (let i = 0; i < 8; i++) bubble(o.x + (Math.random() - .5)*20, o.y + (Math.random() - .5)*20, (Math.random() - .5)*40, (Math.random() - .5)*40); } return; }
+  if (o.onLand) return landJump(o); dolphinJump(); if (o.jumpY > 0) o.jumps = 1; }
+const landJumpV = () => springShoes() ? 7.6 : 4.4;   // (about 1 m up, or about 3 m in spring shoes)
+function landJump(o){ if (o.car || o.bike || o.workout || o.sleeping || o.sitting != null || o.bison || o.climb || o.inHouse || o.onShip || o.onBoat || o.vehicle || o.ride) return;
+  walkRef = (o.gh ?? 0) + .3; const g = groundAt(o.x, o.y); o.jumpY = g + .01; o.jumpV = landJumpV(); o.onLand = false; o.landJump = true; o.jumps = 1; o.depth = 0; o.vd = 0;
+  sfx(springShoes() ? 260 : 330, .15, springShoes() ? 'sine' : 'triangle', .05, 0, springShoes() ? 700 : 200); }
 function dolphinJump(){   // (the Rocket Fin makes the jump about twice as high)
   const o = ocean; if (mode !== 'ocean' || !o || paused || !canJump() || o.onLand || o.ride || o.vehicle || o.jumpY > 0 || (o.depth || 0) > .6) return;
   const sp = Math.hypot(o.vx, o.vy)/METERS; o.jumpV = (4.2 + Math.min(3, sp*.9))*(gearLv('rocketfin') ? jumpAt(gearLv('rocketfin')) : 1)*(hasGear('springfins') ? Math.SQRT2 : 1); o.jumpY = .01; o.depth = 0; o.vd = 0;
@@ -1908,18 +1918,21 @@ function jumpStep(o, dt){
   if (o.glide) o.jumpV += (-1.6 - o.jumpV)*Math.min(1, dt*3);   // paraglider: drift down slowly
   else o.jumpV -= 9.8*dt;
   if (o.jetOn) o.jumpV = Math.min(9, o.jumpV + 24*dt);   // jetpack: up, up and away
-  if (o.jumpY > (hasGear('springfins') ? 120 : 60) && o.jumpV > 0) o.jumpV = 0;   // the sky has a ceiling (Spring Fins double it, so they double even a maxed Rocket Fin jump)
+  if (!o.landJump && o.jumpY > (hasGear('springfins') ? 120 : 60) && o.jumpV > 0) o.jumpV = 0;   // the sky has a ceiling (Spring Fins double it, so they double even a maxed Rocket Fin jump)
   o.jumpY += o.jumpV*dt; o.idle = 0; o.depth = 0; o.vd = 0;
-  const fx = Math.cos(o.ang), fy = Math.sin(o.ang); o.x += o.vx*dt; o.y += o.vy*dt;   // sail through the air with no water to slow you
-  const w = wantHeading(), steer = o.glide || o.jetOn; if (w) o.ang += clamp(angDiff(w.ang, o.ang), -(steer ? 2.5 : 1.2)*dt, (steer ? 2.5 : 1.2)*dt);
+  const fx = Math.cos(o.ang), fy = Math.sin(o.ang);
+  if (o.landJump){ const w2 = wantHeading(), sp2 = w2 ? 165*w2.m : 0; if (w2){ o.ang += clamp(angDiff(w2.ang, o.ang), -6*dt, 6*dt); } o.vx += (Math.cos(o.ang)*sp2 - o.vx)*Math.min(1, dt*(w2 ? 4 : 1.5)); o.vy += (Math.sin(o.ang)*sp2 - o.vy)*Math.min(1, dt*(w2 ? 4 : 1.5));   // (you can steer a jump a bit)
+    const nx = o.x + o.vx*dt, ny = o.y + o.vy*dt; walkRef = o.jumpY + .3; if (groundAt(nx, ny) <= o.jumpY + .35){ o.x = nx; o.y = ny; } else { o.vx = o.vy = 0; } }   // (a wall stops you; jump high enough and you can land on top)
+  else { o.x += o.vx*dt; o.y += o.vy*dt; }   // sail through the air with no water to slow you
+  const w = wantHeading(), steer = o.glide || o.jetOn; if (w && !o.landJump) o.ang += clamp(angDiff(w.ang, o.ang), -(steer ? 2.5 : 1.2)*dt, (steer ? 2.5 : 1.2)*dt);
   if (steer){ const sp = w ? (o.glide ? 320 : 360)*w.m : o.glide ? 200 : 0; o.vx += (Math.cos(o.ang)*sp - o.vx)*Math.min(1, dt*2); o.vy += (Math.sin(o.ang)*sp - o.vy)*Math.min(1, dt*2); }
   eagleWall(o, wasY);   // Eagle Rock's steep sides: you only land on top if you come down from above
-  { const gh = groundAt(o.x, o.y); if (gh > -.35 && o.jumpY <= gh){ o.jumpY = 0; o.jumpV = 0; o.glide = false; o.depth = 0; o.vd = 0; o.onLand = true; o.vx *= .3; o.vy *= .3; sfx(120, .2, 'sine', .08); return true; } }   // came down on an island: land on it
-  if (o.jumpY <= 0){ o.jumpY = 0; o.jumpV = 0; o.glide = false; o.depth = .5; o.vd = .8; sfx(160, .35, 'sine', .08, 0, -80);
+  { if (o.landJump) walkRef = o.jumpY + .3; const gh = groundAt(o.x, o.y); if (gh > -.35 && o.jumpY <= gh){ o.jumpY = 0; o.jumpV = 0; o.glide = false; o.depth = 0; o.vd = 0; o.onLand = true; o.gh = gh; walkRef = gh + .3; if (o.landJump){ o.landJump = false; o.jumps = 0; sfx(140, .1, 'sine', .05); return true; } o.jumps = 0; o.vx *= .3; o.vy *= .3; sfx(120, .2, 'sine', .08); return true; } }   // came down on an island: land on it
+  if (o.jumpY <= 0){ o.jumpY = 0; o.jumpV = 0; o.glide = false; o.landJump = false; o.jumps = 0; o.depth = .5; o.vd = .8; sfx(160, .35, 'sine', .08, 0, -80);
     for (let i=0;i<18;i++) bubble(o.x + fx*20 + (Math.random()-.5)*40, o.y + fy*20 + (Math.random()-.5)*40, (Math.random()-.5)*60, (Math.random()-.5)*60); }
   return true;
 }
-$('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); if (ocean?.skating) iceJump(ocean); else dolphinJump(); });
+$('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); jumpKey(); });
 $('hornBtn').addEventListener('pointerdown', e => { e.preventDefault(); horn(); });
 $('carBtn').onclick = () => { initAudio(); carKey(); };
 $('sonarBtn').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); sonarPing(); });
@@ -3588,7 +3601,7 @@ function walkStep(o, dt){
   const w = wantHeading(), walking = !!w;
   if (w) o.ang += clamp(angDiff(w.ang, o.ang), -(o.bike ? 2.6 : 6)*dt, (o.bike ? 2.6 : 6)*dt);
   const sk = o.skating = !!o.skates && onIce(o);   // (on skates, on the ice: you glide, and it takes a while to stop or turn)
-  const main = o.x > coastX(o.y) || (o.gh ?? 0) > PIER_L.h1 - 1.5, run = main && diveHeld(), sp = walking ? (o.bike ? (run ? 400 : 270)*Math.max(.5, w.m) : sk ? ownTop(230)*speedPct()*(run ? 1.5 : 1) : main ? run ? 270 : 110 : 62)*w.m*foodSpeed() : 0;   // (out on the pier too)   // (skating: as fast as your swimming gear and XP make you, times the Top speed slider; hold Run for a burst)   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
+  const main = o.x > coastX(o.y) || (o.gh ?? 0) > PIER_L.h1 - 1.5, run = main && diveHeld(), sp = walking ? (o.bike ? (run ? 400 : 270)*Math.max(.5, w.m) : sk ? ownTop(230)*speedPct()*(run ? 1.5 : 1) : main ? run ? 330 : 165 : 120)*w.m*foodSpeed() : 0;   // (out on the pier too)   // (skating: as fast as your swimming gear and XP make you, times the Top speed slider; hold Run for a burst)   // (hold Run on the mainland: about 6.75 m/s; the city is real size)                // about 1.5 m/s (2.75 on the mainland: it's a long way down to the water)
   if (o.bike){ const v = Math.hypot(o.vx, o.vy)/METERS; o.bike.ph += dt*v*2.4; o.bike.wh += dt*v/.33; if (walking && (o.stepSfx = (o.stepSfx || 0) - dt) <= 0){ o.stepSfx = .5; sfx(1800, .02, 'square', .006); } }
   else if (walking && (o.stepSfx = (o.stepSfx || 0) - dt) <= 0){ o.stepSfx = sk ? .55 : run ? .24 : .38; if (sk) sfx(2600, .3, 'sawtooth', .004, 0, -1800); else sfx(150 + Math.random()*40, .06, 'triangle', .03); }
   const air = sk && o.iceJ; if (air && iceAir(o) <= 0 && time - o.iceJ.t0 > .1){ const n = o.iceJ.spun; o.iceJ = null; sfx(140, .15, 'square', .03); if (n){ heartsAt = time; banner(n >= 3 ? 'Triple axel! 🌟🌟🌟' : n === 2 ? 'Double axel! 🌟🌟' : 'Axel jump! 🌟', n >= 3 ? 'Olympic gold!' : 'Tap Spin in the air to spin more'); } }   // landed
@@ -3779,7 +3792,7 @@ function updOcean(dt){
   { const bb = $('boatBtn'), showBt = !!o.vehicle || (canBoard(o) && ownedBoats().length > 0); if (bb.hidden === showBt) bb.hidden = !showBt;
     const bt = o.vehicle ? 'Get out' : 'Boats'; if (bb.textContent !== bt) bb.textContent = bt;
     const ub = $('upBtn'), showU = !!VEH[o.vehicle]?.sub; if (ub.hidden === showU) ub.hidden = !showU; }
-  { const jb = $('jumpBtn'), showJ = (canJump() && !o.onLand && !o.ride && !o.vehicle) || !!o.skating; if (jb.hidden === showJ) jb.hidden = !showJ;
+  { const jb = $('jumpBtn'), showJ = (canJump() && !o.onLand && !o.ride && !o.vehicle) || !!o.skating || (o.onLand && !o.car && !o.bike && !o.workout && !o.vehicle) || (o.jumpY > 0 && hasGear('doublejump') && (o.jumps || 1) < 2); if (jb.hidden === showJ) jb.hidden = !showJ;
     const sb = $('sonarBtn'), showS = !o.onLand && !o.ride && !o.vehicle && hasGear('sonar'); if (sb.hidden === showS) sb.hidden = !showS; }
   const rb = $('rideBtn'), ladder = !o.vehicle && shipLadderNear(o), boat = !ladder && !o.vehicle && boatNear(o), bis = !o.bison && bisonNear(o), showRide = !!(o.ride || o.rideTarget || ladder || boat || o.onShip || o.onBoat || o.bison || bis);
   if (rb.hidden === showRide) rb.hidden = !showRide;
@@ -6137,13 +6150,14 @@ const SCOOPS = { "McConnell's": [['Sea Salt Cream & Cookies', '#efe6da'], ['Salt
 const SCOOP_PRICE = [0, 8, 12, 15];   // one, two or three scoops
 const M = (e, n, p, act = 'eat', x = {}) => ({ e, n, p, act, ...x });
 const COLORS = [['Red', '#e53935'], ['Yellow', '#fdd835'], ['Green', '#43a047'], ['Blue', '#1e88e5'], ['Purple', '#8e24aa'], ['Pink', '#f06292'], ['Black', '#222222'], ['White', '#f4f4f0']];
+const SPRING_COL = '#00e5ff', springShoes = () => save.wear?.shoes === SPRING_COL;   // (spring shoes: bright cyan soles; wear other shoes and they're off)
 const CAPS = COLORS.slice(0, 7).map(([c, h]) => M('🧢', `${c} cap`, 30, 'wear', { slot: 'hat', col: h }));
 const STORE_MENU = {
   food: [M('🍔', 'Burger', 12), M('🍟', 'Fries', 6), M('🍕', 'Pizza slice', 8), M('🍋', 'Lemonade', 5, 'drink')],
   bakery: [M('🧁', 'Cupcake', 8), M('🍪', 'Cookie', 5), M('🥐', 'Croissant', 6), M('🍰', 'Slice of cake', 10)],
   candy: [M('🍭', 'Giant lollipop', 10), M('🍬', 'Gummy bears', 6), M('🍫', 'Chocolate bar', 6), M('🌈', 'Rainbow sour belts', 6)],
   clothes: [...COLORS.map(([c, h]) => M('👕', `${c} T-shirt`, 40, 'wear', { slot: 'shirt', col: h })), CAPS[0], CAPS[3]],
-  shoes: [['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h })),
+  shoes: [M('🦘', 'Spring shoes', 120, 'wear', { slot: 'shoes', col: SPRING_COL, say: 'Boing! Jump (J) about three times as high while you wear them' }), ...[['White', '#f4f4f0'], ['Red', '#e53935'], ['Black', '#222222'], ['Blue', '#1e88e5'], ['Pink', '#f06292'], ['Neon green', '#76ff03']].map(([c, h]) => M('👟', `${c} sneakers`, 50, 'wear', { slot: 'shoes', col: h }))],
   shades: [['Black', '#111111'], ['Pink', '#f06292'], ['Gold', '#d4a020'], ['Blue mirror', '#2f80ed'], ['Red', '#e53935']].map(([c, h]) => M('🕶️', `${c} sunglasses`, 30, 'wear', { slot: 'shades', col: h })),
   books: 'books',   // (bookshops: read any book for free, or buy one to take with you; see BOOKS)
   toys: [M('🧸', 'Teddy bear', 30, 'hug'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Up and down, up and down!' }), M('🦆', 'Rubber duck', 8, 'play', { say: 'Squeak squeak!' }), M('🧩', 'Puzzle', 20, 'puzzle'), M('🪁', 'Kite', 20, 'kite')],

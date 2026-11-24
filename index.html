@@ -86,6 +86,11 @@
   .progress{width:130px;height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:6px}
   .progress i{display:block;height:100%;width:0;background:var(--coral)}
 
+  #seatChat{position:fixed;left:calc(env(safe-area-inset-left,0px) + 12px);top:100px;width:min(320px,calc(100vw - 24px));z-index:30;background:rgba(255,255,255,.96);border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);padding:10px 12px;font:600 14px Nunito,sans-serif;color:#0b2a40}
+  #seatChat .hd{display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px}#seatChat .hd span{flex:1}#seatChat .x{border:0;background:#e9eef2;border-radius:10px;padding:2px 9px;font:800 14px Nunito,sans-serif;cursor:pointer}
+  #seatChat .lines{max-height:132px;overflow-y:auto;margin:6px 0;display:flex;flex-direction:column;gap:3px}#seatChat .ln b{color:#e0533d}#seatChat .ln.me b{color:#1e88e5}#seatChat .note{color:#7a8a96;font-weight:600;font-size:12px}
+  #seatChat .ph{display:flex;flex-wrap:wrap;gap:5px}#seatChat .ph button{border:0;background:#fde6ef;border-radius:12px;padding:5px 9px;font:700 13px Nunito,sans-serif;cursor:pointer}
+  #seatChat form{display:flex;gap:6px;margin-top:7px}#seatChat input{flex:1;min-width:0;border:2px solid #cfe0ea;border-radius:12px;padding:6px 9px;font:600 14px Nunito,sans-serif}#seatChat form button{border:0;background:#1e88e5;color:#fff;border-radius:12px;padding:6px 12px;font:800 14px Nunito,sans-serif}
   .coach{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 108px);
     width:min(calc(100% - 32px),520px);box-sizing:border-box;background:var(--foam);border-radius:18px;padding:12px 16px;
     box-shadow:0 5px 0 rgba(8,43,69,.3);display:flex;gap:12px;align-items:center;pointer-events:none}
@@ -3747,7 +3752,7 @@ function updOcean(dt){
   updCannons(o, dt); if (mode === 'dead') return;
   questStep(o, dt);
   leagueStep(o, dt);
-  mpTick(dt);
+  mpTick(dt); seatChatTick(dt);
   o.tripT = (o.tripT || 0) + dt;
   if (!o.wentFar && Math.hypot(o.x - HOUSE.x, o.y - HOUSE.y) > 300*METERS){ o.wentFar = true; o.homeDone = false; }   // a real trip: coming back home counts
   { const hx = HOUSE.x - o.x, hy = HOUSE.y - o.y, hd = Math.hypot(hx, hy);
@@ -11561,7 +11566,7 @@ function mpTick(dt){
   const o = ocean, m = player; if (!m) return;
   const me = { n: (leagueBadge() + (save.label || fbAuth.name)).slice(0, 20),   // your league badge shows on your name tag c: curChar().id, g: LOOK_GEAR.filter(id => hasGear(id)).join(',').slice(0, 60),
     x: Math.round(o.x), y: Math.round(o.y), w: +m.position.y.toFixed(2), a: +o.ang.toFixed(2), p: +m.rotation.z.toFixed(2),
-    l: o.onShip ? 2 : o.onBoat ? 3 : o.onLand ? 1 : 0, d: +(o.depth || 0).toFixed(2) };
+    l: o.workout?.k === 'sit' ? 4 : o.onShip ? 2 : o.onBoat ? 3 : o.onLand ? 1 : 0, d: +(o.depth || 0).toFixed(2) };
   const key = JSON.stringify(me); if (key === mpLast && (mpSendT = .2, (o.mpIdle = (o.mpIdle || 0) + .2) < 4)) return;   // still: resend only now and then so you don't vanish
   o.mpIdle = 0; mpLast = key; mpSay({ ...me, t: { '.sv': 'timestamp' } });
 }
@@ -11575,10 +11580,50 @@ function drawOthers(t){
     o.sx += (o.x - o.sx)*k; o.sy += (o.y - o.sy)*k; o.sw += ((o.w ?? 0) - o.sw)*k; o.sa = lerpAngle(o.sa, o.a ?? 0, k);
     const m = o.model, u = m.userData; m.visible = true;
     m.position.set(o.sx*U, o.sw, o.sy*U); m.rotation.set(0, -o.sa, o.p ?? 0);
-    { const gear = (o.g || '').split(','); showGear(m, id => gear.includes(id), o.l === 1); }   // (their kit, and street clothes when they're walking around on land)
-    if (o.l && u.kind === 'swimmer') poseWalk(m, moving ? t*8 : 0, moving); else poseModel(m, moving ? null : RIDE_POSE, t*1.2);
+    { const gear = (o.g || '').split(','); showGear(m, id => gear.includes(id), o.l === 1 || o.l === 4); }   // (their kit, and street clothes when they're walking around on land)
+    if (o.l === 4 && u.kind === 'swimmer'){ poseWalk(m, 0, false); for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.5; u.legs[l].kn.rotation.z = -1.5; } }   // (sitting on a bench or at a table)
+    else if (o.l && u.kind === 'swimmer') poseWalk(m, moving ? t*8 : 0, moving); else poseModel(m, moving ? null : RIDE_POSE, t*1.2);
     o.tag.position.set(o.sx*U, o.sw + (o.l ? 1.2 : .9), o.sy*U); }
 }
+/* ---------- Sitting together: sit down next to another player and a little chat opens, just for the two of you ----------
+   With a friend (friend codes, on the phone) you can type. With anyone else you can only tap ready-made phrases, so nothing typed
+   ever reaches a stranger (the Firestore rules hold to that too). Data: seatchats/<id> { from, to, fromName, text | phrase, at };
+   each message is deleted as soon as the other player's game shows it. Close it and it stays closed until one of you gets up. */
+const SEAT_PHRASES = ['Hi! 👋', 'Nice spot!', 'This food is yummy 😋', 'Want to ride the Matterhorn?', 'Race you to the pier!', 'Follow me!', 'Ha ha 😂', 'Yes!', 'No thanks', 'Be right back', 'See you later!', 'Bye! 👋'];
+const SEATCHAT = { with: null, lines: [], pollT: 0, closedFor: null, seen: new Set(), el: null,
+  send: m => fsWrite(`/seatchats/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, m),
+  poll: () => fsQuery('seatchats', 'to', 'EQUAL', fbAuth.uid), drop: id => fsDel(`/seatchats/${id}`).catch(() => {}),
+  ready: () => socialOn(), me: () => fbAuth?.uid, myName: () => (save.label || fbAuth?.name || 'Player').slice(0, 30) };
+function seatBuddy(){ const o = ocean; if (!o || o.workout?.k !== 'sit') return null; let best = null, bd = 2.6;   // (another player sitting within a couple of meters: the same bench or table)
+  for (const [key, v] of others){ if (v.l !== 4) continue; const d = Math.hypot(v.x - o.x, v.y - o.y)*U; if (d < bd){ bd = d; best = { key, uid: key.split('_')[0], name: v.n || 'Player' }; } }
+  if (best) best.friend = friends.some(f => f.uid === best.uid); return best; }
+function seatChatTick(dt){ const S = SEATCHAT, b = seatBuddy();
+  if (!b){ if (S.with) closeSeatChat(); S.closedFor = null; return; }
+  if (S.closedFor === b.key) return;
+  if (!S.with || S.with.key !== b.key) openSeatChat(b); else if (S.with.friend !== b.friend){ S.with.friend = b.friend; if (b.friend) S.lines.push({ note: `You and ${b.name} are friends now: you can type to each other.` }); renderSeatChat(true); }
+  if ((S.pollT -= dt) <= 0){ S.pollT = 2; pollSeatChat(); } }
+function openSeatChat(b){ const S = SEATCHAT; S.with = b; S.lines = [{ note: b.friend ? `You're sitting with your friend ${b.name}. Only the two of you see this chat.` : `You're sitting next to ${b.name}. Tap something to say. (Make friends with a friend code on your phone to type.)` }];
+  if (!S.el){ S.el = document.createElement('div'); S.el.id = 'seatChat'; document.body.appendChild(S.el);
+    S.el.addEventListener('click', e => { const ph = e.target.closest('[data-ph]'); if (ph){ sayInSeatChat({ phrase: +ph.dataset.ph }); return; } if (e.target.closest('.x')){ SEATCHAT.closedFor = SEATCHAT.with?.key; closeSeatChat(); } });
+    S.el.addEventListener('submit', e => { e.preventDefault(); const inp = S.el.querySelector('input'), v = inp.value.trim().slice(0, 200); if (v){ sayInSeatChat({ text: v }); inp.value = ''; } });
+    for (const ev of ['pointerdown', 'touchstart', 'wheel']) S.el.addEventListener(ev, e => e.stopPropagation(), { passive: true }); }
+  S.el.hidden = false; S.pollT = 0; sfx(880, .08, 'triangle', .04); sfx(1175, .1, 'triangle', .04, .09); renderSeatChat(true); }
+function closeSeatChat(){ const S = SEATCHAT; S.with = null; S.lines = []; if (S.el) S.el.hidden = true; }
+function renderSeatChat(full){ const S = SEATCHAT, b = S.with; if (!S.el || !b) return;
+  if (full || !S.el.querySelector('.lines')){ S.el.innerHTML = `<div class="hd">💬 <span></span><button class="x" type="button" aria-label="Close">✕</button></div><div class="lines"></div><div class="ph">${SEAT_PHRASES.map((p, i) => `<button type="button" data-ph="${i}">${p}</button>`).join('')}</div>${b.friend ? '<form><input maxlength="200" placeholder="Type a message…" autocomplete="off"><button type="submit">Send</button></form>' : ''}`;
+    S.el.querySelector('.hd span').textContent = b.name + (b.friend ? ' · friend' : ''); }
+  const L = S.el.querySelector('.lines'); L.textContent = ''; for (const ln of S.lines.slice(-30)){ const d = document.createElement('div'); if (ln.note){ d.className = 'note'; d.textContent = ln.note; } else { d.className = 'ln' + (ln.me ? ' me' : ''); const w = document.createElement('b'); w.textContent = (ln.me ? 'You' : ln.who) + ': '; d.append(w, document.createTextNode(ln.text)); } L.appendChild(d); }
+  L.scrollTop = L.scrollHeight; }
+function sayInSeatChat(m){ const S = SEATCHAT, b = S.with; if (!b) return; initAudio(); const text = m.text ?? SEAT_PHRASES[m.phrase]; if (m.text && !b.friend) return;   // (typing is only for friends)
+  S.lines.push({ me: true, text }); renderSeatChat(); sfx(660, .06, 'sine', .03);
+  S.send({ from: SEATCHAT.me(), to: b.uid, fromName: SEATCHAT.myName(), ...(m.text ? { text: m.text } : { phrase: m.phrase }), at: Date.now() })
+    .catch(e => { S.lines.push({ note: e?.status === 403 ? "Chat isn't switched on yet." : "Couldn't send that. Check the internet." }); renderSeatChat(); }); }
+async function pollSeatChat(){ const S = SEATCHAT, b = S.with; if (!b || !S.ready()) return; let all; try { all = await S.poll(); } catch(e){ return; }
+  const now = Date.now(); let got = false;
+  for (const m of (all || []).sort((a, c) => (a.at || 0) - (c.at || 0))){ if (S.seen.has(m.id)) continue;
+    if (S.with && m.from === S.with.uid){ const text = m.text != null ? (S.with.friend ? String(m.text).slice(0, 200) : null) : SEAT_PHRASES[m.phrase]; if (text){ S.lines.push({ who: S.with.name, text }); got = true; } S.seen.add(m.id); S.drop(m.id); }
+    else if (now - (m.at || 0) > 600000){ S.seen.add(m.id); S.drop(m.id); } }   // (old ones from someone you're not sitting with any more)
+  if (got){ renderSeatChat(); sfx(988, .07, 'triangle', .04); } }
 // only people ride dolphins, climb ships and sit in boats: switching to an animal drops you back in the water
 function leaveHumanThings(){
   const o = ocean; if (!o) return;

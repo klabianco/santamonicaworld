@@ -3566,16 +3566,17 @@ const islandPlants = () => plantsCache || (plantsCache = (() => { const R = mulb
 // Slide along it if you can; otherwise stay put. (Jumping, the jetpack and the glider still get you anywhere.)
 // The 10 Freeway east of the McClure Tunnel: no walking on it (cars only). Main St, 4th St and Lincoln cross on bridges, so those stay open.
 const FREEWAY = (() => { const segs = []; for (const r of CITY.roads) if (r.name === 'Santa Monica Freeway' && r.p.every(q => q[0] > 400)) for (let k = 0; k < r.p.length - 1; k++) segs.push([r.p[k], r.p[k + 1]]);
-  return { segs, bridges: [[591, 61], [773, 194], [1255, 302], [1186, 293]] }; })();
+  return { segs, bridges: [[591, 61], [773, 194], [1255, 302], [1186, 293]], spans: [[591, 30, 591, 92, 13], [773, 150, 773, 222, 13]] }; })();   // (spans: the whole of the Main St and 4th St bridges, end to end and curb to curb plus sidewalks; Main St is the real way to walk from the mall to Tongva Park)
+const onFwBridge = (s, t, extra = 0) => FREEWAY.bridges.some(([bs, bt]) => Math.hypot(s - bs, t - bt) < 9 + extra) || FREEWAY.spans.some(([a, b, c, d, w]) => segDist(s, t, [[a, b], [c, d]]) < w + extra);
 function segDist(s, t, [a, b]){ const dx = b[0] - a[0], dy = b[1] - a[1], u = clamp(((s - a[0])*dx + (t - a[1])*dy)/(dx*dx + dy*dy || 1), 0, 1); return Math.hypot(s - a[0] - u*dx, t - a[1] - u*dy); }
 function fwDist(s, t){ let d = 1e9; if (s < 400 || s > 1400 || t < -10 || t > 350) return d; for (const g of FREEWAY.segs) d = Math.min(d, segDist(s, t, g)); return d; }
-function onFreeway(x, y){ const [s, t] = landST(x, y); if (fwDist(s, t) > 8.5) return false; return !FREEWAY.bridges.some(([bs, bt]) => Math.hypot(s - bs, t - bt) < 9); }
+function onFreeway(x, y){ const [s, t] = landST(x, y); if (fwDist(s, t) > 8.5) return false; return !onFwBridge(s, t); }
 function steepStop(o, x0, y0){
   const h0 = groundAt(x0, y0), e = 6, steep = (x, y) => Math.hypot(groundAt(x + e, y) - groundAt(x - e, y), groundAt(x, y + e) - groundAt(x, y - e))/(2*e*U) > 1.1;
   const shop = x0 > coastX(y0) && roomAt(...landST(x0, y0), true);   // (in a shop you can hop down off a table or the counter)
   const fw0 = !o.car && onFreeway(x0, y0);
   const farAway = !!placeAtX(x0*U) || inSFu(x0);   // (Bergamot's island edge only applies at home, not in Kyoto, the Getty or Disneyland)
-  const ok = (x, y) => { if (SOUTHP.box && !farAway && bergOut(...landST(x, y))) return false; if (farAway && MATTER.railHit && MATTER.railHit(x0, y0, x, y)) return false; if (!o.car && !fw0 && onFreeway(x, y)){ if (time - (o.fwSay || -99) > 6){ o.fwSay = time; coach('🚧 That\'s the 10 Freeway. No walking on it!', 2.2); } return false; } const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
+  const ok = (x, y) => { if (SOUTHP.box && !farAway && bergOut(...landST(x, y))) return false; if (farAway && MATTER.railHit && MATTER.railHit(x0, y0, x, y)) return false; if (!o.car && !fw0 && onFreeway(x, y)) return false;   /* (the fence along the trench stops you, like the real one; the green 10 signs say what it is) */ const d = Math.hypot(x - x0, y - y0)*U, dh = groundAt(x, y) - h0; return (shop && dh < 0 && dh > -2) || Math.abs(dh) <= d*.9 + .004 && (Math.abs(dh) < .003 || !steep(x, y)); };   // (and no zigzagging up a cliff)
   if (ok(o.x, o.y)) return;
   const dx = o.x - x0, dy = o.y - y0, len = Math.hypot(dx, dy);
   for (const a of [.3, -.3, .7, -.7, 1.1, -1.1]){ const c = Math.cos(a), sn = Math.sin(a), nx = x0 + (dx*c - dy*sn)*c, ny = y0 + (dx*sn + dy*c)*c;   // slide along the edge, as straight on as it lets you
@@ -4520,14 +4521,23 @@ const c2 = new THREE.Color(), c3 = new THREE.Color();
 const PROM_SHOPS = ['TOYS', 'ICE CREAM', 'BOOKS', 'SHOES', 'SURF SHOP', 'PIZZA', 'TACOS', 'CANDY', 'BAKERY', 'FROZEN YOGURT', 'PRETZELS', 'SUNGLASSES', 'GAMES', 'MUSIC', 'ART', 'MOVIES'];
 function buildFreewayFence(g, P3){ const tex = canvasTex(64, 64, (x, w, h) => { x.clearRect(0, 0, w, h); x.strokeStyle = 'rgba(170,176,180,1)'; x.lineWidth = 3; for (let i = -64; i < 128; i += 16){ x.beginPath(); x.moveTo(i, 0); x.lineTo(i + 64, 64); x.stroke(); x.beginPath(); x.moveTo(i + 64, 0); x.lineTo(i, 64); x.stroke(); } });
   const mesh = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .3, side: THREE.DoubleSide, roughness: .5, metalness: .5 }), posts = [], geos = [], H = 2.1;
-  const ok = (s, t) => { if (fwDist(s, t) < 8.6) return false; return !FREEWAY.bridges.some(([bs, bt]) => Math.hypot(s - bs, t - bt) < 11) && !onRoadway(s, t); };
+  const ok = (s, t) => { if (fwDist(s, t) < 8.6) return false; return !onFwBridge(s, t, 2) && !onRoadway(s, t); };
   for (const [a, b] of FREEWAY.segs){ const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ns = -(b[1] - a[1])/L, nt = (b[0] - a[0])/L;
     for (const sd of [-9.2, 9.2]) for (let d = 0; d < L - .1; d += 3){ const d1 = Math.min(L, d + 3), p0 = [a[0] + (b[0] - a[0])*d/L + ns*sd, a[1] + (b[1] - a[1])*d/L + nt*sd], p1 = [a[0] + (b[0] - a[0])*d1/L + ns*sd, a[1] + (b[1] - a[1])*d1/L + nt*sd];
       if (!ok(...p0) || !ok(...p1)) continue; const v0 = new THREE.Vector3(...P3(p0[0], p0[1], landH(...p0))), v1 = new THREE.Vector3(...P3(p1[0], p1[1], landH(...p1))), len = v0.distanceTo(v1);
       const q = new THREE.PlaneGeometry(len, H); q.translate(0, H/2, 0); const m4 = new THREE.Matrix4().makeRotationY(-Math.atan2(v1.z - v0.z, v1.x - v0.x)).setPosition(v0.clone().add(v1).multiplyScalar(.5)); q.applyMatrix4(m4);
       const uv = q.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i)*len/.6, uv.getY(i)*H/.6); geos.push(q); posts.push(v0); } }
   if (!geos.length) return; g.add(new THREE.Mesh(mergeGeometries(geos), mesh));
-  const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(.04, .04, H + .1, 6), std(0x9aa0a6, .4, .6), posts.length), m4 = new THREE.Matrix4(); posts.forEach((v, i) => { m4.makeTranslation(v.x, v.y + H/2, v.z); pm.setMatrixAt(i, m4); }); g.add(pm); }
+  const pm = new THREE.InstancedMesh(new THREE.CylinderGeometry(.04, .04, H + .1, 6), std(0x9aa0a6, .4, .6), posts.length), m4 = new THREE.Matrix4(); posts.forEach((v, i) => { m4.makeTranslation(v.x, v.y + H/2, v.z); pm.setMatrixAt(i, m4); }); g.add(pm); 
+  // the green 10 Freeway signs on the bridge railings, like the real ones: the Interstate shield and SANTA MONICA FWY
+  const fwTex = canvasTex(512, 160, (x, w, h) => { x.fillStyle = '#0b6b3a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#fff'; x.lineWidth = 6; x.strokeRect(6, 6, w - 12, h - 12);
+    x.fillStyle = '#fff'; x.beginPath(); x.moveTo(40, 30); x.lineTo(140, 30); x.quadraticCurveTo(150, 110, 90, 140); x.quadraticCurveTo(30, 110, 40, 30); x.fill();
+    x.fillStyle = '#1f4fa8'; x.beginPath(); x.moveTo(46, 54); x.lineTo(134, 54); x.quadraticCurveTo(142, 108, 90, 133); x.quadraticCurveTo(38, 108, 46, 54); x.fill(); x.fillStyle = '#c62828'; x.fillRect(46, 34, 88, 18);
+    x.fillStyle = '#fff'; x.font = '900 52px Nunito, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('10', 90, 96); x.textAlign = 'left'; x.font = '800 40px Nunito, sans-serif'; x.fillText('SANTA MONICA', 165, 62); x.fillText('FREEWAY', 165, 108); });
+  const sm = new THREE.MeshBasicMaterial({ map: fwTex, side: THREE.DoubleSide });
+  for (const [a, b, c, d] of FREEWAY.spans){ const L = Math.hypot(c - a, d - b), us = (c - a)/L, ut = (d - b)/L, ns = -ut, nt = us, mid = [(a + c)/2, (b + d)/2];
+    for (const sd of [-7.2, 7.2]){ const ps = mid[0] + ns*sd, pt = mid[1] + nt*sd, m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, .75), sm), [x0, z0] = landXY(ps, pt), [x1, z1] = landXY(ps + us, pt + ut);
+      m.position.set(...P3(ps, pt, landH(ps, pt) + 1.6)); m.rotation.y = -Math.atan2(z1 - z0, x1 - x0); g.add(m); } } }
 // The pier's railings, so you can see the edge: weathered wood posts with a top rail and a middle rail, all round the deck (open where the stairs go down to the sand)
 function buildPierRailings(g, P3){ const posts = [], rails = [], H = 1.1, s0 = PIER_L.s0, s1 = 257;
   const gapAt = (s, t) => PIER_STAIRS.some(([a, b, e]) => s > Math.min(a, b) - .3 && s < Math.max(a, b) + .3 && Math.abs(t - e) < 1);

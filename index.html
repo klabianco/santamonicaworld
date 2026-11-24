@@ -5573,14 +5573,25 @@ function buildPierLot(g, P3){ const grp = new THREE.Group(), S = A => 390 - A, d
   const at = (A, off, y) => P3(S(A), -off, dh(S(A)) + y);
   { const q = new THREE.PlaneGeometry(1, 1); q.rotateX(-Math.PI/2); const [x0, , z0] = at(A0, -45, 0), [x1, , z1] = at(A1, -87, 0); const m = new THREE.Mesh(q, Object.assign(std(0x6b6660, .95), { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })); m.scale.set(Math.abs(x1 - x0), 1, Math.abs(z1 - z0)); m.position.set((x0 + x1)/2, dh(S((A0 + A1)/2)) + .02, (z0 + z1)/2); grp.add(m); }   // (sealed gray deck)
   const rows = [[-86.5, -81, 1], [-74, -68.5, -1], [-68.5, -63, 1], [-56, -50.5, -1]], cars = [];
-  for (const [o0, o1, face] of rows){ for (let A = A0 + 2; A <= A1 - 2; A += 2.7){ lines.push([A, o0, A, o1]); if (A + 2.7 <= A1 - 2 && R() < .72) cars.push([A + 1.35, (o0 + o1)/2, face, R()]); } }
+  for (const [o0, o1, face] of rows){ for (let A = A0 + 2; A <= A1 - 2; A += 2.7){ lines.push([A, o0, A, o1]); if (A + 2.7 <= A1 - 2 && R() < .45) cars.push([A + 1.35, (o0 + o1)/2, face, R()]); } }   // (a bit under half the stalls taken, like an ordinary afternoon)
   { const geos = []; for (const [a0, o0, a1, o1] of lines){ const q = new THREE.BoxGeometry(.12, .02, Math.abs(o1 - o0)); const [x, y, z] = at((a0 + a1)/2, (o0 + o1)/2, .04); q.translate(x, y, z); geos.push(q); } grp.add(new THREE.Mesh(mergeGeometries(geos), new THREE.MeshBasicMaterial({ color: 0xf4f4f0 }))); }
-  { const body = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, .8, 4.3), std(0xffffff, .35, .3), cars.length), cab = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, .6, 2.2), std(0x22282e, .2, .4), cars.length), m4 = new THREE.Matrix4(), c = new THREE.Color(), COL = [0xf4f4f4, 0x111111, 0x9aa0a6, 0xc62828, 0x1e3a8a, 0x5d6d7e, 0xe8e1d0, 0x2e7d32];
-    cars.forEach(([A, o, face, r], i) => { LAND_BOXES.push([S(A) - .9, -o - 2.15, S(A) + .9, -o + 2.15, dh(S(A)) + 1.5]); const [x, y, z] = at(A, o, .65); m4.makeTranslation(x, y, z); body.setMatrixAt(i, m4); body.setColorAt(i, c.setHex(COL[(r*COL.length)|0])); m4.makeTranslation(x, y + .65, z + face*.25); cab.setMatrixAt(i, m4); });
-    grp.add(body, cab); }
+  // the parked cars are real: the same car you drive, drawn many times at once, and you can hop into any of them (they're in `parked`)
+  { const G = carGeo(), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e3 = new THREE.Euler(0, 0, 0, 'YXZ'), v = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), c = new THREE.Color(), COL = [0xf4f4f4, 0x111111, 0x9aa0a6, 0xc62828, 0x1e3a8a, 0x5d6d7e, 0xe8e1d0, 0x2e7d32, 0x7b8a99, 0x8b1e1e];
+    const wheelGeo = (() => { const gs = []; for (const [x, z] of G.WH){ const t = new THREE.CylinderGeometry(CAR.wheelR, CAR.wheelR, .26, 16); t.rotateX(Math.PI/2); t.translate(x, CAR.wheelR, z); gs.push(t.toNonIndexed()); } return mergeGeometries(gs.map(q2 => { for (const a of Object.keys(q2.attributes)) if (a !== 'position' && a !== 'normal') q2.deleteAttribute(a); return q2; })); })();
+    const paintM = CAR_MAT.paint.clone(); paintM.color.set(0xffffff);
+    const sets = [[G.paint, paintM], [G.dark, CAR_MAT.dark], [G.lights, CAR_MAT.lights], [wheelGeo, CAR_MAT.tire]].map(([geo, mat]) => { const im = new THREE.InstancedMesh(geo, mat, cars.length); im.castShadow = true; grp.add(im); return im; });
+    const aisles = [-77.5, -59.5, -47.75];
+    cars.forEach(([A, o, , r], i) => { const near = aisles.reduce((a, b) => Math.abs(b - o) < Math.abs(a - o) ? b : a), nose = -Math.sign(o - near) || 1;   // (nosed in, the back to the aisle)
+      const s0 = S(A), [x, y] = landXY(s0, -o), [x2, y2] = landXY(s0, -o + nose), ang = Math.atan2(y2 - y, x2 - x), h = dh(s0), col = COL[(r*COL.length)|0];
+      e3.set(0, -ang, 0); q.setFromEuler(e3); m4.compose(v.set(x*U, h, y*U), q, one); for (const im of sets) im.setMatrixAt(i, m4); sets[0].setColorAt(i, c.setHex(col));
+      const box = [s0 - .9, -o - 2.15, s0 + .9, -o + 2.15, h + 1.5]; LAND_BOXES.push(box);
+      parked.push({ x, y, ang, h, color: col, model: { removeFromParent(){ m4.makeScale(0, 0, 0); for (const im of sets){ im.setMatrixAt(i, m4); im.instanceMatrix.needsUpdate = true; } const k = LAND_BOXES.indexOf(box); if (k >= 0) LAND_BOXES.splice(k, 1); } } }); });   // (driving one away leaves its stall empty)
+    for (const im of sets){ im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); } if (sets[0].instanceColor) sets[0].instanceColor.needsUpdate = true; }
   { const ps = new THREE.Mesh(new THREE.BoxGeometry(.5, 1.6, .4), std(0x37474f, .5)); ps.position.set(...at(165, -46.5, .8)); grp.add(ps);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(4, .9), new THREE.MeshBasicMaterial({ map: labelTex('🅿️ PIER DECK PARKING', '#0d47a1', '#ffffff', 1024, 230, 120), side: THREE.DoubleSide })); sg.position.set(...at(170, -45.5, 3.2)); grp.add(sg);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3.2, 6), std(0x9e9e9e, .5)); post.position.set(...at(170, -45.5, 1.6)); grp.add(post); }
+  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .9), new THREE.MeshBasicMaterial({ map: labelTex('🅿️ PARKING ↓', '#0d47a1', '#ffffff', 1024, 270, 150), side: THREE.DoubleSide })), [x, , z] = at(141, -13, 0), [x2, , z2] = at(141, -14, 0); sg.position.set(...at(141, -13, 3.4)); sg.rotation.y = Math.atan2(x2 - x, z2 - z) + Math.PI/2; grp.add(sg);   // (at the foot of the bridge: the way down into the lot, past the end of Pacific Park's fence)
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3.4, 6), std(0x9e9e9e, .5)); post.position.set(...at(141, -13, 1.7)); grp.add(post); }
   g.add(grp); }
 /* Crosswalks and traffic lights at every downtown corner: white ladder crosswalks across each street (like Santa Monica's), and a signal
    pole on each corner with lights facing the traffic coming at it. Ocean, 2nd, 4th, 5th... get green while the cross streets get red, then

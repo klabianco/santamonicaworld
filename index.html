@@ -3526,17 +3526,17 @@ function houseItems(o, dt){
 // here in world meters: y = the seat's height (or rel = height above the ground you're standing on), f = which way you face (or you
 // face away from where you came from), a = the way a bench runs and len its length (sit anywhere along it). o.workout.k === 'sit'.
 const SEATS = new Map();
-function addSeat(x, z, q){ const st = { x, z, y: q.y, rel: q.rel ?? .47, f: q.f || null, a: q.a || null, len: q.len || 0 }, k = Math.floor(x/10) + ',' + Math.floor(z/10); (SEATS.get(k) || SEATS.set(k, []).get(k)).push(st); return st; }
-function addSeatST(s, t, y, fs, ft, len = 0, as = 0, at = 0){ const [x, z] = landXY(s, t), dir = (ds, dt) => { if (!ds && !dt) return null; const [x2, z2] = landXY(s + ds, t + dt), L = Math.hypot(x2 - x, z2 - z) || 1; return [(x2 - x)/L, (z2 - z)/L]; };   // (a seat given in land terms: s across, t along)
-  return addSeat(x*U, z*U, { y, f: dir(fs, ft), a: dir(as, at), len }); }
+function addSeat(x, z, q){ const st = { x, z, y: q.y, rel: q.rel ?? .47, f: q.f || null, a: q.a || null, len: q.len || 0, order: q.order || null }, k = Math.floor(x/10) + ',' + Math.floor(z/10); (SEATS.get(k) || SEATS.set(k, []).get(k)).push(st); return st; }
+function addSeatST(s, t, y, fs, ft, len = 0, as = 0, at = 0, order = null){ const [x, z] = landXY(s, t), dir = (ds, dt) => { if (!ds && !dt) return null; const [x2, z2] = landXY(s + ds, t + dt), L = Math.hypot(x2 - x, z2 - z) || 1; return [(x2 - x)/L, (z2 - z)/L]; };   // (a seat given in land terms: s across, t along)
+  return addSeat(x*U, z*U, { y, f: dir(fs, ft), a: dir(as, at), len, order }); }   // (order: at a restaurant table you can order from your seat)
 function seatNear(o){ if (!o || !o.onLand || o.car || o.bike || o.sleeping || o.sitting != null || o.workout || heldItem || !Number.isFinite(o.gh)) return null; const x = o.x*U, z = o.y*U; let best = null, bd = 1.05;
   for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const st of SEATS.get((Math.floor(x/10) + i) + ',' + (Math.floor(z/10) + j)) || []){ let px = st.x, pz = st.z;
     if (st.len && st.a){ const k = clamp((x - st.x)*st.a[0] + (z - st.z)*st.a[1], -st.len/2 + .3, st.len/2 - .3); px += st.a[0]*k; pz += st.a[1]*k; }
     const d = Math.hypot(x - px, z - pz), sy = st.y ?? (o.gh + st.rel); if (d < bd && Math.abs(sy - .45 - o.gh) < .5){ bd = d; best = { st, px, pz, sy }; } }
   return best; }
 function sitOn(o, h){ if (!o || !h) return; const x = o.x*U, z = o.y*U, away = Math.hypot(x - h.px, z - h.pz) > .15 ? Math.atan2(z - h.pz, x - h.px) : o.ang;
-  o.workout = { k: 'sit', x: h.px/U, y: h.pz/U, sy: h.sy, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = h.px/U; o.y = h.pz/U; o.vx = o.vy = 0; o.walking = false;
-  o.ang = h.st.f ? Math.atan2(h.st.f[1], h.st.f[0]) : away; initAudio(); sfx(330, .08, 'sine', .03); coach('Move to stand up', 2); }
+  o.workout = { k: 'sit', seat: h.st, x: h.px/U, y: h.pz/U, sy: h.sy, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = h.px/U; o.y = h.pz/U; o.vx = o.vy = 0; o.walking = false;
+  o.ang = h.st.f ? Math.atan2(h.st.f[1], h.st.f[0]) : away; initAudio(); sfx(330, .08, 'sine', .03); coach(h.st.order ? 'Order from your seat, eat, then move to stand up' : 'Move to stand up', 2.5); }
 // Chairs: pull one out and sit at the table. Move to get up. o.sitting = which chair.
 function nearChair(o){ const u = houseGroup?.userData.inside; if (!u || !o || !o.onLand || !o.inHouse || o.sitting != null || o.sleeping || heldItem) return -1;
   const [lx, lz] = houseLocal(o); return u.chairs.findIndex(c => Math.hypot(lx - c.userData.x, lz - .6) < .9); }
@@ -7965,7 +7965,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
     { const r = new THREE.Mesh(new THREE.ConeGeometry(13.6, 2.4, 4), mat(0xd8b46a)); const sR = S((A0 + A1)/2); r.position.set(...P3(sR, -(o0 + M.oPatio)/2, dh(sR) + U2 + 4.8)); r.rotation.y = Math.PI/4; r.scale.set(.98, 1, .9); grp.add(r);
       for (const [A, o] of [[A0, o0], [A0, M.oPatio], [A1, o0], [A1, M.oPatio]]){ const tip = new THREE.Mesh(new THREE.ConeGeometry(.35, 1.2, 6), mat(0xd84315)); const s2 = S(A); tip.position.set(...P3(s2, -o, dh(s2) + U2 + 3.9)); tip.rotation.z = (A === A0 ? 1 : -1)*.9; grp.add(tip); } }
     // tables: downstairs by the windows, upstairs in the dining room, and on the patio under umbrellas
-    const table = (A, o, y, umb) => { cyl(A, o, y, .06, .72, 0x333333, 6); cyl(A, o, y + .72, .5, .05, 0xf4f4f0, 14); for (const [da, dd] of [[.8, 0], [-.8, 0], [0, .8], [0, -.8]]){ cyl(A + da, o + dd, y, .2, .45, 0x00897b, 8); addSeatST(S(A + da), -(o + dd), dh(S(A + da)) + y + .45, da, dd); }
+    const table = (A, o, y, umb) => { cyl(A, o, y, .06, .72, 0x333333, 6); cyl(A, o, y + .72, .5, .05, 0xf4f4f0, 14); for (const [da, dd] of [[.8, 0], [-.8, 0], [0, .8], [0, -.8]]){ cyl(A + da, o + dd, y, .2, .45, 0x00897b, 8); addSeatST(S(A + da), -(o + dd), dh(S(A + da)) + y + .45, da, dd, 0, 0, 0, () => openPlaceMenu('Mariasol', 'food')); }
       if (umb){ cyl(A, o, y + .72, .03, 1.7, 0x333333, 6); const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .5, 8), mat([0xe53935, 0xfdd835, 0x00897b][Math.round(A) % 3])); const s2 = S(A); u.position.set(...P3(s2, -o, dh(s2) + y + 2.5)); grp.add(u); } };
     for (const [A, o] of [[593, 6], [598, 6], [603, 6], [598, 11], [603, 11]]) table(A, o, 0);
     for (const [A, o] of [[593, 4], [597.5, 4], [602, 4], [593, 9], [597.5, 9], [602, 9], [593, 14], [597.5, 14], [602, 14]]) table(A, o, U2);
@@ -8501,7 +8501,7 @@ function renderStore(){
   for (const k of slots) card(`<div class="em">${{ hat: '🧢', shirt: '👕', shoes: '👟', shades: '🕶️' }[k]}</div><h3>Take it off</h3><p>${{ hat: 'Your cap', shirt: 'Back to your blue T-shirt', shoes: 'Your sneakers', shades: 'Your sunglasses' }[k]}</p>`, 'Take it off', () => {
     const w = { ...save.wear }; delete w[k]; save.wear = w; persist(); flushCloud(); sfx(520, .08, 'triangle', .05); renderStore(); }, false, 'secondary');
 }
-function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o); if (o?.workout) return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
+function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o); if (o?.workout && o.workout.k !== 'sit') return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it && o.workout?.k === 'sit'){ o.workout.seat?.order?.(); return; } if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
   if (it.act === 'roast') return roastTap(o, it);
   if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)) feed(it.act);
@@ -8530,7 +8530,7 @@ function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o);
 const treatTex = {};
 function drawTreat(o, m){   // hold what you bought in your hand (and show the buttons)
   if (treat && mode === 'ocean' && !o.onLand && !o.car && !(o.jumpY > 0) && !o.onShip && !o.onBoat && !o.vehicle){ banner(`Oh no! Your ${treat.act === 'lick' ? 'ice cream' : treat.n.toLowerCase()} fell in the water`, ''); treat = null; }
-  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : w.k === 'ride2' && ['bus', 'eline', 'bbb', 'gtram', 'matter'].includes(w.key) ? '' : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.bike ? '🚲 Get off' : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : treat.act === 'kite' ? (treat.fly ? 'Reel in' : 'Fly it') : treat.act === 'rc' ? 'Drive' : treat.act === 'ball' ? ({ tennis: 'Hit it up', bball: 'Dribble', football: 'Toss it' }[treat.ball] + (treat.n2 ? ` · ${treat.n2}` : '')) : treat.act === 'play' ? playVerb(treat.n) : treat.act === 'fish' ? (treat.bite ? 'Reel in! 🐟' : treat.cast ? 'Reel in' : 'Cast') : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
+  const w = o.workout, tb = $('treatBtn'), tt = paused || !o.onLand || o.car ? '' : w?.k === 'sit' && !treat ? (w.seat?.order ? '🍴 Order food' : '') : w && w.k !== 'sit' ? (w.k === 'golf' ? (w.phase === 'aim' ? '⛳ Putt! ' + '▮'.repeat(1 + Math.round(w.pow*5)) + '▯'.repeat(5 - Math.round(w.pow*5)) : '⛳ ...') : w.k === 'ride2' && ['bus', 'eline', 'bbb', 'gtram', 'matter'].includes(w.key) ? '' : SPOT[w.k][1] + (w.k === 'weights' && w.n ? ` · ${w.n}` : '')) : o.bike ? '🚲 Get off' : o.skating ? '🌀 Spin' : treat ? `${treat.e} ${treat.act === 'roast' ? (nearPit(o) && !treat.done ? 'Roast' : 'Eat') : treat.act === 'kite' ? (treat.fly ? 'Reel in' : 'Fly it') : treat.act === 'rc' ? 'Drive' : treat.act === 'ball' ? ({ tennis: 'Hit it up', bball: 'Dribble', football: 'Toss it' }[treat.ball] + (treat.n2 ? ` · ${treat.n2}` : '')) : treat.act === 'play' ? playVerb(treat.n) : treat.act === 'fish' ? (treat.bite ? 'Reel in! 🐟' : treat.cast ? 'Reel in' : 'Cast') : ACT_DO[treat.act]}` : inGym(o) ? '💪 Flex' : '';
   if (tb.hidden === !!tt) tb.hidden = !tt; if (tt && tb.firstChild.textContent !== tt) tb.firstChild.textContent = tt;
   placeNow = paused ? null : placeAction(o); if (song && ac && ac.currentTime > song.end){ song = null; if (!$('musicPanel').hidden) renderMusic(); } const bb = $('buyBtn'), bt = placeNow ? placeNow.label : '';
   if (bb.hidden === !!bt) bb.hidden = !bt; if (bt && bb.firstChild.textContent !== bt) bb.firstChild.textContent = bt;
@@ -8679,7 +8679,7 @@ function buildRooms(g, P3){
         B(r.D - .12, r.D - .05, T0 + .8, T1 - .8, 1.9, 2.9, 0x22303c); for (let k = 0; k < 4; k++) B(r.D - .13, r.D - .12, T0 + 1, T1 - 1, 2.05 + k*.2, 2.12 + k*.2, 0xfff2c4);
         B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
         for (let d = 1.4; d + 1.65 < r.D - 3.3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
-          for (const ds of [-.35, 1.25]){ B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); addSeatST(S(d + ds + .2), tm, y0 + .45, S(d + .45) - S(d + ds + .2), 0); } }   // (sit down at a table)
+          for (const ds of [-.35, 1.25]){ B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); addSeatST(S(d + ds + .2), tm, y0 + .45, S(d + .45) - S(d + ds + .2), 0, 0, 0, 0, openStoreHere); } }   // (sit down at a table)
         if (r.name === 'TMNT Pizzeria'){ const D = r.D, tt = T1 - .45;   // TMNT Pizzeria (opened June 2026 where Johnny's New York Pizzeria was): green neon, giant lava lamps, New York-style pies
           for (const [d, hex, blob] of [[1.2, 0x8e24aa, 0xff9100], [2.4, 0x00acc1, 0xffeb3b], [3.6, 0xd81b60, 0x76ff03]]){ B(d, d + .34, tt - .17, tt + .17, 0, .3, 0x333333); B(d + .05, d + .29, tt - .12, tt + .12, .3, 1.5, hex); B(d + .02, d + .32, tt - .15, tt + .15, 1.5, 1.62, 0x333333);
             quad(glow, P3(S(d + .05), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + 1.5), P3(S(d + .05), tt - .125, y0 + 1.5), hex);

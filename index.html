@@ -5124,6 +5124,13 @@ function openMatterChoice(o){ paused = true; const P = $('boothPanel'); P.queryS
   for (const [key, em, t, sub] of [['L', '⬅️', 'Tomorrowland side (left)', '2:07 · 621 m · faster and steeper · splashes in the east pool'], ['R', '➡️', 'Fantasyland side (right)', '2:26 · 650 m · longer, more turns · splashes in the west pool']]){
     const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn primary'; bt.innerHTML = `${em} ${t}<small>${sub}</small>`; bt.onclick = () => { $('boothPanel').hidden = true; paused = false; graceAfterPause(); startRide2(o, 'matter', key); }; box.appendChild(bt); }
   P.hidden = false; resetPick(); }
+function openMatterEnd(o, last){ if (paused || o.workout) return; paused = true; const P = $('boothPanel'), T = MATTER.tracks[last]; P.querySelector('.kicker').textContent = '📸 Your ride photo';
+  P.querySelector('h2').textContent = 'What a ride!'; P.querySelector('.explain').textContent = `${T.name}, high on the Matterhorn. (The real ride doesn't sell photos as far as we know: this one's yours.)`; $('boothQ').hidden = true; $('boothClose').textContent = 'Walk out';
+  const box = $('boothList'); box.innerHTML = ''; if (MATTER.photo){ const im = document.createElement('img'); im.src = MATTER.photo; im.alt = 'Your Matterhorn ride photo'; im.style.cssText = 'width:100%;max-height:38vh;object-fit:cover;border-radius:12px;border:4px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.25);display:block'; box.appendChild(im);
+    const sv = document.createElement('button'); sv.type = 'button'; sv.className = 'btn secondary'; sv.textContent = '💾 Save the photo'; sv.onclick = () => { const a = document.createElement('a'); a.href = MATTER.photo; a.download = 'matterhorn-ride.jpg'; a.click(); }; box.appendChild(sv); }
+  for (const [key, em, t] of [['L', '🔁', 'Ride again: Tomorrowland side (left)'], ['R', '🔁', 'Ride again: Fantasyland side (right)']]){ const bt = document.createElement('button'); bt.type = 'button'; bt.className = 'btn primary'; bt.innerHTML = `${em} ${t}<small>${key === last ? 'the same side again' : 'try the other side'}</small>`;
+    bt.onclick = () => { $('boothPanel').hidden = true; paused = false; graceAfterPause(); const PP = MATTER.pk.place; o.x = (PP.X + MATTER.load[0])/U; o.y = (PP.Z - MATTER.load[1])/U; startRide2(o, 'matter', key); }; box.appendChild(bt); }
+  P.hidden = false; resetPick(); }
 function matterAct(o){ if (!MATTER.pk) return null; const P = MATTER.pk.place; if (placeAtX(o.x*U) !== P || o.workout) return null; const [x, y] = placeLocal(P, o.x*U, o.y*U), Q = MATTER.queue;
   if (Math.hypot(x - MATTER.load[0], y - MATTER.load[1]) < 2.6) return { label: '🎢 Board a bobsled', go: () => openMatterChoice(o) };   // (at the front of the line)
   let inLine = false; for (let i = 0; i < Q.length - 1; i++) if (segD(x, y, Q[i], Q[i + 1]) < 1.2) inLine = true;
@@ -7942,7 +7949,7 @@ const RIDES = {
     if (T < 7) return { A: 376.6, off: -26, y: lerp(6.8, 2.5, (T - 6)), arms: true };
     return { A: 376.6, off: -26, y: 2.5 + Math.abs(Math.sin((T - 7)*6))*.7*Math.max(0, 1 - (T - 7)/2.2) }; } } };
 function startRide2(o, key, track){ const R = RIDES[key]; initAudio(); o.workout = { k: 'ride2', key, T: 0, t0: time, tapT: -9, py: o.gh ?? 0 }; [523, 659, 784].forEach((f, i) => sfx(f, .1, 'triangle', .04, i*.08));
-  if (key === 'matter'){ mtAudioStart(); const w = ocean.workout, T = MATTER.tracks[track || 'R']; w.track = T.key; w.d = 0; w.T = -5; MATTER.sled.visible = true; elineCam = camMode; camMode = 'first'; camInit = false; sfx(500, .2, 'triangle', .04); return banner(`🎢 ${T.name}`, 'You climb in, one rider behind another. The lap belt clicks… keep your hands inside'); }
+  if (key === 'matter'){ mtAudioStart(); MATTER.photo = null; const w = ocean.workout, T = MATTER.tracks[track || 'R']; w.track = T.key; w.d = 0; w.T = -5; MATTER.sled.visible = true; elineCam = camMode; camMode = 'first'; camInit = false; sfx(500, .2, 'triangle', .04); return banner(`🎢 ${T.name}`, 'You climb in, one rider behind another. The lap belt clicks… keep your hands inside'); }
   if (key === 'gtram'){ elineCam = camMode; camMode = 'first'; camInit = false; return banner('🚡 All aboard the Getty tram!', GTRAM.d > GTRAM.L/2 ? 'Down to the parking structure on Sepulveda' : 'Up the hill to the museum. Look out the windows at the 405'); }
   if (key === 'eline' || key === 'bbb'){ elineCam = camMode; camMode = 'first'; camInit = false; }   // (on the train or the city bus you look out of the windows)
   if (key === 'bbb') return banner('🚌 Big Blue Bus', 'Downtown loop: 4th St, Santa Monica Blvd, 2nd St, Broadway. Get off at any blue stop');
@@ -7961,6 +7968,7 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
     if (!w.braked && w.T > T.time - 10){ w.braked = true; camShake = Math.max(camShake || 0, .2); sfx(900, .9, 'sawtooth', .02, 0, -700); sfx(70, .25, 'square', .06); }   // (the brakes grab: a jolt and a hiss)
     if (w.d > T.liftStart && w.d < T.liftEnd && (w.clk = (w.clk ?? 0) - dt) <= 0){ w.clk = .16; sfx(95 + Math.random()*20, .05, 'square', .035); sfx(1400, .015, 'square', .012); }   // (the lift chain: clack-clack-clack)
     if (d0 < T.liftEnd && w.d >= T.liftEnd) sfx(500, .4, 'sawtooth', .03, 0, 300);
+    if (!w.shot && w.d > T.liftEnd + 20 && A.dark < .3 && (w.outT = (w.outT || 0) + dt) > .7){ w.shot = true; M.wantShot = true; sfx(1800, .05, 'square', .02); }   // (snap! high on the mountain, right after you burst out)
     if (!w.splash && w.d >= T.splash - 1){ w.splash = true; sfx(140, .7, 'sine', .09, 0, -90); sfx(3000, .5, 'sawtooth', .015, 0, -2500); camShake = Math.max(camShake || 0, .25); heartsAt = time; }
     M.sled.updateMatrixWorld(); const c = new THREE.Vector3(1.5, .55, 0).applyMatrix4(M.sled.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = { sit: true, arms: w.v > 8.5 }; o.ang = -A.yaw; return; }   // (in the front seat)
   if (w.key === 'gtram' && GTRAM.cars.length){ const car = GTRAM.cars[0]; car.updateMatrixWorld(); const c = new THREE.Vector3(2.4, 1.15, .6).applyMatrix4(car.matrixWorld); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = -car.rotation.y + (GTRAM.dir < 0 ? Math.PI : 0); return; }   // (a seat at the uphill end, by the window)
@@ -7980,7 +7988,7 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
   if (w.key === 'bumper' && (w.bumpT = (w.bumpT || 0) - dt) <= 0){ w.bumpT = 1.4 + Math.random()*1.6; sfx(120, .12, 'square', .05); camShake = Math.max(camShake || 0, .25); } }
 function endRide2(o, w){ if (w.key === 'matter' || w.key === 'gtram'){ const pk = w.key === 'matter' ? MATTER.pk : GTRAM.pk, P = pk.place, [ex, ey] = w.key === 'matter' ? MATTER.exit : (() => { const [sx, sy, , a] = gtramAt(GTRAM.d - 14); return [sx - Math.sin(a)*4, sy + Math.cos(a)*4]; })();
     if (MATTER.sled) MATTER.sled.visible = false; if (w.key === 'matter'){ mtAudioStop(); MATTER.roll = MATTER.pitch = 0; for (const k in MATTER.tunM || {}) MATTER.tunM[k].visible = false; if (MATTER.mtn){ MATTER.mtn.visible = false; MATTER.mtnView.visible = true; } } o.x = (P.X + ex)/U; o.y = (P.Z - ey)/U; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(o.x, o.y); walkRef = o.gh + .3;
-    return w.key === 'matter' && w.done ? banner('🏔️ What a ride!', 'Out past the EXIT sign. Ride it again? The line starts at the entrance on the walk') : null; }
+    if (w.key === 'matter' && w.done) setTimeout(() => openMatterEnd(o, w.track), 600); return null; }
   const R = RIDES[w.key], [x, y] = landXY(390 - R.exit[0], -R.exit[1]); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3;
   if (PARK_ANIM.dragon) PARK_ANIM.dragon.rotation.z = 0; if (PARK_ANIM.plunge) PARK_ANIM.plunge.position.y = .6;
   if (w.key === 'carousel') return banner('🎠 What a ride!', 'Pick a different horse next time');
@@ -10894,7 +10902,7 @@ function render3D(dt){
     const cUnder = camera.position.y < waveH(camera.position.x, camera.position.z, OC.amp, 1) - .02;
     WATERU.under.value = cUnder ? 1 : 0; WATERU.tint.value.copy(OC.deep).lerp(OC.sh, .45).multiplyScalar(.9); WATERU.k.value = [.11, .22, .16, .11, .26, .15, .5][ocean.zone] || .15;
     underwaterLook(oceanScene, [oceanWater], cUnder, tmpC2.copy(OC.deep).lerp(OC.sh, .35).multiplyScalar(Math.exp(-dep*.09)*(ocean.wIn ? .45 : 1)), (OC.dark > .5 ? .14 : .075)*(hasGear('snorkel') ? .65 : 1), OC.fog, lerp(.0105, .0034, landFogK = lerp(landFogK, smooth(-80, 25, -coastS(ocean.x, ocean.y)*U), Math.min(1, dt*1.5)))*(1 + superK()*1.5));   // (thinner over the land, so you can see down the streets)
-    draw(oceanScene);
+    draw(oceanScene); if (MATTER.wantShot){ MATTER.wantShot = false; try { MATTER.photo = renderer.domElement.toDataURL('image/jpeg', .85); } catch(e){} }   // (the ride photo: taken right after the frame is drawn)
   }
 }
 

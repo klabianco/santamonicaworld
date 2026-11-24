@@ -3522,6 +3522,21 @@ function houseItems(o, dt){
   const utx = o.sitting != null ? 'Stand up' : heldItem ? HOUSE_ITEMS[heldItem].use : chairNear ? 'Sit on the chair' : lampNear ? (save.lampOff ? 'Turn on the lamp' : 'Turn off the lamp') : '';
   if (ub.hidden === !!utx) ub.hidden = !utx; if (utx && ub.firstChild.textContent !== utx) ub.firstChild.textContent = utx;
 }
+// Benches, stools and restaurant chairs out in the world: walk up to one and sit down; move to get up. Each builder adds its seats
+// here in world meters: y = the seat's height (or rel = height above the ground you're standing on), f = which way you face (or you
+// face away from where you came from), a = the way a bench runs and len its length (sit anywhere along it). o.workout.k === 'sit'.
+const SEATS = new Map();
+function addSeat(x, z, q){ const st = { x, z, y: q.y, rel: q.rel ?? .47, f: q.f || null, a: q.a || null, len: q.len || 0 }, k = Math.floor(x/10) + ',' + Math.floor(z/10); (SEATS.get(k) || SEATS.set(k, []).get(k)).push(st); return st; }
+function addSeatST(s, t, y, fs, ft, len = 0, as = 0, at = 0){ const [x, z] = landXY(s, t), dir = (ds, dt) => { if (!ds && !dt) return null; const [x2, z2] = landXY(s + ds, t + dt), L = Math.hypot(x2 - x, z2 - z) || 1; return [(x2 - x)/L, (z2 - z)/L]; };   // (a seat given in land terms: s across, t along)
+  return addSeat(x*U, z*U, { y, f: dir(fs, ft), a: dir(as, at), len }); }
+function seatNear(o){ if (!o || !o.onLand || o.car || o.bike || o.sleeping || o.sitting != null || o.workout || heldItem || !Number.isFinite(o.gh)) return null; const x = o.x*U, z = o.y*U; let best = null, bd = 1.05;
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const st of SEATS.get((Math.floor(x/10) + i) + ',' + (Math.floor(z/10) + j)) || []){ let px = st.x, pz = st.z;
+    if (st.len && st.a){ const k = clamp((x - st.x)*st.a[0] + (z - st.z)*st.a[1], -st.len/2 + .3, st.len/2 - .3); px += st.a[0]*k; pz += st.a[1]*k; }
+    const d = Math.hypot(x - px, z - pz), sy = st.y ?? (o.gh + st.rel); if (d < bd && Math.abs(sy - .45 - o.gh) < .5){ bd = d; best = { st, px, pz, sy }; } }
+  return best; }
+function sitOn(o, h){ if (!o || !h) return; const x = o.x*U, z = o.y*U, away = Math.hypot(x - h.px, z - h.pz) > .15 ? Math.atan2(z - h.pz, x - h.px) : o.ang;
+  o.workout = { k: 'sit', x: h.px/U, y: h.pz/U, sy: h.sy, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = h.px/U; o.y = h.pz/U; o.vx = o.vy = 0; o.walking = false;
+  o.ang = h.st.f ? Math.atan2(h.st.f[1], h.st.f[0]) : away; initAudio(); sfx(330, .08, 'sine', .03); coach('Move to stand up', 2); }
 // Chairs: pull one out and sit at the table. Move to get up. o.sitting = which chair.
 function nearChair(o){ const u = houseGroup?.userData.inside; if (!u || !o || !o.onLand || !o.inHouse || o.sitting != null || o.sleeping || heldItem) return -1;
   const [lx, lz] = houseLocal(o); return u.chairs.findIndex(c => Math.hypot(lx - c.userData.x, lz - .6) < .9); }
@@ -4635,7 +4650,7 @@ function sfStreets(D, g, W3, add, flatGeo, off){ const L = SF.LAND, m4 = new THR
     const inst = (list, geo, mat, y, sx = 1, sy = 1, sz = 1) => { if (!list?.length) return; const im = new THREE.InstancedMesh(geo, mat, list.length); list.forEach(([, x, yy], i) => { const [wx, , wz] = W3(x, yy, 0); m4.makeScale(sx, sy, sz).setPosition(wx, L + y, wz); im.setMatrixAt(i, m4); }); g.add(im); };
     const green = std(0x1f3a2e, .5, .3);
     inst(by.L, new THREE.CylinderGeometry(.08, .12, 4.6, 6), green, 2.3); inst(by.L, new THREE.SphereGeometry(.3, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff1c8 }), 4.8);
-    inst(by.B, new THREE.BoxGeometry(1.8, .45, .55), std(0x8a6a48, .85), .45); inst(by.W, new THREE.CylinderGeometry(.3, .3, .95, 10), green, .48); inst(by.K, new THREE.TorusGeometry(.4, .04, 5, 12, Math.PI), std(0x9e9e9e, .4, .6), .05);
+    inst(by.B, new THREE.BoxGeometry(1.8, .45, .55), std(0x8a6a48, .85), .45); for (const [, x, yy] of by.B || []){ const [wx, , wz] = W3(x, yy, 0); addSeat(wx, wz, { rel: .5, len: 1.8, a: [1, 0] }); }   /* (you can sit on the benches) */ inst(by.W, new THREE.CylinderGeometry(.3, .3, .95, 10), green, .48); inst(by.K, new THREE.TorusGeometry(.4, .04, 5, 12, Math.PI), std(0x9e9e9e, .4, .6), .05);
     inst(by.P, new THREE.BoxGeometry(.5, 1.1, .45), std(0x1f4fa8, .5), .55); inst(by.D, new THREE.CylinderGeometry(.2, .25, 1, 8), std(0x7d8a8f, .5), .5); inst(by.X, new THREE.CylinderGeometry(.13, .15, .9, 8), std(0x5d6468, .5), .45); inst(by.T, new THREE.BoxGeometry(1.8, .75, .8), std(0x8a6a48, .85), .38);
     inst(by.I, new THREE.BoxGeometry(1.2, 1.8, .15), std(0x23395d, .5), 1.2); inst(by.G, new THREE.CylinderGeometry(.06, .08, 9, 6), std(0xdddddd, .4, .6), 4.5); inst(by.F, new THREE.CylinderGeometry(3, 3.2, .7, 20), std(0xbdb5a6, .8), .35);
     inst(by.U, new THREE.BoxGeometry(.1, 3, .1), std(0x777777, .5), 1.5); inst(by.U, new THREE.BoxGeometry(.6, .5, .05), new THREE.MeshBasicMaterial({ color: 0xc62828 }), 2.9);   // (Muni stop flags)
@@ -6968,7 +6983,7 @@ function partyStep(dt, o){ const C = coastPeople, dj = o.workout?.k === 'dj' ? o
       if (L <= v){ p.s = ts; p.t = tt; if (++P.k >= P.path.length){ if (P.stage === 'in') P.stage = 'dance'; else { p.party = null; p.t = clamp(p.t, p.t0, p.t1); p.dir = Math.random() < .5 ? 1 : -1; continue; } } }
       else { p.s += ds/L*v; p.t += dd/L*v; } }
     const d = (p.s - r.fs)*r.inw; P.h = d > 0 ? r.floor : landH(p.s, p.t); } }
-const SPOT = { ride2: ['', '🙌 Wheee!'], art: ['🖼️ Look closer', ''], paint: ['🎨 Paint a picture', ''], rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
+const SPOT = { sit: ['', ''], ride2: ['', '🙌 Wheee!'], art: ['🖼️ Look closer', ''], paint: ['🎨 Paint a picture', ''], rc: ['', '🚗 Pick it up'], golf: ['⛳ Play mini golf', '⛳ Putt!'], wheel: ['', '📸 Photo'], coaster: ['', '🙌 Hands up!'], elevator: ['🛗 Elevator', ''], records: ['🎶 Listen to records', ''], boardgame: ['🎲 Play a board game', ''], tread: ['🏃 Treadmill', '⏩ Faster'], bike: ['🚴 Spin bike', '⏩ Pedal faster'], weights: ['🏋️ Lift weights', '💪 Lift!'], stretch: ['🧘 Stretch', '🙆 Big stretch'],
   dj: ['🎧 Be the DJ', '🎵 Drop the beat'], stage: ['🎭 Get on stage', '🙇 Take a bow'], phone: ['📱 Try a phone', ''], gallery: ['🖼️ Test your eyes', ''], vr: ['🥽 Try VR', ''], froyo: ['🍨 Fill a cup', ''], pickle: ['🏓 Play pickleball', '🏓 Hit!'] };
 let placeNow = null, bells = null;
 const inGym = o => { if (!o?.onLand || o.car) return false; const [s, t] = landST(o.x, o.y); return s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)?.cat === 'gym'; };
@@ -7823,7 +7838,7 @@ function buildPalisades(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   { const t = XST.washington - 96, f = fenceS(t, 1), s = isNaN(f) ? parkCurb(t) - 23 : Math.max(parkCurb(t) - 23, f + 3.6), sage = 0x7d9b86;
     for (const ds of [-2, 2]) for (let dt = -5; dt <= 5; dt += 2.5) add(new THREE.BoxGeometry(.25, 2.8, .25), sage, s + ds, t + dt, 1.4);
     for (const ds of [-2, 2]) add(new THREE.BoxGeometry(.2, .3, 11), sage, s + ds, t, 2.9); for (let dt = -5.3; dt <= 5.3; dt += .6) add(new THREE.BoxGeometry(5.2, .12, .12), sage, s, t + dt, 3.1);
-    for (const ds of [-1.6, 1.6]) add(new THREE.BoxGeometry(.5, .45, 9), 0x8d6e53, s + ds, t, .25);
+    for (const ds of [-1.6, 1.6]){ add(new THREE.BoxGeometry(.5, .45, 9), 0x8d6e53, s + ds, t, .25); addSeatST(s + ds, t, landH(s + ds, t) + .48, -Math.sign(ds), 0, 9, 0, 1); }
     add(new THREE.BoxGeometry(4.4, .02, 11), 0xc8ad83, s, t, .02); }
   // the Idaho Gate (1912): two rough fieldstone pillars with brick caps either side of the path in from Idaho Ave
   { const t = XST.idaho - 14, s = parkCurb(t) - 3; for (const dt of [-2.2, 2.2]){ add(new THREE.CylinderGeometry(.7, .8, 2.6, 7), 0x8f8578, s, t + dt, 1.3, 0, .3); add(new THREE.BoxGeometry(1.5, .3, 1.5), 0x9c4a32, s, t + dt, 2.75); } }
@@ -7950,7 +7965,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
     { const r = new THREE.Mesh(new THREE.ConeGeometry(13.6, 2.4, 4), mat(0xd8b46a)); const sR = S((A0 + A1)/2); r.position.set(...P3(sR, -(o0 + M.oPatio)/2, dh(sR) + U2 + 4.8)); r.rotation.y = Math.PI/4; r.scale.set(.98, 1, .9); grp.add(r);
       for (const [A, o] of [[A0, o0], [A0, M.oPatio], [A1, o0], [A1, M.oPatio]]){ const tip = new THREE.Mesh(new THREE.ConeGeometry(.35, 1.2, 6), mat(0xd84315)); const s2 = S(A); tip.position.set(...P3(s2, -o, dh(s2) + U2 + 3.9)); tip.rotation.z = (A === A0 ? 1 : -1)*.9; grp.add(tip); } }
     // tables: downstairs by the windows, upstairs in the dining room, and on the patio under umbrellas
-    const table = (A, o, y, umb) => { cyl(A, o, y, .06, .72, 0x333333, 6); cyl(A, o, y + .72, .5, .05, 0xf4f4f0, 14); for (const [da, dd] of [[.8, 0], [-.8, 0], [0, .8], [0, -.8]]) cyl(A + da, o + dd, y, .2, .45, 0x00897b, 8);
+    const table = (A, o, y, umb) => { cyl(A, o, y, .06, .72, 0x333333, 6); cyl(A, o, y + .72, .5, .05, 0xf4f4f0, 14); for (const [da, dd] of [[.8, 0], [-.8, 0], [0, .8], [0, -.8]]){ cyl(A + da, o + dd, y, .2, .45, 0x00897b, 8); addSeatST(S(A + da), -(o + dd), dh(S(A + da)) + y + .45, da, dd); }
       if (umb){ cyl(A, o, y + .72, .03, 1.7, 0x333333, 6); const u = new THREE.Mesh(new THREE.ConeGeometry(1.3, .5, 8), mat([0xe53935, 0xfdd835, 0x00897b][Math.round(A) % 3])); const s2 = S(A); u.position.set(...P3(s2, -o, dh(s2) + y + 2.5)); grp.add(u); } };
     for (const [A, o] of [[593, 6], [598, 6], [603, 6], [598, 11], [603, 11]]) table(A, o, 0);
     for (const [A, o] of [[593, 4], [597.5, 4], [602, 4], [593, 9], [597.5, 9], [602, 9], [593, 14], [597.5, 14], [602, 14]]) table(A, o, U2);
@@ -7963,7 +7978,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
   bx(579, 583, 4, 8, 0, 3, 0xfdd835); sign(581, 4, 2.6, 2.8, .4, "TOM'S FAST FOOD", '#c62828', '#ffffff', 'e', 50);   // (Tom Pearl's: a little food stand)
   sign(629, 33, 1.6, 3, .5, 'SUNSET POINT', '#1f2d5a', '#ffffff', 'e', 70); cyl(629, 33, 0, .05, 1.4, 0x444444, 6);
   // benches on the end deck and along the narrow pier, facing the sea
-  for (const [A, off] of [[615, 20], [620, 10], [622, -8], [618, -14], [500, 4], [520, -5], [470, 4], [545, -5]]) { bx(A - .9, A + .9, off - .25, off + .25, .42, .5, 0xf4f4f0); bx(A - .9, A + .9, off + (off > 0 ? .2 : -.3), off + (off > 0 ? .3 : -.2), .5, 1, 0xf4f4f0); }
+  for (const [A, off] of [[615, 20], [620, 10], [622, -8], [618, -14], [500, 4], [520, -5], [470, 4], [545, -5]]) { bx(A - .9, A + .9, off - .25, off + .25, .42, .5, 0xf4f4f0); bx(A - .9, A + .9, off + (off > 0 ? .2 : -.3), off + (off > 0 ? .3 : -.2), .5, 1, 0xf4f4f0); addSeatST(S(A), -off, dh(S(A)) + .5, 0, off > 0 ? 1 : -1, 1.8, 1, 0); }
   // people fishing along the rails of the narrow pier and the end
   { const R = mulberry(9); for (let k = 0; k < 14; k++){ const A = 470 + k*11 + R()*4, north = k % 2 === 0, off = A > 579 ? (north ? 33 : -18) : (north ? 4.4 : -5.8), s = S(A), t = -off, gh = dh(s), col = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047, 0x8e24aa, 0xff7043][k % 6];
     const body = new THREE.Mesh(new THREE.CylinderGeometry(.2, .24, 1, 8), mat(col)); body.position.set(...P3(s, t + (north ? .4 : -.4), gh + 1.05)); grp.add(body); const legs = new THREE.Mesh(new THREE.CylinderGeometry(.18, .2, .55, 8), mat(0x37474f)); legs.position.set(...P3(s, t + (north ? .4 : -.4), gh + .28)); grp.add(legs);
@@ -8236,7 +8251,9 @@ function vrStep(o, dt){ const V = vrSwim; if (!V || !o) return; o.air = airMax()
   F.instanceMatrix.needsUpdate = true; }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
+  if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
+  { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   { const d = gettyAct(o) || matterAct(o); if (d) return d; }
   { const d = !o.workout && (kyotoAct(o) || disneyAct(o)); if (d) return d; }   // (Kyoto: shrines, fortunes, food, the stage... and the rides at Disneyland)
@@ -8290,7 +8307,7 @@ function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAud
   const hi = { tread: ['On the treadmill!', 'Tap Faster to speed up. Walk away when you\'re done'], bike: ['Spin time!', 'Tap Pedal faster to go faster'], weights: ['Pump some iron!', 'Tap Lift! for every lift'],
     stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat and people will come dance'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
   banner(...hi); sfx(660, .1, 'triangle', .05); }
-function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null; if (w.k === 'ride2') return endRide2(o, w); if (w.k === 'rc'){ if (rcObj) rcObj.visible = false; sfx(600, .08, 'triangle', .04); return banner('Picked up your mini car', 'Tap Drive to drive it again'); }
+function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null; if (w.k === 'sit'){ o.x = w.ex; o.y = w.ey; walkRef = w.eg + .3; o.gh = groundAt(o.x, o.y); return; }   /* (stand up where you were standing) */ if (w.k === 'ride2') return endRide2(o, w); if (w.k === 'rc'){ if (rcObj) rcObj.visible = false; sfx(600, .08, 'triangle', .04); return banner('Picked up your mini car', 'Tap Drive to drive it again'); }
   if (w.k === 'golf'){ const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.d - .8), w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); return; }   // (step back off the tee: golf spots have no exit point)
   { const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.ed ?? w.sp.d), w.sp.et ?? w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); }
   const secs = Math.round(time - w.t0), how = w.k === 'tread' ? `You ran ${Math.round(w.dist)} meters` : w.k === 'bike' ? `You rode ${Math.round(w.dist)} meters` : w.k === 'weights' ? `${w.n} lift${w.n === 1 ? '' : 's'}. Strength ${strengthLv()} 💪` : w.k === 'stretch' ? `${secs} seconds of stretching` : '';
@@ -8318,6 +8335,7 @@ function workStep(o, dt){ const w = o.workout; if (w.k === 'rc') return rcStep(o
     if (w.k === 'dj' && w.crowd && b === 7 && Math.random() < .5) sfx(700 + Math.random()*300, .35, 'sine', .015, .1, 500); } } }   // (the crowd: woo!)
 function poseWork(m, px, gy, pz, human){ const w = ocean.workout, u = m.userData, k = w.k; if (k === 'ride2') return poseRide2(m, px, gy, pz, human);
   m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0); if (bells) bells.visible = false;
+  if (k === 'sit'){ m.position.set(px, w.sy + (human ? .34 : .05), pz); poseWalk(m, 0, false); if (human) for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.5; u.legs[l].kn.rotation.z = -1.5; } return; }   // sitting on a bench or a chair
   if (w.pier){ m.position.set(px, (w.py ?? gy) + (k === 'wheel' ? .73 : .35) + (human ? 0 : -.4), pz); poseWalk(m, 0, false); if (!human) return;   // riding: sitting down
     for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.5; u.legs[l].kn.rotation.z = -1.5; }
     if (k === 'coaster' && (time - w.tapT < 2 || (pacPark?.tv > 9))){ u.arms.la.sh.rotation.set(0, 0, .2); u.arms.ra.sh.rotation.set(0, 0, -.2); } return; }
@@ -8661,7 +8679,7 @@ function buildRooms(g, P3){
         B(r.D - .12, r.D - .05, T0 + .8, T1 - .8, 1.9, 2.9, 0x22303c); for (let k = 0; k < 4; k++) B(r.D - .13, r.D - .12, T0 + 1, T1 - 1, 2.05 + k*.2, 2.12 + k*.2, 0xfff2c4);
         B(r.D - .9, r.D - .5, T0 + 1.5, T0 + 2.1, 0, 1.1, 0x2d3d58); B(r.D - .95, r.D - .45, T0 + 1.45, T0 + 2.15, 1.1, 1.75, 0xf4f4f0); B(r.D - .82, r.D - .58, T0 + 1.65, T0 + 1.95, 1.8, 2.1, 0xc99a74);
         for (let d = 1.4; d + 1.65 < r.D - 3.3; d += 2.2) for (const tm of [T0 + W*.3, T0 + W*.72]){ B(d, d + .9, tm - .45, tm + .45, .72, .78, 0x8a6a48); B(d + .4, d + .5, tm - .05, tm + .05, 0, .72, 0x2d3a35);   // tables and stools
-          for (const ds of [-.35, 1.25]) B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); }
+          for (const ds of [-.35, 1.25]){ B(d + ds, d + ds + .4, tm - .2, tm + .2, 0, .45, 0x2d3a35); addSeatST(S(d + ds + .2), tm, y0 + .45, S(d + .45) - S(d + ds + .2), 0); } }   // (sit down at a table)
         if (r.name === 'TMNT Pizzeria'){ const D = r.D, tt = T1 - .45;   // TMNT Pizzeria (opened June 2026 where Johnny's New York Pizzeria was): green neon, giant lava lamps, New York-style pies
           for (const [d, hex, blob] of [[1.2, 0x8e24aa, 0xff9100], [2.4, 0x00acc1, 0xffeb3b], [3.6, 0xd81b60, 0x76ff03]]){ B(d, d + .34, tt - .17, tt + .17, 0, .3, 0x333333); B(d + .05, d + .29, tt - .12, tt + .12, .3, 1.5, hex); B(d + .02, d + .32, tt - .15, tt + .15, 1.5, 1.62, 0x333333);
             quad(glow, P3(S(d + .05), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + .3), P3(S(d + .29), tt - .125, y0 + 1.5), P3(S(d + .05), tt - .125, y0 + 1.5), hex);
@@ -8999,7 +9017,7 @@ function buildPromenade(g, P3, at, instanceOf){
       for (let t = t0 + 14; t < t1 - 6; t += 22){ if (PROM_DINOS.some(d => Math.abs(d[1] - t) < (d[2] === 'sauro' ? 9 : 7))) continue; bs.push([PROM.s - 6, t, 1, 0], [PROM.s + 6, t, 1, Math.PI]); }   // (facing in, toward the middle of the street, backs to the shops)
       for (let t = t0 + 4; t < t1; t += 18) ls.push([PROM.s - 7.5, t, 1, 0], [PROM.s + 7.5, t, 1, 0]);
       for (const tt of [t0 + .5, t1 - .5]) for (let s = PROM.s0 + 1.5; s < PROM.s1 - 1; s += 2.2) bo.push([s, tt, 1, 0]); }
-    instanceOf(bench, bs); instanceOf(lamp, ls); instanceOf(bol, bo); }
+    instanceOf(bench, bs); instanceOf(lamp, ls); instanceOf(bol, bo); for (const [s, t, , r] of bs){ const [x, z] = landXY(s, t); addSeat(x*U, z*U, { y: landH(s, t) + .49, f: [Math.cos(r), -Math.sin(r)], a: [Math.sin(r), Math.cos(r)], len: 1.8 }); } }
   // jacarandas (purple in late spring) and tall palms along the curbs, and art banners strung high across the Promenade
   { const jac = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, 3.2, 6), std(0x6b5440, .9)); tr.position.y = 1.6; jac.add(tr);
     for (const [x, y, z, r, c] of [[0, 4.1, 0, 1.9, 0x9b7fd1], [.9, 3.7, .5, 1.3, 0x8a6fc4], [-.8, 3.8, -.6, 1.4, 0x5f8a45]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), std(c, .85)); b.position.set(x, y, z); b.scale.y = .7; jac.add(b); }

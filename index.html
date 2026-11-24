@@ -4974,10 +4974,12 @@ function buildGetty(pk, g, W3){ const D = pk.data, P = pk.place;
       for (let x = -3.2; x <= 3.2; x += 1.6) bx(.5, .45, 2.2, x, 1.85, 0, seatM); bx(8.4, .05, 2.5, 0, 1.66, 0, dark);
       g.add(car); GTRAM.cars.push(car); }
     gtramStep(0); } }
-function gtramStep(dt){ const T = GTRAM; if (!T.cars.length) return;
+function gtramReset(T){ T.d = T.stops[0]; T.dir = 1; T.v = 0; T.wait = 30; }
+function gtramAdvance(T, dt, quiet){
   if (T.wait > 0){ T.wait -= dt; T.v = 0; if (T.wait <= 0){ T.dir = T.d > T.L/2 ? -1 : 1; } }
-  else { const goal = T.dir > 0 ? T.stops[1] : T.stops[0], toGo = Math.abs(goal - T.d); T.v = Math.min(4.8, T.v + dt*.5, Math.sqrt(2*.5*toGo) + .2);   // (the Getty: 'about five minutes'; others say 3 to 4) T.d += T.v*dt*T.dir;
-    if ((goal - T.d)*T.dir <= 0){ T.d = goal; T.wait = 30; sfx(880, .15, 'sine', .03); if (ocean?.workout?.key === 'gtram') banner(T.dir > 0 ? '🚡 Arrival Plaza' : '🚡 Lower Tram Station', T.dir > 0 ? 'The top of the hill: the museum is up the steps. Tap Get off' : 'The parking and the bus stop. Tap Get off'); } }
+  else { const goal = T.dir > 0 ? T.stops[1] : T.stops[0], toGo = Math.abs(goal - T.d); T.v = Math.min(4.8, T.v + dt*.5, Math.sqrt(2*.5*toGo) + .2); T.d += T.v*dt*T.dir;   // (the Getty: 'about five minutes'; others say 3 to 4)
+    if ((goal - T.d)*T.dir <= 0){ T.d = goal; T.wait = 30; if (T.dir < 0) T.lap++; if (!quiet){ sfx(880, .15, 'sine', .03); if (ocean?.workout?.key === 'gtram') banner(T.dir > 0 ? '🚡 Arrival Plaza' : '🚡 Lower Tram Station', T.dir > 0 ? 'The top of the hill: the museum is up the steps. Tap Get off' : 'The parking and the bus stop. Tap Get off'); } } } }
+function gtramStep(dt){ const T = GTRAM; if (!T.cars.length) return; if (T.L > 0 && T.stops[1] > T.stops[0]) realSync(T, gtramReset, gtramAdvance);
   T.cars.forEach((car, k) => { const [x, y, z, a, pitch] = gtramAt(T.d - 4.4 - k*9); car.position.set(...[T.pk.place.X + x, z + .05, T.pk.place.Z - y]); car.rotation.set(0, a, pitch); }); }
 function gtramStationNear(o){ const P = GTRAM.pk?.place; if (!P || placeAtX(o.x*U) !== P) return null; const [x, y] = placeLocal(P, o.x*U, o.y*U);
   for (const [i, d] of [[0, GTRAM.stops[0] - 14], [1, GTRAM.stops[1] - 14]]){ const [sx, sy] = gtramAt(d); if (Math.hypot(sx - x, sy - y) < 22) return i; } return null; }
@@ -5263,10 +5265,19 @@ function buildBus(g){ const b = new THREE.Group(), red = std(0xc62828, .45), dar
   for (const S of BUS.stops){ const p = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.8, 6), std(0x555555, .5)); pole.position.y = 1.4; p.add(pole);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(.9, .9), new THREE.MeshBasicMaterial({ map: labelTex('🚌 TOUR', '#c62828', '#ffffff', 256, 256, 70), side: THREE.DoubleSide })); sg.position.y = 2.6; p.add(sg);
     const [x, y] = landXY(S.s, S.t); p.position.set(x*U, landH(S.s, S.t), y*U); g.add(p); } }
-function busStep(dt){ const B = BUS; if (!B.mesh) return;
+// Everything on a timetable runs on the real clock: the tour bus, the E Line, the Big Blue Buses and the Getty tram are wherever they'd
+// be at this real moment (each one's day counted from New Year 2026), so a reload, a pause or coming back tomorrow never moves them.
+const RT_EPOCH = Date.UTC(2026, 0, 1)/1000;
+function realSync(K, reset, adv, off = 0){ const now = Date.now()/1000;
+  if (!K.rtP){ reset(K); K.lap = 0; let t = 0; while (K.lap < 1 && t < 7200){ adv(K, .05, true); t += .05; } K.rtP = Math.max(1, t); K.rt = null; }   // (how long one round takes, measured once)
+  if (K.rt == null || now - K.rt > 3 || now < K.rt){ reset(K); K.lap = 0; const ph = (((now - RT_EPOCH + off) % K.rtP) + K.rtP) % K.rtP; for (let t = 0; t < ph; t += .05) adv(K, Math.min(.05, ph - t), true); K.rt = now; return; }   // (back after a while: straight to where it is now)
+  let dt = now - K.rt; K.rt = now; while (dt > 1e-6){ const h = Math.min(.05, dt); adv(K, h, false); dt -= h; } }
+function busReset(B){ const S = B.stops[0]; B.d = S.d; B.wait = 14; B.v = 0; B.stopAt = S; B.left = S; }
+function busAdvance(B, dt, quiet){
   if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { B.v = Math.min(9, B.v + dt*2.5); const d0 = B.d; B.d += B.v*dt; B.stopAt = null; if (B.left && Math.abs(((B.d - B.left.d) % B.L + B.L) % B.L) > 20) B.left = null;   // (just left a stop: don't stop there again)
-    for (const S of B.stops){ const a = ((d0 % B.L) + B.L) % B.L, b = ((B.d % B.L) + B.L) % B.L; if (S === B.left) continue; if ((a < S.d && b >= S.d) || (a > b && (S.d > a || S.d <= b))){ B.d = S.d; B.wait = 14; B.stopAt = S; B.left = S; sfx(500, .15, 'sine', .02); if (ocean?.workout?.key === 'bus') banner(`🚏 ${S.name}`, S.say + '. Tap Hop off to get off here'); } } }
-  if (B.wait > 0 && !B.stopAt) B.stopAt = B.stops.find(S => Math.abs(S.d - (((B.d % B.L) + B.L) % B.L)) < .5) || null;
+    for (const S of B.stops){ const a = ((d0 % B.L) + B.L) % B.L, b = ((B.d % B.L) + B.L) % B.L; if (S === B.left) continue; if ((a < S.d && b >= S.d) || (a > b && (S.d > a || S.d <= b))){ B.d = S.d; B.wait = 14; B.stopAt = S; B.left = S; if (S === B.stops[0]) B.lap++; if (!quiet){ sfx(500, .15, 'sine', .02); if (ocean?.workout?.key === 'bus') banner(`🚏 ${S.name}`, S.say + '. Tap Hop off to get off here'); } } } }
+  if (B.wait > 0 && !B.stopAt) B.stopAt = B.stops.find(S => Math.abs(S.d - (((B.d % B.L) + B.L) % B.L)) < .5) || null; }
+function busStep(dt){ const B = BUS; if (!B.mesh) return; realSync(B, busReset, busAdvance);
   const [sv, t, h] = B.at(B.d), [x, y] = landXY(sv, t); B.mesh.position.set(x*U, landH(sv, t), y*U); const want = -h; B.ang = B.ang == null ? want : lerpAngle(B.ang, want, Math.min(1, dt*3)); B.mesh.rotation.y = B.ang; }
 function busStopNear(o){ const [sv, t] = landST(o.x, o.y); return BUS.stops.find(S => Math.hypot(S.s - sv, S.t - t) < 6); }
 function busETA(S){ const B = BUS, d = ((S.d - B.d) % B.L + B.L) % B.L; return Math.round(d/9 + (B.wait > 0 ? B.wait : 0) + B.stops.filter(x => { const q = ((x.d - B.d) % B.L + B.L) % B.L; return q > .5 && q < d; }).length*14); }
@@ -5487,12 +5498,15 @@ function buildEline(g, P3){ const E = ELINE, rails = [], bal = [], road = [], po
       const pan = new THREE.Mesh(new THREE.BoxGeometry(2, .1, .1), dark); pan.position.set(0, 4.1, 0); pan.rotation.z = .5; car.add(pan); g.add(car); E.cars.push(car); } }
   elineStep(0); }
 let elineCam = null;
-function elineStep(dt){ const E = ELINE; if (!E.cars.length) return; if (elineCam && !['eline', 'bbb', 'gtram', 'matter'].includes(ocean?.workout?.key)){ camMode = elineCam; elineCam = null; camInit = false; }   // (off the train: your view back)
+function elineReset(E){ E.d = E.stations[0].d; E.dir = 1; E.v = 0; E.wait = 40; E.at = E.stations[0]; E.left = null; }
+function elineAdvance(E, dt, quiet){
   if (E.wait > 0){ E.wait -= dt; E.v = 0; if (E.wait <= 0 && E.at?.end && ((E.dir > 0 && E.at.d > E.L/2) || (E.dir < 0 && E.at.d < E.L/2))) E.dir = -E.dir; if (E.wait <= 0) E.left = E.at; }
   else { const nxt = E.stations.filter(S => S !== E.left && (S.d - E.d)*E.dir > -.5).sort((a, b) => Math.abs(a.d - E.d) - Math.abs(b.d - E.d))[0], [s] = elineAt(E.d), top = s < 1000 ? 5 : s < 2212 ? 7 : 15, toGo = nxt ? Math.abs(nxt.d - E.d) : 1e9;
     E.v = Math.min(top, E.v + dt*1.1, Math.sqrt(2*1.1*Math.max(0, toGo)) + .3); E.d += E.v*dt*E.dir;
-    if (nxt && (nxt.d - E.d)*E.dir <= 0){ E.d = nxt.d; E.at = nxt; E.wait = nxt.end ? 40 : 20; E.left = null; sfx(700, .12, 'sine', .03);
-      if (ocean?.workout?.key === 'eline') banner(`🚉 ${nxt.name}`, nxt.end ? 'End of the line. Tap Get off' : 'Doors open… next stop: ' + (E.dir > 0 ? '26th St/Bergamot' : 'Downtown Santa Monica')); } else E.at = null; }
+    if (nxt && (nxt.d - E.d)*E.dir <= 0){ E.d = nxt.d; E.at = nxt; E.wait = nxt.end ? 40 : 20; E.left = null; if (nxt === E.stations[0]) E.lap++; if (!quiet){ sfx(700, .12, 'sine', .03);
+      if (ocean?.workout?.key === 'eline') banner(`🚉 ${nxt.name}`, nxt.end ? 'End of the line. Tap Get off' : 'Doors open… next stop: ' + (E.dir > 0 ? '26th St/Bergamot' : 'Downtown Santa Monica')); } } else E.at = null; } }
+function elineStep(dt){ const E = ELINE; if (!E.cars.length) return; if (elineCam && !['eline', 'bbb', 'gtram', 'matter'].includes(ocean?.workout?.key)){ camMode = elineCam; elineCam = null; camInit = false; }   // (off the train: your view back)
+  realSync(E, elineReset, elineAdvance);
   E.cars.forEach((car, k) => { const [s, t, a, h] = elineAt(E.d - E.dir*(13.5 + k*27.6)), [x, y] = landXY(s, t); car.position.set(x*U, h + .05, y*U); car.rotation.y = -a; }); }
 function elineStationNear(o){ const [s, t] = landST(o.x, o.y); return ELINE.stations.find(S => S.end && S.plat && Math.hypot(S.plat[0] - s, S.plat[1] - t) < 45) || ELINE.stations.find(S => S.end && S.name === '26th St/Bergamot' && Math.hypot(BERG.station[0] - s, BERG.station[1] - t) < 45 && (S.plat = S.plat || BERG.station)); }
 function elineOff(o){ const S = ELINE.at; if (!S) return; o.workout = null; const [s, t] = bergFreeAny(S.plat || BERG.station), [x, y] = landXY(s, t); o.x = x; o.y = y; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner(`🚉 ${S.name}`, S.name === '26th St/Bergamot' ? 'Bergamot Station\'s galleries are right here' : '3rd Street Promenade is two blocks up 4th St'); }
@@ -7645,15 +7659,16 @@ function buildBBB(g){ const r = BBB.route = laneRoute([[AVES.fourth, XST.broadwa
     BBB.stops.push(d); (BBB.stopPos || (BBB.stopPos = [])).push({ s: qs, t: qt, d }); const p = new THREE.Group(), pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 3, 6), std(0x666666, .5)); pole.position.y = 1.5; p.add(pole);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(.8, .8), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, map: canvasTex(128, 128, x => { x.fillStyle = '#1f5fbf'; x.fillRect(0, 0, 128, 128); x.fillStyle = '#fff'; x.font = "bold 22px sans-serif"; x.textAlign = 'center'; x.fillText('BIG BLUE', 64, 46); x.fillText('BUS', 64, 72); x.font = "40px sans-serif"; x.fillText('🚌', 64, 114); }, false) })); sg.position.y = 2.75; p.add(sg);
     const [x, y] = landXY(qs, qt); p.position.set(x*U, landH(qs, qt), y*U); g.add(p); } }
-function bbbStep(){ if (!BBB.route) return; const dt = Math.min(.1, Math.max(0, time - BBB.last)); BBB.last = time; const L = BBB.route.L;
-  BBB.buses.forEach((B, k) => { if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { const d0 = ((B.d % L) + L) % L; B.v = Math.min(8, B.v + dt*2); B.d += B.v*dt; const d1 = ((B.d % L) + L) % L;
-      for (const S of BBB.stops) if (S !== B.left && ((d0 < S && d1 >= S) || (d0 > d1 && (S > d0 || S <= d1)))){ B.d = S; B.wait = 9; B.left = S; break; } if (B.left != null && Math.abs(d1 - B.left) > 30) B.left = null; }
+function bbbAdvance(B, dt){ const L = BBB.route.L; if (B.wait > 0){ B.wait -= dt; B.v = 0; } else { const d0 = ((B.d % L) + L) % L; B.v = Math.min(8, B.v + dt*2); B.d += B.v*dt; const d1 = ((B.d % L) + L) % L;
+    for (const S of BBB.stops) if (S !== B.left && ((d0 < S && d1 >= S) || (d0 > d1 && (S > d0 || S <= d1)))){ B.d = S; B.wait = 9; B.left = S; if (S === BBB.stops[0]) B.lap++; break; } if (B.left != null && Math.abs(d1 - B.left) > 30) B.left = null; } }
+function bbbReset(B){ B.d = BBB.stops[0]; B.wait = 9; B.v = 0; B.left = BBB.stops[0]; }
+function bbbStep(){ if (!BBB.route) return; const dt = Math.min(.1, Math.max(0, time - BBB.last)); BBB.last = time;
+  BBB.buses.forEach((B, k) => { if (BBB.stops.length) realSync(B, bbbReset, bbbAdvance, k*(BBB.buses[0].rtP || 0)/2);   // (the two buses half a round apart)
     const [sv, t, h] = BBB.at(B.d), [x, y] = landXY(sv, t); B.m.position.set(x*U, landH(sv, t), y*U); const want = -h; B.ang = B.ang == null ? want : lerpAngle(B.ang, want, Math.min(1, dt*3)); B.m.rotation.y = B.ang; }); }
 /* Western gulls on the beach by the pier: they stand about on the sand facing the wind, and when you come running they take off, flap away,
    circle over the beach for a while and come down somewhere else nearby (like the real ones). And pigeons down the middle of the Promenade,
    which clatter up when you run through them and settle again a few meters on. Instanced: five meshes for all the birds. */
-const GULLS = { list: [], m: null, last: 0 };
-function buildGulls(g){ const NG = 26, NP = 30, NS = 16, N = NG + NP + NS, R = mulberry(91), body = new THREE.SphereGeometry(.16, 8, 6); body.scale(1.7, .8, .8);
+const GULLS = { list: [], m: null, last: 0 };function buildGulls(g){ const NG = 26, NP = 30, NS = 16, N = NG + NP + NS, R = mulberry(91), body = new THREE.SphereGeometry(.16, 8, 6); body.scale(1.7, .8, .8);
   const wing = new THREE.BoxGeometry(.32, .025, .62); wing.translate(0, 0, .31); const beak = new THREE.ConeGeometry(.03, .14, 5); beak.rotateZ(-Math.PI/2); beak.translate(.33, .03, 0); const head = new THREE.SphereGeometry(.085, 8, 6); head.translate(.24, .1, 0);
   const mk = geo => { const m = new THREE.InstancedMesh(geo, std(0xffffff, .7), N); m.frustumCulled = false; m.castShadow = true; g.add(m); return m; };
   GULLS.m = { body: mk(body), head: mk(head), wl: mk(wing), wr: mk(wing), beak: mk(beak) };

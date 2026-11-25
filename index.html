@@ -1852,7 +1852,7 @@ function gadgetStep(o, dt){
   o.jetOn = false;
   if (heldGadget === 'jetpack' && gadgetHeld && !busy && (o.fuel ?? 6) > 0){
     if (!inAir){ if (o.onShip || o.inHouse || o.inCasino || o.climb) return; o.jumpY = o.onLand ? Math.max(.1, groundAt(o.x, o.y) + .1) : .05; o.jumpV = 3; o.onLand = false; o.depth = 0; o.vd = 0; sfx(160, .4, 'sawtooth', .05, 0, 300); }
-    o.jetOn = true; o.fuel -= dt; if (o.fuel <= 0) banner('Out of fuel!', 'Open your paraglider, or splash down'); }
+    o.jetOn = true; o.fuel = 6; }   // (the jetpack never runs out)
   if (!tap || busy) return;
   if (heldGadget === 'paraglider'){
     if (o.climb && o.climb.h >= o.climb.top - .1){   // from the crow's nest: take off!
@@ -6556,17 +6556,17 @@ function endTurn(){ if (!game) return; const who = game.turn;
 const chubNow = () => clamp(save.chub || 0, 0, 1), fullNow = () => clamp(save.full ?? 70, 0, 100);
 let foodT = 0, hungerNagT = 0;
 function feed(kind){ const full = fullNow(), add = kind === 'lick' ? 5 : kind === 'drink' ? 3 : 9, sweet = kind === 'lick' || kind === 'froyo' || kind === 'roast';
-  save.full = Math.min(100, full + add); let gain = (sweet ? .012 : .004) + (full > 85 ? .03 : 0); save.chub = Math.min(1, chubNow() + gain);
+  save.full = Math.min(100, full + add); let gain = kind === 'drink' ? .006 : (sweet ? .028 : .02) + (full > 85 ? .03 : 0); /* (every bite shows: about 40 bites from slim to round, quicker if you keep eating when you're full) */ save.chub = Math.min(1, chubNow() + gain);
   if (full < 30 && save.full >= 30) banner('😋 That hit the spot!', 'Not hungry any more');
   else if (full > 85 && Math.random() < .3) banner('🤰 So full!', chubNow() > .5 ? "You're getting chubby! Run and swim to burn it off" : "You're stuffed"); }
 function foodStep(dt, o){ if (paused || o.workout?.k === 'sit') return; foodT += dt; if (foodT < 1) return; const k = foodT; foodT = 0;
-  const busy = o.workout || o.skating || (o.bike && o.walking) || (!o.onLand && !o.car) || (o.walking && diveHeld()) ? 2.2 : o.walking ? 1 : .5;   // (sitting in a car or standing still uses less)
-  save.full = Math.max(0, fullNow() - k*busy/18); if (busy > 2 && chubNow() > 0) save.chub = Math.max(0, chubNow() - k*.0025);   // (about 25 min from full to starving; ~7 min of exercise burns off a lot of chub)
+  const busy = (o.workout && o.workout.k !== 'ride2' && !o.workout.pier) || o.skating ||   /* (riding a ride or a bus isn't exercise) */ (o.bike && o.walking) || (!o.onLand && !o.car) || (o.walking && diveHeld()) ? 2.2 : o.walking ? 1 : .5;   // (sitting in a car or standing still uses less)
+  save.full = Math.max(0, fullNow() - k*busy/18); if (busy > 2){ if (chubNow() > 0) save.chub = Math.max(0, chubNow() - k*.003); save.fit = Math.min(1800, (save.fit || 0) + k); }   // (about 25 min from full to starving; ~5 min of exercise burns off a lot of chub, and all of it builds muscle)
   const f = fullNow(), chip = $('foodChip'); if (chip){ chip.hidden = false; $('foodFill').style.width = f + '%'; chip.classList.toggle('low', f < 25); }
   if (f < 25 && time > hungerNagT){ hungerNagT = time + (f < 10 ? 45 : 90); sfx(90, .35, 'sawtooth', .03, 0, -30); sfx(70, .3, 'sawtooth', .03, .3, -20);
     coach(f < 10 ? "🍔 You're starving! You're slowing down. Go get something to eat" : '🍔 Your tummy is rumbling! Find something to eat on the Promenade', 4); } }
 const foodSpeed = () => (fullNow() < 10 ? .7 : 1)*(1 - .18*chubNow());
-const muscleNow = () => Math.min(1, (save.lifts || 0)/200), strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
+const muscleNow = () => Math.min(1, (save.lifts || 0)/200 + (save.fit || 0)/1800), /* (lifting weights, or 30 minutes of running, swimming, skating, the treadmill or the bike: toned and strong) */ strengthLv = () => 1 + Math.floor((save.lifts || 0)/20);
 function setTattoo(m, e){   // a temporary tattoo, on the outside of your right forearm
   const u = m.userData; if (u.kind !== 'swimmer' || u.tatE === (e || '')) return; u.tatE = e || ''; if (u.tat){ u.tat.parent.remove(u.tat); u.tat = null; } if (!e) return;
   const tex = canvasTex(96, 96, (x, w, h) => { x.clearRect(0, 0, w, h); emo(x, e, w/2, h/2 + 4, 78); }, false), pl = new THREE.Mesh(new THREE.PlaneGeometry(.085, .085), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, opacity: .9 }));
@@ -6574,7 +6574,7 @@ function setTattoo(m, e){   // a temporary tattoo, on the outside of your right 
 function setMuscle(m, mu){ const u = m.userData, ch = chubNow(), key = mu.toFixed(3) + '|' + ch.toFixed(2); if (u.kind !== 'swimmer' || u.mu === key) return; u.mu = key; const a = 1 + 1.3*mu + .35*ch, f = 1 + .6*mu + .3*ch;
   for (const id of ['la', 'ra']){ const { sh, el } = u.arms[id]; sh.userData.z0 ??= sh.position.z; sh.position.z = sh.userData.z0*(1 + .22*mu + .4*ch);   // (broader shoulders,
     for (const c of sh.children) if (c.isMesh) c.scale.set(1, a, a); if (el.children[0]?.isMesh) el.children[0].scale.set(1, f, f); }                   //  big arms)
-  for (const c of [u.torso, u.tee]) if (c) c.scale.set(1 + .04*ch, 1 + .25*mu + .7*ch, 1 + .32*mu + .38*ch);   //  and a bigger chest; a round tummy from eating a lot)
+  for (const c of [u.torso, u.tee]) if (c) c.scale.set(1 + .06*ch, 1 + .25*mu + .95*ch, 1 + .32*mu + .55*ch);   //  and a bigger chest; a round tummy from eating a lot)
   for (const id of ['ll', 'rl']){ const th = u.legs[id]?.hp; if (th){ th.userData.z0 ??= th.position.z; th.position.z = th.userData.z0*(1 + .3*ch); for (const c of th.children) if (c.isMesh) c.scale.set(1, 1 + .45*ch, 1 + .45*ch); } } }                                                                   //  and a bigger chest)
 function flex(){ const o = ocean; if (!o) return; o.flexT = time + 2.2; heartsAt = time; [392, 523, 659].forEach((f, i) => sfx(f, .14, 'square', .03, i*.08));
   const n = save.lifts || 0; banner(`💪 Strength ${strengthLv()}`, n ? `${n} lifts so far. ${n < 200 ? 'Keep lifting to get even bigger!' : 'Maximum muscles!'}` : 'Lift weights to grow your muscles!'); }

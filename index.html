@@ -6606,10 +6606,10 @@ function buildPacificPark(g, P3){
     wheel.add(gp); gond.push(gp); }
   // the West Coaster: a red track looping round the park on white supports, and its little train
   const pts = PP.coaster.map(([s, t, h]) => new THREE.Vector3(...P3(s, t, pierDeckH(s) + h))), curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 420, .16, 8, true), std(0xd32f2f, .45, .3)));
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 420, .16, 8, true), std(0xfdd835, .45, .3)));   // (yellow track, from photos)
   { const N = 420, P = curve.getSpacedPoints(N); for (let i = 0; i < N; i += 3){ const p = P[i], q = P[i + 1] || P[0], dir = q.clone().sub(p).normalize(), side = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(.45);
       const tie = new THREE.Mesh(new THREE.BoxGeometry(.12, .08, 1.1), std(0x5d4037, .8)); tie.position.copy(p); tie.lookAt(p.clone().add(side)); g.add(tie);
-      if (i % 12 === 0){ const col = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 1, 6), steel); const gy = (() => { const [ls, lt] = landST(p.x/U, p.z/U); return pierDeckH(ls); })(); col.scale.y = Math.max(.1, p.y - gy); col.position.set(p.x, (p.y + gy)/2, p.z); g.add(col); } } }
+      if (i % 12 === 0){ const col = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 1, 6), std([0x7b1fa2, 0xd32f2f, 0x2e9d4f, 0x1e6fd9, 0xf06292][(i/12) % 5], .45, .3));   /* (round columns painted purple, red, green, blue and pink) */ const gy = (() => { const [ls, lt] = landST(p.x/U, p.z/U); return pierDeckH(ls); })(); col.scale.y = Math.max(.1, p.y - gy); col.position.set(p.x, (p.y + gy)/2, p.z); g.add(col); } } }
   const train = new THREE.Group(); for (let k = 0; k < 5; k++){ const car = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(1.6, .6, 1.1), std([0xfdd835, 0x1e88e5, 0x43a047, 0xe53935, 0xff7043][k], .45)); body.position.y = .45; car.add(body); const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, 1), std(0x222222, .7)); seat.position.set(-.5, .8, 0); car.add(seat); train.add(car); }
   g.add(train);
   { const S0 = -34.6, S1 = -17.7, T0 = 72.8, T1 = 81.1, dk = pierDeckH(-26), bxs = (s0, s1, t0, t1, y0, y1, hex) => { const m = new THREE.Mesh(new THREE.BoxGeometry(s1 - s0, y1 - y0, t1 - t0), std(hex, .7)); m.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, dk + (y0 + y1)/2)); g.add(m); };   // the station (OpenStreetMap footprint): a platform beside the track, a red roof, the back wall
@@ -6619,14 +6619,14 @@ function buildPacificPark(g, P3){
   // Inkie's Scrambler, built like a real Eli Bridge Scrambler: a center tower, three long arms running LOW, under the cars, each ending in
   // a hub with four sweeps, and a two-seat car on the end of every sweep. The arms turn one way and the hubs the other, so the cars whip
   // past each other at the corners. Nothing passes over the cars, so nothing ever goes through you. (Colors are a guess.)
-  let scrCup = null; const scr = new THREE.Group(); scr.position.set(...P3(-54, 52, pierDeckH(-54))); g.add(scr); const scrSpin = new THREE.Group(); scrSpin.position.y = .5; scr.add(scrSpin);
-  { const purple = std(0x6a1b9a, .45, .2), yellow = std(0xfdd835, .45, .3), steel = std(0x9aa0a6, .35, .7);
+  let scrCup = null; const scr = new THREE.Group(); scr.position.set(...P3(-54, 55, pierDeckH(-54)));   /* (inside the coaster's seaward loop, like the real one: 8 m clear of every column, its reach is under 7) */ g.add(scr); const scrSpin = new THREE.Group(); scrSpin.position.y = .5; scr.add(scrSpin);
+  { const purple = std(0x6a1b9a, .45, .2), yellow = std(0x2e9d4f, .45, .3), steel = std(0x9aa0a6, .35, .7);   // (green arms and silver cars, from photos)
     const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, .45, 16), purple); base.position.y = .22; scr.add(base);
     const tower = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 3.4, 12), purple); tower.position.y = 1.7; scr.add(tower);
     const cap = new THREE.Mesh(new THREE.ConeGeometry(1.1, .9, 12), yellow); cap.position.y = 3.85; scr.add(cap);
     const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.06, 6, 4), new THREE.MeshBasicMaterial({ color: 0xfff1b8 }), 24), m4 = new THREE.Matrix4(); for (let k = 0; k < 24; k++){ const a = k/24*TAU; m4.makeTranslation(Math.cos(a)*1.05, 3.42, Math.sin(a)*1.05); bulbs.setMatrixAt(k, m4); } scr.add(bulbs);
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, .3, 16), yellow); ring.position.y = .05; scrSpin.add(ring);
-    const CC = [0xe53935, 0x1e88e5, 0x43a047, 0xff7043];
+    const CC = [0xc9ced3, 0xc9ced3, 0xbfc5ca, 0xd3d7db];
     for (let k = 0; k < 3; k++){ const arm = new THREE.Group(); arm.rotation.y = k*TAU/3; scrSpin.add(arm);
       const bar = new THREE.Mesh(new THREE.BoxGeometry(4.4, .22, .3), yellow); bar.position.set(2.2, 0, 0); arm.add(bar);   // (the long arm, at knee height under everything)
       const star = new THREE.Group(); star.position.set(4.4, 0, 0); arm.add(star);

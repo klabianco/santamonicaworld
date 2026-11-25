@@ -8355,10 +8355,23 @@ function vrStep(o, dt){ const V = vrSwim; if (!V || !o) return; o.air = airMax()
   const F = V.fish, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), s1 = new THREE.Vector3(1, 1, 1);
   for (let i = 0; i < F.count; i++){ const a = time*.6 + i*.37, r = 4 + (i % 9)*.6, y = -1.5 - (i % 5)*.5 + Math.sin(time + i)*.3; v.set(px + Math.cos(a)*r, y, pz + Math.sin(a)*r); q.setFromAxisAngle(up, -(a + Math.PI/2)); m4.compose(v, q, s1); F.setMatrixAt(i, m4); }
   F.instanceMatrix.needsUpdate = true; }
+/* Touchscreen kiosks on the Promenade: walk up to one and play on its screen. The screen runs Troy's Air Hockey (troy-air-hockey.pages.dev) */
+const KIOSKS = [], KIOSK_GAME = 'https://troy-air-hockey.pages.dev/';
+let kioskTex = null; const kioskScreenTex = () => kioskTex || (kioskTex = canvasTex(256, 384, (x, w, h) => { const gr = x.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0b1a3a'); gr.addColorStop(1, '#13306b'); x.fillStyle = gr; x.fillRect(0, 0, w, h);
+  x.strokeStyle = '#41e0ff'; x.lineWidth = 6; x.strokeRect(36, 70, w - 72, h - 160); x.beginPath(); x.moveTo(36, h/2 - 15); x.lineTo(w - 36, h/2 - 15); x.stroke(); x.beginPath(); x.arc(w/2, h/2 - 15, 26, 0, TAU); x.stroke();
+  x.fillStyle = '#ff3d7f'; x.beginPath(); x.arc(w/2, 120, 18, 0, TAU); x.fill(); x.fillStyle = '#ffffff'; x.beginPath(); x.arc(w/2 + 30, h/2 + 40, 11, 0, TAU); x.fill(); x.fillStyle = '#41e0ff'; x.beginPath(); x.arc(w/2, h - 130, 18, 0, TAU); x.fill();
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 34px Nunito, sans-serif'; x.fillText('AIR HOCKEY', w/2, 46); x.font = '700 24px Nunito, sans-serif'; x.fillText('Tap to play', w/2, h - 40); }));
+function kioskNear(o){ if (!o?.onLand || o.workout || o.car) return null; const [s, t] = landST(o.x, o.y); return KIOSKS.find(K => Math.hypot(K.s - s, K.t - t) < 1.7) || null; }
+function openKiosk(){ initAudio(); let d = $('kioskPanel'); if (!d){ d = document.createElement('div'); d.id = 'kioskPanel'; d.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(6,14,30,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(10px,env(safe-area-inset-top)) 10px 10px';
+    d.innerHTML = '<div style="width:min(1000px,100%);display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:#fff;font:800 18px Nunito,sans-serif"><span>🕹️ Touchscreen</span><button type="button" id="kioskClose" style="border:0;border-radius:14px;padding:8px 16px;font:800 16px Nunito,sans-serif;background:#fff;color:#0b2a40">✕ Back to the Promenade</button></div><iframe id="kioskFrame" title="Air Hockey" allow="fullscreen; autoplay; gamepad" style="width:min(1000px,100%);flex:1;max-height:calc(100% - 50px);border:6px solid #111;border-radius:18px;background:#000"></iframe>';
+    document.body.appendChild(d); d.querySelector('#kioskClose').onclick = closeKiosk; }
+  d.querySelector('#kioskFrame').src = KIOSK_GAME; d.hidden = false; paused = true; }
+function closeKiosk(){ const d = $('kioskPanel'); if (!d) return; d.hidden = true; d.querySelector('#kioskFrame').src = 'about:blank'; paused = false; graceAfterPause?.(); }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
+  { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   { const d = gettyAct(o) || matterAct(o); if (d) return d; }
@@ -9167,7 +9180,10 @@ function buildPromenade(g, P3, at, instanceOf){
     const vt = (text, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(6.6, .62), new THREE.MeshBasicMaterial({ map: canvasTex(1024, 96, x => { x.fillStyle = '#f4f4f1'; x.fillRect(0, 0, 1024, 96); x.font = "600 62px 'Helvetica Neue', Arial, sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#5d6a74'; x.fillText(text.split('').join(String.fromCharCode(8202)), 512, 50); }, false) })); m.position.set(0, 5.3, z); m.rotation.set(0, ry, Math.PI/2); gp.add(m); };   // (the letters run up the pylon)
     vt('THIRD STREET PROMENADE', .352, 0); vt('WILSHIRE', -.352, Math.PI);
     const kio = new THREE.Mesh(new THREE.BoxGeometry(1.15, 2.1, .85), blue); kio.position.y = 1.05; gp.add(kio);
-    const map = new THREE.Mesh(new THREE.PlaneGeometry(.8, 1.1), std(0xe9eef2, .4)); map.position.set(0, 1.25, .43); gp.add(map);
+    const map = new THREE.Mesh(new THREE.PlaneGeometry(.8, 1.1), new THREE.MeshBasicMaterial({ map: kioskScreenTex() })); map.position.set(0, 1.25, .43); gp.add(map); KIOSKS.push({ s: PROM.s, t: t + 1 });   // (its screen is a touchscreen)
+    for (const [ks, kt] of [[PROM.s + 3.2, XST.arizona - 11], [PROM.s - 3.2, XST.arizona + 11], [PROM.s + 3.2, XST.smblvd - 11], [PROM.s - 3.2, XST.smblvd + 11], [PROM.s + 3.2, PROM.t1 - 6]]){ const kg = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(.95, 2.3, .32), std(0x15181c, .35, .4)); body.position.y = 1.15; kg.add(body);   // slim black touchscreen kiosks by each cross street (a guess where they stand)
+      for (const sz of [.165, -.165]){ const sc = new THREE.Mesh(new THREE.PlaneGeometry(.78, 1.17), new THREE.MeshBasicMaterial({ map: kioskScreenTex() })); sc.position.set(0, 1.3, sz); if (sz < 0) sc.rotation.y = Math.PI; kg.add(sc); }
+      at(kg, ks, kt); const [x0, z0] = landXY(ks, kt), [x1, z1] = landXY(ks, kt + 1); kg.rotation.y = Math.atan2(x1 - x0, z1 - z0); KIOSKS.push({ s: ks, t: kt }); LAND_BOXES.push([ks - .5, kt - .3, ks + .5, kt + .3, landH(ks, kt) + 2.3]); }
     at(gp, PROM.s, t); LAND_BOXES.push([PROM.s - .6, t - .45, PROM.s + .6, t + .45, landH(PROM.s, t) + 9.2]);
     const ft = new THREE.Group(), stone = std(0xb4ab9c, .85), t0 = t + 2.4, t1 = t + 14.5, w = 5.2, flower = std(0xf2c62e, .9), leaf = std(0x4f7d39, .95), tile = std(0x5fb3d6, .3), rail = std(0x6d7378, .5, .4);
     const box = (sw, h, tw, m, ds, y, tc) => { const me = new THREE.Mesh(new THREE.BoxGeometry(sw, h, tw), m); me.position.set(ds, y, tc); ft.add(me); return me; };

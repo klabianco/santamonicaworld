@@ -6648,7 +6648,7 @@ function buildPacificPark(g, P3){
   const LN = 80, lights = new THREE.InstancedMesh(new THREE.SphereGeometry(.13, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff }), LN*2), m4 = new THREE.Matrix4(), c = new THREE.Color();
   for (let k = 0; k < LN; k++) for (const [j, z] of [[0, -.9], [1, .9]]){ const a = k/LN*TAU; m4.makeTranslation(Math.cos(a)*(W.R + .2), Math.sin(a)*(W.R + .2), z); lights.setMatrixAt(k*2 + j, m4); lights.setColorAt(k*2 + j, c.setHSL(k/LN, .9, .6)); }
   spin.add(lights);
-  const gond = [], GC = [0xe53935, 0xfdd835, 0x1e88e5, 0x43a047, 0xff7043];
+  const gond = [], GC = [0xe53935, 0xfdd835];
   for (let k = 0; k < W.n; k++){ const gp = new THREE.Group(), cm = std(GC[k % GC.length], .5);   // (open cars: a floor, a low wall, posts and a roof, so you can see who's riding)
     const floor = new THREE.Mesh(new THREE.BoxGeometry(1.7, .1, 1.5), cm); floor.position.y = -2.35; gp.add(floor); for (const z of [-.5, .5]){ const bn = new THREE.Mesh(new THREE.BoxGeometry(1.5, .12, .4), std(0xf4f4f0, .6)); bn.position.set(0, -1.95, z); gp.add(bn); }
     for (const [x, z, w, d] of [[-.82, 0, .06, 1.5], [.82, 0, .06, 1.5], [0, -.72, 1.7, .06], [0, .72, 1.7, .06]]){ const wl = new THREE.Mesh(new THREE.BoxGeometry(w, .6, d), cm); wl.position.set(x, -2.0, z); gp.add(wl); }
@@ -6740,7 +6740,7 @@ function kiddieStep(dt, w){ for (const key of ['airlift', 'frenzy']){ const K = 
     if (key === 'airlift') K.cars.forEach((C, i) => { C.car.position.y = 1.2*sp*(.5 + .5*Math.sin(K.ang*1.5 + i*1.1)); C.car.rotation.y = -K.ang*.5; });   // (the balloons rise and fall as they go round)
     else K.cars.forEach((C, i) => { C.car.rotation.y += dt*sp*(2.4 + 1.6*Math.sin(K.ang*.9 + C.ph)); }); } }   // (and each shark car spins on its own: sometimes slow, sometimes wild)
 function parkStep(dt){ const P = pacPark; if (!P) return; const w = ocean?.workout; carouselStep(dt); kiddieStep(dt, w);
-  P.ang += dt*.11; P.spin.rotation.z = P.ang; const W = PP.wheel;
+  P.ang += dt*.26; P.spin.rotation.z = P.ang;   /* (2.5 turns a minute, like the real one) */ const W = PP.wheel;
   P.gond.forEach((gp, k) => { const a = P.ang + k/W.n*TAU; gp.position.set(Math.cos(a)*W.R, Math.sin(a)*W.R, 0); });   // (the cars hang straight down as the wheel turns)
   { const rw = w?.k === 'ride2' && w.key === 'scrambler' ? w.p?.sp ?? 0 : 1; P.scrV = lerp(P.scrV ?? 1, rw, Math.min(1, dt*2)); P.scrSpin.rotation.y += dt*1.6*P.scrV; P.scrPh = (P.scrPh || 0) + dt*2.6*P.scrV;   // (it stops to let you on, then whips you round)
     P.scrSpin.children.forEach(a => { if (a.children[1]) a.children[1].rotation.y = -P.scrPh; }); }
@@ -11305,7 +11305,7 @@ function render3D(dt){
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? (ocean.workout?.pier || ocean.workout?.k === 'ride2' ? ocean.workout.py + .6 : landY(ocean) + .6 + (ocean.climb?.h || 0)) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
     const cUnder = camera.position.y < waveH(camera.position.x, camera.position.z, OC.amp, 1) - .02;
     WATERU.under.value = cUnder ? 1 : 0; WATERU.tint.value.copy(OC.deep).lerp(OC.sh, .45).multiplyScalar(.9); WATERU.k.value = [.11, .22, .16, .11, .26, .15, .5][ocean.zone] || .15;
-    underwaterLook(oceanScene, [oceanWater], cUnder, tmpC2.copy(OC.deep).lerp(OC.sh, .35).multiplyScalar(Math.exp(-dep*.09)*(ocean.wIn ? .45 : 1)), (OC.dark > .5 ? .14 : .075)*(hasGear('snorkel') ? .65 : 1), OC.fog, lerp(.0105, .0034, landFogK = lerp(landFogK, smooth(-80, 25, -coastS(ocean.x, ocean.y)*U), Math.min(1, dt*1.5)))*(1 + superK()*1.5));   // (thinner over the land, so you can see down the streets)
+    underwaterLook(oceanScene, [oceanWater], cUnder, tmpC2.copy(OC.deep).lerp(OC.sh, .35).multiplyScalar(Math.exp(-dep*.09)*(ocean.wIn ? .45 : 1)), (OC.dark > .5 ? .14 : .075)*(hasGear('snorkel') ? .65 : 1), OC.fog, lerp(.0105, .0034, landFogK = lerp(landFogK, smooth(-80, 25, -coastS(ocean.x, ocean.y)*U), Math.min(1, dt*1.5)))*(1 + superK()*1.5)/(1 + (Math.max(0, camera.position.y - Math.max(0, landH(...landST(camera.position.x/U, camera.position.z/U))) - 6)/16)**1.6));   /* (the haze thins the higher you are: from the top of the Pacific Wheel or a rooftop you see the whole skyline) */   // (thinner over the land, so you can see down the streets)
     draw(oceanScene); if (MATTER.wantShot){ MATTER.wantShot = false; try { MATTER.photo = renderer.domElement.toDataURL('image/jpeg', .85); } catch(e){} }   // (the ride photo: taken right after the frame is drawn)
   }
 }

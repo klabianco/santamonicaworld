@@ -3090,7 +3090,7 @@ function bldIndex(){
   if (bldIndex.done) return; bldIndex.done = true;
   CITY.bldgs.forEach((b, n) => { let s0 = 1e9, s1 = -1e9, t0 = 1e9, t1 = -1e9, lo = 1e9;
     for (const [s, t] of b.p){ s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t); lo = Math.min(lo, landH(s, t)); }
-    const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); if (onPier && ((s0 > 195 && s1 < 242 && t0 > 5 && t1 < 50) || ((s0 + s1)/2 > -222 && (s0 + s1)/2 < -190 && (t0 + t1)/2 < -1 && (t0 + t1)/2 > -26))){ b.base = pierDeckH((s0 + s1)/2); b.top = b.base + 12; b.box = [s0, t0, s1, t1]; return; }   b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];   // (the Hippodrome: you can walk in; its walls are solid by themselves, see buildPierTown)
+    const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); if (onPier && ((s0 > 195 && s1 < 242 && t0 > 5 && t1 < 50) || (s0 > 28 && s1 < 64 && t0 > 5 && t1 < 50) || ((s0 + s1)/2 > -222 && (s0 + s1)/2 < -190 && (t0 + t1)/2 < -1 && (t0 + t1)/2 > -26))){ b.base = pierDeckH((s0 + s1)/2); b.top = b.base + 12; b.box = [s0, t0, s1, t1]; return; }   b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];   // (the Hippodrome: you can walk in; its walls are solid by themselves, see buildPierTown)
     if (s1 < 70 && s0 > 0 && (s1 - s0)*(t1 - t0) < 45) return;   // (lifeguard towers on the sand: built as towers, not solid boxes)
     if (inSMP((s0 + s1)/2, (t0 + t1)/2)) return;   // (Santa Monica Place is built by hand)
     for (let i = Math.floor(s0/BLD_CELL); i <= Math.floor(s1/BLD_CELL); i++) for (let j = Math.floor(t0/BLD_CELL); j <= Math.floor(t1/BLD_CELL); j++){ const k = bldKey(i, j); (bldCells.get(k) || bldCells.set(k, []).get(k)).push(n); } }); }
@@ -8016,6 +8016,50 @@ function buildPalisades(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
    Real pier coordinates: A = meters out from the Ocean Ave crosswalk, off = meters north (+) / south (-) of the centerline;
    in the game, s = 390 - A and t = -off. Modeled as it stood through 2025: the 1939 bridge and the neon sign came down
    in 2026 for the rebuild (back in 2027). */
+/* Playland Arcade (1954, the Gordon family; pier research): you can walk in. A long dim hall lit by the cabinets: rows of video games (Pac-Man,
+   Galaga, Mario Kart and the rest), sit-down racers, pinball, air hockey tables, Skee-Ball lanes, claw machines, Whac-A-Mole, a coin pusher and the
+   prize counter at the back. The claws, Skee-Ball and Whac-A-Mole play the game's own versions; the video cabinets, pinball and air hockey run
+   Troy's games on their screens. (The real hall has 160-200 games; this is the gist of it, and where each row stands is a guess.) */
+const PLAYLAND = { spots: [], box: null, beepT: 0 };
+function buildPlayland(grp, bx, S, dh, P3, A0, A1, o0, o1){ const white = 0xf6f6f2, a = A0 + .3, b = A1 - .3, so = o0 + .3, n = o1 - .3, H = 6.2, P = PLAYLAND; P.box = [S(A1), -o1, S(A0), -o0];
+  const wall = (Aa, Ab, oa, ob) => { LAND_BOXES.push([S(Ab), -ob, S(Aa), -oa, dh(S((Aa + Ab)/2)) + H, dh(S((Aa + Ab)/2)) - 1.5]); };
+  const doors = [[A0 + 3, A0 + 6], [A1 - 6, A1 - 3]]; let pv = a; for (const [d0, d1] of doors){ bx(pv, d0, n, o1, 0, H, white); wall(pv, d0, n - .2, o1); bx(d0, d1, n, o1, 3.2, H, white); pv = d1; } bx(pv, b, n, o1, 0, H, white); wall(pv, b, n - .2, o1);   // (the front, with two wide doors onto the pier)
+  bx(A0, A1, o0, so, 0, H, white); wall(A0, A1, o0, so + .2); bx(A0, a, o0, o1, 0, H, white); wall(A0, a + .2, o0, o1); bx(b, A1, o0, o1, 0, H, white); wall(b - .2, A1, o0, o1);
+  bx(A0, A1, o0, o1, H - .2, H, 0x14121c); bx(a, b, so, n, .01, .04, 0x1a1440);   // (a dark ceiling, and the dark carpet with its stars)
+  { const R = mulberry(31), st = []; for (let k = 0; k < 140; k++){ const A = a + R()*(b - a), o = so + R()*(n - so); bx(A, A + .08, o, o + .08, .045, .05, [0xff3e8a, 0x00e5ff, 0xffd200, 0x7c4dff][k % 4]); } }
+  const glowM = c => new THREE.MeshBasicMaterial({ color: c }), screen = (A, o, y, w, h, c, face) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glowM(c)); const s2 = S(A); m.position.set(...P3(s2, -o, dh(s2) + y)); m.rotation.y = face; grp.add(m); return m; };
+  const toN = 0, toS = Math.PI;   // (screens facing up the hall toward the doors, or back)
+  const SCR = [0x2f80ed, 0xffd200, 0xff3e8a, 0x00e5ff, 0x7c4dff, 0x43a047, 0xff7043];
+  // rows of video cabinets, back to back, down the hall
+  const vid = ['Pac-Man', 'Ms. Pac-Man', 'Galaga', 'Galaga', 'Luigi\'s Mansion', 'Halo', 'Street Fighter', 'Mortal Kombat', 'Minecraft Dungeons', 'House of the Dead', 'NERF Arcade', 'Super Mario Bros.'];
+  let vi = 0; for (const oRow of [o1 - 9, o1 - 16]) for (const side of [1, -1]) for (let A = A0 + 4; A < A1 - 4; A += 1.6){ const oc = oRow + side*.45, name = vid[vi++ % vid.length];
+    bx(A - .4, A + .4, oc - .35, oc + .35, 0, 1.9, 0x1d1d26); screen(A, oc + side*.36, 1.35, .62, .5, SCR[vi % SCR.length], side > 0 ? toN : toS); bx(A - .4, A + .4, oc - .4, oc + .4, 1.9, 2.15, SCR[(vi + 3) % SCR.length]);
+    P.spots.push({ A, o: oc + side*.9, r: .8, label: `🕹️ Play ${name}`, go: () => openKiosk() }); }
+  // sit-down racers (Mario Kart, Cruis'n USA, Daytona) along the seaward wall
+  for (let k = 0; k < 5; k++){ const o = o1 - 6 - k*2.4, A = A0 + 1.8; bx(A - 1, A + 1.2, o - .7, o + .7, 0, 1.0, 0x22222e); bx(A + .9, A + 1.2, o - .7, o + .7, 1, 2.1, 0x1d1d26); screen(A + .88, o, 1.55, .9, .65, SCR[k], -Math.PI/2); bx(A - .9, A - .3, o - .4, o + .4, .45, 1.15, 0xc62828);
+    P.spots.push({ A: A - 1.4, o, r: 1, label: `🏎️ Race in ${['Mario Kart', 'Mario Kart', "Cruis'n USA", 'Daytona USA', 'Super Bikes'][k]}`, go: () => openKiosk() }); }
+  // pinball along the landward wall
+  for (let k = 0; k < 4; k++){ const o = o1 - 6 - k*1.4, A = A1 - 1.6; bx(A - .4, A + .9, o - .35, o + .35, .7, 1.0, 0x2a2a38); screen(A + .2, o, 1.02, 1.1, .6, SCR[k + 2], 0).rotation.x = -Math.PI/2.4; bx(A + .9, A + 1.2, o - .35, o + .35, 1, 1.9, 0x1d1d26);
+    P.spots.push({ A: A - 1, o, r: .8, label: `🎯 Play ${['Star Wars', 'The Mandalorian', 'Addams Family', 'Getaway'][k]} pinball`, go: () => openKiosk() }); }
+  // air hockey tables
+  for (const A of [A0 + 8, A0 + 13]){ const o = o1 - 22; bx(A - .65, A + .65, o - 1.15, o + 1.15, 0, .8, 0xf2f2f2); screen(A, o, .81, 1.15, 2.05, 0x9fd8ff, 0).rotation.x = -Math.PI/2; P.spots.push({ A, o: o + 1.7, r: 1, label: '🏒 Play air hockey', go: () => openKiosk() }); }
+  // Skee-Ball lanes
+  for (let k = 0; k < 4; k++){ const A = A1 - 4 - k*1.1, o = so + 4.5; bx(A - .4, A + .4, o - 3.4, o + .2, 0, .75, 0x7a4a2a); bx(A - .4, A + .4, o - 3.6, o - 3.3, .75, 2.2, 0x1d1d26); screen(A, o - 3.28, 1.8, .6, .3, 0xff3e8a, toN); P.spots.push({ A, o: o + .7, r: .7, label: '🎳 Play Skee-Ball', go: () => openArcade('skee') }); }
+  // claw machines, Whac-A-Mole and the coin pusher
+  for (let k = 0; k < 4; k++){ const A = A0 + 4 + k*1.4, o = so + 3; bx(A - .55, A + .55, o - .55, o + .55, 0, .9, SCR[k]); const gl = new THREE.Mesh(new THREE.BoxGeometry(1, 1.1, 1), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, transparent: true, opacity: .25, roughness: .05 })); const s2 = S(A); gl.position.set(...P3(s2, -o, dh(s2) + 1.45)); grp.add(gl);
+    for (let j = 0; j < 7; j++){ const pl = new THREE.Mesh(new THREE.SphereGeometry(.13, 8, 6), std([0xff8fb1, 0x8fd3ff, 0xffe066, 0xb39ddb, 0x9ae6a8][(j + k) % 5], .8)); pl.position.set(...P3(s2 + (j % 3 - 1)*.25, -o + (Math.floor(j/3) - 1)*.25, dh(s2) + 1.0 + (j % 2)*.1)); grp.add(pl); }
+    P.spots.push({ A, o: o + 1.1, r: .8, label: '🧸 Play the claw machine', go: () => openArcade('claw') }); }
+  { const A = A0 + 10.5, o = so + 3; bx(A - .7, A + .7, o - .5, o + .5, 0, .85, 0x2e9d4f); for (let k = 0; k < 5; k++) bx(A - .5 + k*.25, A - .35 + k*.25, o - .1, o + .1, .85, .95, 0x6d4c41); P.spots.push({ A, o: o + 1.1, r: .9, label: '🔨 Play Whac-A-Mole', go: () => openArcade('whack') }); }
+  { const A = A0 + 13, o = so + 3; bx(A - .8, A + .8, o - .6, o + .6, 0, 1.2, 0xc62828); screen(A, o + .61, 1.5, 1.2, .5, 0xffd200, toN); P.spots.push({ A, o: o + 1.2, r: .9, label: '🪙 Coin pusher (5 coins)', go: () => { if ((save.coins || 0) < 5) return banner('🪙 Coin pusher', 'You need 5 coins'); save.coins -= 5; persist(); const win = Math.random() < .35 ? 5 + Math.floor(Math.random()*12) : Math.floor(Math.random()*4); sfx(800, .1, 'square', .03); if (win) addCoins(win); banner('🪙 Clink... clink... CLATTER!', win ? `${win} coins fell over the edge!` : 'Almost! The coins are hanging right on the edge'); } }); }
+  // the prize counter at the back, plush on the shelves
+  { const o = so + .9, A0b = A0 + 15.5, A1b = A1 - 1; bx(A0b, A1b, o - .4, o + .4, 0, 1.05, 0xf2f2f2); const gl = new THREE.Mesh(new THREE.BoxGeometry(1, .02, 1), new THREE.MeshBasicMaterial({ color: 0x9fd8ff })); bx(A0b, A1b, so + .05, so + .25, 1.4, 1.5, 0x8a6a48); bx(A0b, A1b, so + .05, so + .25, 2.2, 2.3, 0x8a6a48);
+    for (let A = A0b + .3; A < A1b - .2; A += .5) for (const y of [1.6, 2.4]){ const pl = new THREE.Mesh(new THREE.SphereGeometry(.18, 8, 6), std(SCR[Math.floor(A*3 + y) % SCR.length], .8)); const s2 = S(A); pl.position.set(...P3(s2, -(so + .2), dh(s2) + y)); grp.add(pl); }
+    P.spots.push({ A: (A0b + A1b)/2, o: o + 1, r: 2, label: '🎟️ Prize counter', go: () => banner('🎟️ The prize counter', 'Win tickets at Skee-Ball, the claws and Whac-A-Mole, then trade them for plush, toys and candy') }); }
+  // the sign and front, as before
+  bx(A0, A1, o1 - .05, o1 + .1, 4.4, 5.4, 0x26a69a); }
+function playlandAct(o){ const B = PLAYLAND.box; if (!B || !o?.onLand || o.workout) return null; const [s, t] = landST(o.x, o.y); if (s < B[0] || s > B[2] || t < B[1] || t > B[3]) return null; const A = 390 - s, off = -t; let best = null, bd = 9;
+  for (const P of PLAYLAND.spots){ const d = Math.hypot(P.A - A, P.o - off); if (d < P.r && d < bd){ bd = d; best = P; } } if ((PLAYLAND.beepT -= .016) <= 0 && ac){ PLAYLAND.beepT = .25 + Math.random()*.6; sfx([523, 659, 784, 988, 1175, 1568][(Math.random()*6)|0], .07, Math.random() < .5 ? 'square' : 'triangle', .008, 0, Math.random() < .3 ? 400 : 0); }   // (the attract-mode bleeps all round you)
+  return best ? { label: best.label, go: best.go } : null; }
 function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const S = A => 390 - A, dh = s => pierDeckH(s);
   // a box on the deck, by real coordinates (A0..A1 along, off0..off1 across), from y0 to y1 above the deck
@@ -8079,7 +8123,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
   { bx(314, 323, -33, -11, 0, 4.2, 0xc62828); for (let k = 0; k < 9; k++) bx(314 + k, 315 + k, -11, -9.6, 2.6 - (k%2)*0, 2.8, k % 2 ? 0xffffff : 0xc62828); bx(314, 323, -11.4, -9.6, 2.55, 2.62, 0xffffff);
     sign(318.5, -10.9, 5.1, 6, 1.2, 'PierBurger', '#c62828', '#ffffff', 'n', 140); bx(323, 332, -30, -11, 0, 3.8, 0xf4f4f0); bx(323, 332, -11.4, -9.6, 2.5, 2.62, 0x1565c0); sign(327.5, -10.9, 3.3, 6, .55, "MARLENE'S BEACHCOMBER", '#f4f4f0', '#1565c0', 'n', 60); }
   // ---- Playland Arcade: white with blue trim, a teal lattice frieze and little gables
-  { const A0 = 332, A1 = 356, o0 = -45, o1 = -10; bx(A0, A1, o0, o1, 0, 6.2, 0xf6f6f2); bx(A0, A1, o1 - .05, o1 + .1, 4.4, 5.4, 0x26a69a); for (let A = A0; A < A1; A += .8) bx(A, A + .1, o1 + .1, o1 + .2, 4.4, 5.4, 0xf6f6f2);
+  { const A0 = 332, A1 = 356, o0 = -45, o1 = -10; buildPlayland(grp, bx, S, dh, P3, A0, A1, o0, o1); bx(A0, A1, o1 - .05, o1 + .1, 4.4, 5.4, 0x26a69a); for (let A = A0; A < A1; A += .8) bx(A, A + .1, o1 + .1, o1 + .2, 4.4, 5.4, 0xf6f6f2);
     for (let A = A0 + 2; A < A1 - 2; A += 6){ const gab = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.6, 3), mat(0xf6f6f2)); const s = S(A + 2); gab.position.set(...P3(s, -(o1 + .3), dh(s) + 7)); gab.rotation.set(0, 0, 0); gab.scale.z = .15; grp.add(gab); bx(A + 1.95, A + 2.05, o1 + .1, o1 + .3, 7.8, 8.6, 0x1565c0); }
     for (let A = A0 + 1; A < A1 - 1; A += 3) bx(A, A + 2.2, o1 + .02, o1 + .1, .2, 3.4, 0x26323a); for (let A = A0; A <= A1; A += 3) bx(A, A + .2, o1 + .1, o1 + .3, 0, 4.4, 0x1565c0);
     sign(344, o1 + .35, 3.9, 9, .8, 'PLAYLAND ARCADE', '#f6f6f2', '#1565c0', 'n'); sign(337, o1 + .35, 3.95, 3.6, .4, 'Kiddie Rides', '#f6f6f2', '#c62828', 'n', 60); }
@@ -8474,7 +8518,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout }; if (o.workout?.k === 'slide') return null; if (o.workout?.k === 'spin') return { label: '🛑 Get off the spinner', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
-  { const P2 = tplayAct(o); if (P2) return P2; }
+  { const P2 = tplayAct(o) || playlandAct(o); if (P2) return P2; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   { const d = gettyAct(o) || matterAct(o); if (d) return d; }

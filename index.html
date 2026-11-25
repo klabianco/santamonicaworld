@@ -6245,6 +6245,7 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Smashies Burger': [M('🍔', 'Smash burger', 11), M('🍟', 'Fries', 5)],
   'The Coffee Bean': [M('🍫', 'Hot chocolate', 5, 'drink'), M('🧋', 'Ice blended', 6, 'drink'), M('🥐', 'Croissant', 4)],
   'Bait & Tackle': [M('🎣', 'Fishing rod', 20, 'fish'), M('🪱', 'Bait', 2, 'play', { say: 'Wiggly! Fish love it' })],
+  'John Reed Juice Bar': [M('🥤', 'Green smoothie', 9, 'drink'), M('🍓', 'Berry protein shake', 10, 'drink', { protein: true }), M('🥥', 'Coconut water', 6, 'drink'), M('🥣', 'Açaí bowl', 12)],   // (the pink juice bar at the front: mocktails, no cocktails)
   'Mariasol': [M('🌮', 'Tacos', 12), M('🧀', 'Quesadilla', 10), M('🥑', 'Chips and guacamole', 8), M('🥛', 'Horchata', 5, 'drink')],
   'Dining Deck': [M('🥟', 'Din Tai Fung soup dumplings', 14), M('🍜', 'Din Tai Fung noodles', 12), M('🍕', 'Sbarro pizza slice', 6), M('🍰', 'Cheesecake Factory cheesecake', 10), M('🍝', 'Cheesecake Factory pasta', 18), M('🥤', 'Lemonade', 5, 'drink')],
   'Demitasse': [M('☕', 'Latte', 6, 'drink'), M('🍫', 'Hot chocolate', 5, 'drink'), M('🥐', 'Croissant', 5)],
@@ -8508,7 +8509,8 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   let best = null, bd = 9; const dn = r.down && downIn(o); for (const sp of r.spots || []){ if (!!sp.down !== !!dn) continue; const k = Math.hypot(sp.d - d, sp.t - t); if (k < (sp.rad || 1.2) && k < bd){ bd = k; best = sp; } }
   if (best?.k === 'golf') return { label: `⛳ Hole ${best.hole + 1}: ${r.golf[best.hole].name}`, go: () => startGolf(r, best) };
   if (best?.k === 'elevator') return { label: dn ? '🛗 Elevator up' : '🛗 Elevator down', go: () => rideElevator(r, !dn) };
-  if (best) return { label: SPOT[best.k][0], go: () => best.k === 'art' ? showArt(best) : best.k === 'paint' ? openPaint() : best.k === 'vr' ? startVR(o) : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
+  if (best?.menu) return { label: best.label, go: () => openPlaceMenu(best.menu, 'food') };
+  if (best) return { label: best.label || SPOT[best.k][0], go: () => best.k === 'art' ? showArt(best) : best.k === 'paint' ? openPaint() : best.k === 'vr' ? startVR(o) : best.k === 'gallery' ? openIllusions() : best.k === 'froyo' ? openStoreHere() : best.k === 'pickle' ? startPickle(r, best) : best.k === 'phone' ? tryPhone() : best.k === 'records' ? openMusic() : best.k === 'boardgame' ? openGame('store') : startWorkout(r, best) };
   if (r.cat === 'gym' || r.cat === 'vacant' || r.cat === 'soon' || r.cat === 'gallery' || r.cat === 'illusions' || r.cat === 'pickle') return null;
   if (r.cat === 'books') return d > .8 ? { label: '📖 Read a book', go: openStoreHere } : null;
   if (r.cat === 'theatre') return d > .8 && d < r.D - 2.6 ? { label: '🎟️ Watch the show', go: openStoreHere } : null;
@@ -8527,7 +8529,7 @@ function startWorkout(r, sp){ const o = ocean; if (!o || paused) return; initAud
   o.workout = { k: sp.k, r, sp, x, y, lvl: 1, n: 0, dist: 0, t0: time, tapT: -9, beatT: 0, beat: 0, st: 0 };
   const hi = { tread: ['On the treadmill!', 'Tap Faster to speed up. Walk away when you\'re done'], bike: ['Spin time!', 'Tap Pedal faster to go faster'], weights: ['Pump some iron!', 'Tap Lift! for every lift'],
     stretch: ['Stretch it out', 'Reach up high! Tap Big stretch'], dj: ['You\'re the DJ!', 'Tap Drop the beat and people will come dance'], stage: ['You\'re on stage!', 'Dance! Tap Take a bow when you\'re done'] }[sp.k];
-  banner(...hi); sfx(660, .1, 'triangle', .05); }
+  banner(...(sp.say || hi)); sfx(660, .1, 'triangle', .05); }
 function stopWorkout(){ const o = ocean, w = o?.workout; if (!w) return; o.workout = null; if (w.k === 'sit' || w.k === 'slide' || w.k === 'spin'){ o.x = w.ex; o.y = w.ey; walkRef = w.eg + .3; o.gh = groundAt(o.x, o.y); return; }   /* (stand up where you were standing) */ if (w.k === 'ride2') return endRide2(o, w); if (w.k === 'rc'){ if (rcObj) rcObj.visible = false; sfx(600, .08, 'triangle', .04); return banner('Picked up your mini car', 'Tap Drive to drive it again'); }
   if (w.k === 'golf'){ const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.d - .8), w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); return; }   // (step back off the tee: golf spots have no exit point)
   { const [x, y] = landXY(w.r.fs + w.r.inw*(w.sp.ed ?? w.sp.d), w.sp.et ?? w.sp.t); if (Number.isFinite(x) && Number.isFinite(y)){ o.x = x; o.y = y; } walkRef = w.r.floor + .3; o.gh = groundAt(o.x, o.y); }
@@ -8725,7 +8727,7 @@ function renderStore(){
 function useTreat(){ const o = ocean; if (o?.bike && !paused) return bikeOff(o); if (o?.workout && o.workout.k !== 'sit') return workTap(); if (o?.skating && !paused){ initAudio(); return iceSpin(o); } const it = treat; if (!o || paused) return; if (!it && o.workout?.k === 'sit'){ o.workout.seat?.order?.(); return; } if (!it){ if (inGym(o)){ initAudio(); flex(); } return; } initAudio();
   const done = (t, s) => { treat = null; banner(t, s); };
   if (it.act === 'roast') return roastTap(o, it);
-  if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)){ feed(it.act); biteT = time; }   // (and up it goes to your mouth: see drawTreat)
+  if (['froyo', 'lick', 'eat', 'drink'].includes(it.act)){ feed(it.act); biteT = time; if (it.protein){ save.fit = Math.min(1800, (save.fit || 0) + 40); persist(); } }   // (and up it goes to your mouth: see drawTreat)
   if (it.act === 'froyo'){ it.licks++; sfx(700 + Math.random()*150, .07, 'sine', .04); if (it.licks % 2 === 0){ it.scoops.pop(); if (!it.scoops.length) return done('All gone! Yum', 'That froyo was delicious'); } return; }
   if (it.act === 'lick'){ it.licks++; sfx(900 + Math.random()*200, .08, 'sine', .04); if (Math.random() < .08) banner('Brain freeze!', 'Brrrr! Lick slower');
     if (it.licks % 3 === 0){ if (it.scoops.length) it.scoops.pop(); else return done('Crunch! All gone', 'That was delicious'); if (!it.scoops.length) banner('Now the cone!', 'Crunchy'); } }
@@ -8779,7 +8781,7 @@ $('musicClose').onclick = closeMusic; $('gameRoll').onclick = () => { if (game &
 $('gameNew').onclick = () => { if (!game || game.busy) return; Object.assign(game, { pos: [0, 0], turn: 0, die: 0, won: 0, msg: 'New game! You go first.' }); drawGame(); };
 $('bookPrev').onclick = () => turnBook(-1); $('bookNext').onclick = () => turnBook(1); $('bookClose').onclick = closeBook;
 $('buyBtn').onclick = () => doPlace(); $('treatBtn').onclick = () => useTreat(); $('storeClose').onclick = closeStore;
-const BIG_SHOP = { 'Apple Store': { w: 2, half: 8, deep: 18 }, 'Barnes & Noble': { w: 2, half: 7.6, deep: 18, down: true }, 'Holey Moley': { w: 2, half: 7, deep: 15 }, 'Museum of Illusions': { w: 2, half: 6.5, deep: 16 }, 'PicklePop': { w: 2, half: 7.5, deep: 18 } };   // (the real one is 21,000 square feet over two floors, in the old Athleta at 1318: a staircase in the middle goes down to the kids' books, toys, games and records)
+const BIG_SHOP = { 'JOHN REED Fitness': { w: 3, half: 12, deep: 26 }, 'Apple Store': { w: 2, half: 8, deep: 18 }, 'Barnes & Noble': { w: 2, half: 7.6, deep: 18, down: true }, 'Holey Moley': { w: 2, half: 7, deep: 15 }, 'Museum of Illusions': { w: 2, half: 6.5, deep: 16 }, 'PicklePop': { w: 2, half: 7.5, deep: 18 } };   // (the real one is 21,000 square feet over two floors, in the old Athleta at 1318: a staircase in the middle goes down to the kids' books, toys, games and records)
 function promRooms(){   // (worked out once: where each shop's sign, door and room go)
   if (PROM_ROOMS) return PROM_ROOMS; bldIndex(); PROM_ROOMS = [];
   const L = PROM_STORES.map(([side, t, name, kind], i) => ({ i, side, t, name, kind, cat: STORE_KIND[name] || (/soon\)$/.test(name) ? 'soon' : kind === 1 ? 'food' : kind === 2 ? 'movies' : 'clothes') }));
@@ -9123,23 +9125,49 @@ function buildRooms(g, P3){
           B(d + .65, d + .75, tm - .05, tm + .05, 0, 2.6, 0x333333); r.spots.push({ k: 'vr', d: d + .7, t: tm, rad: 1 }); }
         counter(0x1a1036); break;
       case 'vacant': break;   // (empty: for lease)
-      case 'gym': { r.spots = []; const tl = T0 + 1, tr = T1 - 1, tm = T0 + W/2, D = r.D;   // JOHN REED: cardio, free weights, stretching, live DJs, art and plants (the real club has three floors; this is one)
-        for (const tt of [T0 + .45, T1 - .45]){ B(.5, .95, tt - .2, tt + .2, 0, .45, 0x8a6a48); B(.45, 1, tt - .3, tt + .3, .45, 1.25, 0x2e7d4f); B(.55, .9, tt - .18, tt + .18, 1.25, 1.65, 0x43a047); }   // plants in the window
-        for (const d0 of [1.5, 3.7]){ B(d0, d0 + 1.8, tl - .38, tl + .38, 0, .2, 0x1d1d1f); B(d0 + .25, d0 + 1.7, tl - .3, tl + .3, .2, .21, 0x3a3a3a);   // treadmills, looking out the window
-          for (const o2 of [-.36, .36]) B(d0, d0 + .08, tl + o2 - .03, tl + o2 + .03, .2, 1.12, 0x9aa0a6); B(d0 - .02, d0 + .2, tl - .4, tl + .4, 1.1, 1.32, 0x22303c);
-          r.spots.push({ k: 'tread', d: d0 + 1, t: tl, face: -1, ed: d0 + 1, et: tm }); }
-        for (const d0 of [1.8, 3.4, 5]){ B(d0 - .45, d0 + .45, tr - .2, tr + .2, 0, .08, 0x1d1d1f); B(d0 + .05, d0 + .15, tr - .05, tr + .05, .08, .75, 0x9aa0a6); B(d0 - .05, d0 + .25, tr - .13, tr + .13, .75, .82, 0x111111);   // spin bikes
-          B(d0 - .45, d0 - .35, tr - .05, tr + .05, .08, 1, 0x9aa0a6); B(d0 - .55, d0 - .4, tr - .25, tr + .25, 1, 1.05, 0x111111); B(d0 - .35, d0 - .05, tr - .03, tr + .03, .2, .5, 0xd81b60);
-          r.spots.push({ k: 'bike', d: d0 + .1, t: tr, face: -1, ed: d0 + .1, et: tm }); }
-        B(1.6, 3.4, tm - .45, tm + .45, 0, .02, 0x00acc1); r.spots.push({ k: 'stretch', d: 2.5, t: tm, face: -1, ed: 2.5, et: tm });   // a stretching mat
-        B(D - .06, D - .02, T0 + .3, T0 + 3, .45, 2.6, 0xbfd4dc); B(D - .7, D - .15, T0 + .4, T0 + 2.6, 0, .55, 0x2d3a35);   // the mirror and the dumbbell rack
-        for (let k = 0; k < 6; k++) for (const dd of [D - .6, D - .38]) B(dd, dd + .16, T0 + .55 + k*.33, T0 + .75 + k*.33, .55, .67, 0x1d1d1f);
-        B(D - 3.2, D - 2.2, T0 + 1.3, T0 + 1.7, 0, .45, 0x111111); r.spots.push({ k: 'weights', d: D - 1.5, t: T0 + 1.5, face: 1, ed: D - 1.5, et: T0 + 1.5 });   // a bench, and room to lift
-        B(D - 1.5, D - .9, T1 - 2.4, T1 - 1, 0, 1.05, 0x111111); for (const tt of [T1 - 2.25, T1 - 1.6]) B(D - 1.42, D - .98, tt, tt + .44, 1.05, 1.09, 0x3a3a3a);   // the DJ booth: decks on top,
-        for (const tt of [T1 - 3, T1 - .9]) B(D - .65, D - .2, tt, tt + .45, 0, 1.7, 0x1d1d1f); r.spots.push({ k: 'dj', d: D - .5, t: T1 - 1.7, face: -1, ed: D - 2.3, et: T1 - 1.7, rad: 1.4 });   //   speakers either side
+      case 'gym': { r.spots = []; const tm = T0 + W/2, D = r.D, fd = f => Math.max(.8, f*D);   // JOHN REED (from the research: the 1949 J.C. Penney building at 1202, 45,000 sq ft over three floors; this is the street level):
+        // check-in turnstiles and the pink juice bar at the front, the wall of pastel surfboards spelling JOHN REED, the cardio deck (treadmills, stair climbers,
+        // ellipticals), spin bikes, the long black functional rig with squat stations and colored bumper plates, a turf strip with a red sled, dumbbells and a bench,
+        // jungle planters, woven pendant lamps, and the DJ booth at the back under a neon pyramid mural with a rower beside it. Everything you use counts on your body.
+        const desk = fd(.09); B(desk, desk + .8, tm - 2.2, tm + 2.2, 0, 1.05, 0xf2ede4); for (const tt of [tm - 3.2, tm + 2.8]) for (let k = 0; k < 2; k++) B(desk + .2, desk + .5, tt + k*.6, tt + k*.6 + .1, 0, 1, 0x9aa0a6);   // the desk and turnstiles
+        { const jb = fd(.05), pk = 0xf4a6c6; B(jb, jb + 3.2, T0 + .3, T0 + 1.1, 0, 1.05, pk); B(jb, jb + 3.2, T0 + .25, T0 + 1.15, 1.05, 1.12, 0xffffff); B(jb + .2, jb + 3, T0 + .05, T0 + .25, 1.4, 2.6, 0xf8c8dc);   // the pink juice bar
+          for (let k = 0; k < 4; k++) B(jb + .3 + k*.75, jb + .6 + k*.75, T0 + 1.5, T0 + 1.8, 0, .75, 0xffffff); r.spots.push({ k: 'froyo', d: jb + 1.6, t: T0 + 1.6, rad: 1.6, label: '🥤 Juice bar', menu: 'John Reed Juice Bar' }); }
+        { const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256; const x = cv.getContext('2d'), L = 'JOHN REED', cols = ['#f7c6d9', '#bfe3f2', '#fff1a8', '#c8f0d2', '#f7c6d9', '#d9ccf5', '#bfe3f2', '#ffd8b0', '#c8f0d2'];   // the surfboard wall
+          for (let k = 0; k < 9; k++){ const cx = 60 + k*113; x.fillStyle = cols[k]; x.beginPath(); x.ellipse(cx, 128, 44, 120, 0, 0, TAU); x.fill(); x.strokeStyle = 'rgba(0,0,0,.15)'; x.lineWidth = 3; x.beginPath(); x.moveTo(cx, 12); x.lineTo(cx, 244); x.stroke(); x.fillStyle = '#1d1d1f'; x.font = '900 64px Nunito, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(L[k], cx, 128); }
+          const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; const sb = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(7, D*.4), Math.min(7, D*.4)/4), new THREE.MeshBasicMaterial({ map: tex, transparent: true })); sb.position.set(...P3(S(fd(.22)), T1 - .08, y0 + 1.9)); const a2 = new THREE.Vector3(...P3(S(fd(.22)), T1, 0)), b2 = new THREE.Vector3(...P3(S(fd(.22)) + inw, T1, 0)); sb.rotation.y = -Math.atan2(b2.z - a2.z, b2.x - a2.x) + (inw > 0 ? 0 : Math.PI); sb.lookAt(new THREE.Vector3(...P3(S(fd(.22)), T0, y0 + 1.9))); g.add(sb); }
+        const tl = T0 + 1.1, tr = T1 - 1.1;
+        // the cardio deck along one wall: treadmills, then stair climbers, then ellipticals
+        { let d = fd(.2); const machine = (kind, n) => { for (let k = 0; k < n; k++, d += 1.9){ if (d > D*.72) return;
+            if (kind === 'tread'){ B(d, d + 1.8, tl - .38, tl + .38, 0, .2, 0x1d1d1f); B(d + .25, d + 1.7, tl - .3, tl + .3, .2, .21, 0x3a3a3a); for (const o2 of [-.36, .36]) B(d, d + .08, tl + o2 - .03, tl + o2 + .03, .2, 1.12, 0x9aa0a6); B(d - .02, d + .2, tl - .4, tl + .4, 1.1, 1.32, 0x22303c); r.spots.push({ k: 'tread', d: d + 1, t: tl, face: -1, ed: d + 1, et: tm }); }
+            else if (kind === 'stair'){ B(d, d + 1.2, tl - .45, tl + .45, 0, .25, 0x1d1d1f); for (let st = 0; st < 4; st++) B(d + .2 + st*.2, d + .4 + st*.2, tl - .32, tl + .32, .25 + st*.22, .3 + st*.22, 0x3a3a3a); for (const o2 of [-.42, .42]) B(d + 1, d + 1.08, tl + o2 - .03, tl + o2 + .03, .25, 1.7, 0x9aa0a6); B(d + .95, d + 1.15, tl - .45, tl + .45, 1.6, 1.85, 0x22303c); r.spots.push({ k: 'tread', label: '🪜 Stair climber', say: ['Climbing the stairs!', 'Tap Faster to climb faster. Great for your legs'], d: d + .55, t: tl, face: -1, ed: d + .55, et: tm }); }
+            else { B(d, d + 1.7, tl - .2, tl + .2, 0, .25, 0x1d1d1f); for (const o2 of [-.25, .25]){ B(d + .4, d + .8, tl + o2 - .1, tl + o2 + .1, .3, .36, 0x3a3a3a); B(d + .2, d + .25, tl + o2 - .02, tl + o2 + .02, .3, 1.5, 0x9aa0a6); } B(d + .05, d + .3, tl - .3, tl + .3, 1.2, 1.45, 0x22303c); r.spots.push({ k: 'tread', label: '🏃 Elliptical', say: ['Gliding on the elliptical!', 'Tap Faster to go faster. Easy on the knees'], d: d + .7, t: tl, face: -1, ed: d + .7, et: tm }); } } };
+          machine('tread', 4); machine('stair', 2); machine('ellip', 2); }
+        // spin bikes along the other wall
+        for (let k = 0; k < 4; k++){ const d0 = fd(.42) + k*1.6; if (d0 > D*.7) break; B(d0 - .45, d0 + .45, tr - .2, tr + .2, 0, .08, 0x1d1d1f); B(d0 + .05, d0 + .15, tr - .05, tr + .05, .08, .75, 0x9aa0a6); B(d0 - .05, d0 + .25, tr - .13, tr + .13, .75, .82, 0x111111);
+          B(d0 - .45, d0 - .35, tr - .05, tr + .05, .08, 1, 0x9aa0a6); B(d0 - .55, d0 - .4, tr - .25, tr + .25, 1, 1.05, 0x111111); B(d0 - .35, d0 - .05, tr - .03, tr + .03, .2, .5, 0xd81b60); r.spots.push({ k: 'bike', d: d0 + .1, t: tr, face: -1, ed: d0 + .1, et: tm }); }
+        // the functional rig down the middle: black uprights and pull-up bars, a squat station with a loaded bar, colored bumper plates on pegs, kettlebells
+        { const r0 = fd(.3), r1 = Math.min(D - 4, fd(.68)); for (let d = r0; d <= r1 + .01; d += (r1 - r0)/3){ for (const o2 of [-.6, .6]) B(d - .05, d + .05, tm + o2 - .05, tm + o2 + .05, 0, 2.4, 0x111111); } for (const o2 of [-.6, .6]) B(r0, r1, tm + o2 - .04, tm + o2 + .04, 2.35, 2.43, 0x111111);
+          const sq = (r0 + r1)/2; B(sq - .02, sq + .02, tm - 1.1, tm + 1.1, 1.45, 1.49, 0x9aa0a6); for (const [o2, hex] of [[-1.05, 0xd32f2f], [-.95, 0x1e6fd9], [.95, 0x1e6fd9], [1.05, 0xd32f2f]]) B(sq - .23, sq + .23, tm + o2 - .04, tm + o2 + .04, 1.24, 1.7, hex);
+          r.spots.push({ k: 'weights', label: '🏋️ Squat rack', say: ['Squats!', 'Tap Squat! for every squat: legs and everything'], d: sq - .7, t: tm, face: 1, ed: sq - 1.4, et: tm });
+          for (let k = 0; k < 8; k++) B(r0 + .3 + k*.35, r0 + .5 + k*.35, tm - .1, tm + .1, .1, .55, [0x2e9d4f, 0xffd200, 0x1e6fd9, 0xd32f2f][k % 4]);
+          for (let k = 0; k < 6; k++) B(r1 - 1.6 + k*.28, r1 - 1.42 + k*.28, tm + .9, tm + 1.08, 0, .28, 0x222222); }
+        // the turf strip with its red sled (push it)
+        { const t0 = fd(.72), t1 = Math.min(D - 3.2, t0 + 6); if (t1 - t0 > 2.5){ B(t0, t1, tr - .9, tr + .3, 0, .03, 0x3f8f45); B(t0 + .3, t0 + 1.1, tr - .6, tr, .03, .45, 0xd32f2f); B(t0 + .9, t0 + 1, tr - .55, tr - .05, .45, 1.15, 0x9aa0a6);
+          r.spots.push({ k: 'tread', label: '🛷 Push the sled', say: ['Push the sled!', 'Tap Faster to push harder. Legs on fire'], d: t0 + 1.6, t: tr - .3, face: -1, ed: t0 + 1.8, et: tm }); } }
+        // dumbbells and a bench, against the wall by the stretch mats
+        B(D - .7, D - .15, T0 + .4, T0 + 2.6, 0, .55, 0x2d3a35); for (let k = 0; k < 6; k++) for (const dd of [D - .6, D - .38]) B(dd, dd + .16, T0 + .55 + k*.33, T0 + .75 + k*.33, .55, .67, 0x1d1d1f); B(D - .06, D - .02, T0 + .3, T0 + 3, .45, 2.6, 0xbfd4dc);
+        B(D - 3.2, D - 2.2, T0 + 1.3, T0 + 1.7, 0, .45, 0x111111); r.spots.push({ k: 'weights', d: D - 1.5, t: T0 + 1.5, face: 1, ed: D - 1.5, et: T0 + 1.5 });
+        B(fd(.5), fd(.5) + 1.8, tm - 2.6, tm - 1.8, 0, .02, 0x00acc1); r.spots.push({ k: 'stretch', d: fd(.5) + .9, t: tm - 2.2, face: -1, ed: fd(.5) + .9, et: tm });
+        // the DJ booth at the back, under a neon pyramid mural, and the rower next to it
+        B(D - 1.5, D - .9, T1 - 2.4, T1 - 1, 0, 1.05, 0x111111); for (const tt of [T1 - 2.25, T1 - 1.6]) B(D - 1.42, D - .98, tt, tt + .44, 1.05, 1.09, 0x3a3a3a);
+        for (const tt of [T1 - 3, T1 - .9]) B(D - .65, D - .2, tt, tt + .45, 0, 1.7, 0x1d1d1f); r.spots.push({ k: 'dj', d: D - .5, t: T1 - 1.7, face: -1, ed: D - 2.3, et: T1 - 1.7, rad: 1.4 });
         quad(glow, P3(S(D - 1.52), T1 - 2.35, y0 + .9), P3(S(D - 1.52), T1 - 1.05, y0 + .9), P3(S(D - 1.52), T1 - 1.05, y0 + .98), P3(S(D - 1.52), T1 - 2.35, y0 + .98), 0x7c4dff);
-        for (const [tt, hex] of [[T0 + .03, 0xff3e8a], [T1 - .03, 0x2f80ed]]) quad(glow, P3(S(.8), tt, y1 - .3), P3(S(D - .3), tt, y1 - .3), P3(S(D - .3), tt, y1 - .2), P3(S(.8), tt, y1 - .2), hex);   // colored light along the walls
-        for (let d = 2; d + 1.2 < D - 1.5; d += 2) for (const tt of [T0 + .02, T1 - .06]) B(d, d + 1.1, tt, tt + .04, 1.55, 2.5, pick());   // art on the walls
+        { const pc = T1 - 1.7; for (let k = 0; k < 5; k++){ const w2 = 1.4 - k*.26, hb = 1.9 + k*.28; quad(glow, P3(S(D - .04), pc - w2, y0 + hb), P3(S(D - .04), pc + w2, y0 + hb), P3(S(D - .04), pc + w2, y0 + hb + .05), P3(S(D - .04), pc - w2, y0 + hb + .05), [0xff3e8a, 0x7c4dff, 0x2f80ed, 0x00e5ff, 0xffd200][k]); } }   // (the pyramid in neon steps)
+        { const rw = T1 - 3.8; B(D - 3, D - .9, rw - .12, rw + .12, 0, .2, 0x1d1d1f); B(D - 2.6, D - 2.2, rw - .2, rw + .2, .2, .35, 0x3a3a3a); B(D - 1.05, D - .95, rw - .3, rw + .3, .2, .9, 0x9aa0a6); r.spots.push({ k: 'bike', label: '🚣 Rowing machine', say: ['Row, row, row!', 'Tap Pedal faster to pull harder. Arms, back and legs'], d: D - 2.4, t: rw, face: 1, ed: D - 2.4, et: rw - 1.2 }); }
+        // jungle planters, woven pendant lamps, colored light along the walls, art
+        for (const [dd, tt] of [[.4, T0 + .45], [.4, T1 - .45], [D - 3.6, tm + 2.6], [fd(.5), T1 - .5]]){ B(dd, dd + .7, tt - .35, tt + .35, 0, .6, 0x8a6a48); B(dd - .1, dd + .8, tt - .45, tt + .45, .6, 1.7, 0x2e7d4f); B(dd, dd + .7, tt - .3, tt + .3, 1.7, 2.3, 0x43a047); }
+        for (let d = 2; d < D - 1; d += 3.2) for (const tt of [tm - 3, tm + 3]){ box(props, S(d - .18), S(d + .18), tt - .18, tt + .18, y1 - .75, y1 - .45, 0xc9a77a); box(props, S(d - .015), S(d + .015), tt - .015, tt + .015, y1 - .45, y1, 0x333333); }
+        for (const [tt, hex] of [[T0 + .03, 0xff3e8a], [T1 - .03, 0x2f80ed]]) quad(glow, P3(S(.8), tt, y1 - .3), P3(S(D - .3), tt, y1 - .3), P3(S(D - .3), tt, y1 - .2), P3(S(.8), tt, y1 - .2), hex);
         break; }
       case 'theatre': r.spots = [{ k: 'stage', d: r.D - 1.3, t: (T0 + T1)/2, face: -1, ed: r.D - 2.8, et: (T0 + T1)/2, rad: 2 }]; B(r.D - 2.5, r.D - .1, T0 + .3, T1 - .3, 0, .6, 0x6b4a32); B(r.D - .1, r.D - .05, T0 + .3, T1 - .3, .6, 3.3, 0xa0101e);   // the stage and its red curtain
         for (let d = 1.2; d < r.D - 3.2; d += 1) for (let t = T0 + .5; t < T1 - .8; t += .7) if (Math.abs(t + .25 - (T0 + T1)/2) > .75) B(d, d + .5, t, t + .5, 0, .45, 0xa0101e); break; } }   // rows of seats, with an aisle down the middle

@@ -6098,11 +6098,22 @@ function buildCoast(){
         if (Math.round(s) % 16 === 0){ const lp = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, 3.6, 8), lampM); lp.position.copy(a).add(new THREE.Vector3(0, 1.8, side*(hw + .1))); br.add(lp);
           const bulb = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), glow); bulb.position.copy(a).add(new THREE.Vector3(0, 3.7, side*(hw + .1))); br.add(bulb); } }
       if (Math.round(s) % 8 === 0 && a.y - landH(s, tm) > 1.2) for (let k = -hw + .7; k < hw; k += 9){ const gh = landH(s, tm + k), ph = a.y - gh; const p = new THREE.Mesh(new THREE.CylinderGeometry(.3, .3, ph, 8), deckM); p.position.set(a.x, gh + ph/2 - .3, a.z + k); br.add(p); } }
-    // stairs down to the sand on each side, with handrails
-    for (const [a, b, e, d] of PIER_STAIRS){ const n = 18, gEnd = landH((a + b)/2, e + d*9.5);
-      for (let k = 0; k < n; k++){ const f = (k + .5)/n, t = e + d*f*9, h = lerp(pierDeckH(a), gEnd, f), st = new THREE.Mesh(new THREE.BoxGeometry(b - a, .18, .52), boardM); st.position.set(...P3((a + b)/2, t, h - .09)); br.add(st);
-        if (k % 3 === 0) for (const ss of [a + .05, b - .05]){ const post = new THREE.Mesh(new THREE.BoxGeometry(.08, 1, .08), railW); post.position.set(...P3(ss, t, h + .5)); br.add(post); } }
-      for (const ss of [a + .05, b - .05]){ const p0 = new THREE.Vector3(...P3(ss, e, pierDeckH(a) + 1)), p1 = new THREE.Vector3(...P3(ss, e + d*9, gEnd + 1)), r = new THREE.Mesh(new THREE.BoxGeometry(.07, .07, p0.distanceTo(p1)), railW); r.position.copy(p0).add(p1).multiplyScalar(.5); r.lookAt(p1); br.add(r); } }
+    // stairs down to the sand on each side (the north ones beside Bubba Gump, like the real North Beach Stairs): wood treads and risers between
+    // side stringers, posts and rails both sides, a wooden landing at the bottom, then a plank walkway across the sand, landward to the beach
+    // bike path and seaward toward the water (pier research: the stairs land on a wooden walkway, then the path and the sand)
+    { const wood = std(0x8a6a4a, .85), dark = std(0x5d4632, .9), sand = (s2, t2) => landH(s2, t2);
+      for (const [a, b, e, d] of PIER_STAIRS){ const n = 18, gEnd = landH((a + b)/2, e + d*9.5), w = b - a, top = pierDeckH(a);
+        for (let k = 0; k < n; k++){ const f0 = k/n, f1 = (k + 1)/n, t0 = e + d*f0*9, t1 = e + d*f1*9, h0 = lerp(top, gEnd, f0), h1 = lerp(top, gEnd, f1);
+          const tr = new THREE.Mesh(new THREE.BoxGeometry(w, .07, 9/n + .04), wood); tr.position.set(...P3((a + b)/2, (t0 + t1)/2, h1 - .035)); br.add(tr);   // the tread
+          const ri = new THREE.Mesh(new THREE.BoxGeometry(w, h0 - h1, .04), dark); ri.position.set(...P3((a + b)/2, t0 + d*.02, (h0 + h1)/2)); br.add(ri); }   // the riser
+        for (const ss of [a + .05, b - .05]){ const A = new THREE.Vector3(...P3(ss, e, top - .15)), B = new THREE.Vector3(...P3(ss, e + d*9, gEnd - .15)), st = new THREE.Mesh(new THREE.BoxGeometry(.08, .32, A.distanceTo(B)), dark); st.position.copy(A).add(B).multiplyScalar(.5); st.lookAt(B); br.add(st);   // the stringers
+          for (let k = 0; k <= 6; k++){ const f = k/6, t = e + d*f*9, h = lerp(top, gEnd, f), post = new THREE.Mesh(new THREE.BoxGeometry(.1, 1.05, .1), wood); post.position.set(...P3(ss, t, h + .5)); br.add(post); }
+          for (const hh of [1, .55]){ const p0 = new THREE.Vector3(...P3(ss, e, top + hh)), p1 = new THREE.Vector3(...P3(ss, e + d*9, gEnd + hh)), r = new THREE.Mesh(new THREE.BoxGeometry(.07, .07, p0.distanceTo(p1)), hh === 1 ? wood : railW); r.position.copy(p0).add(p1).multiplyScalar(.5); r.lookAt(p1); br.add(r); } }
+        const ls = (a + b)/2, lt = e + d*10.6, landing = new THREE.Mesh(new THREE.BoxGeometry(w + 1.6, .14, 3.2), wood); landing.position.set(...P3(ls, lt, gEnd + .05)); br.add(landing);   // the landing at the bottom
+        // the plank walkway across the sand: landward to the bike path, seaward toward the water
+        for (const [s0, s1] of [[ls + w/2 + .8, 141], [ls - w/2 - .8, 18]]){ const n2 = Math.ceil(Math.abs(s1 - s0)/1.2), dir = Math.sign(s1 - s0);
+          for (let k = 0; k < n2; k++){ const sa = s0 + dir*k*1.2, sb = sa + dir*1.2, sm = (sa + sb)/2, pl = new THREE.Mesh(new THREE.BoxGeometry(1.15, .06, 2.4), k % 2 ? wood : std(0x96775a, .85)); pl.position.set(...P3(sm, lt, sand(sm, lt) + .05)); br.add(pl); } } } }
+    buildBeachVendors(g, P3);
     g.add(br); mergeStatic(br); }
   // the Dive Shop: a stand on the sand just north of the pier (walk in to shop)
   { const [ds, dt] = DIVE_SHOP, gh = landH(ds, dt), hut = new THREE.Group(), blue = std(0x1f6b8a, .6), wh = std(0xf4f4f0, .6);
@@ -6245,6 +6256,9 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Smashies Burger': [M('🍔', 'Smash burger', 11), M('🍟', 'Fries', 5)],
   'The Coffee Bean': [M('🍫', 'Hot chocolate', 5, 'drink'), M('🧋', 'Ice blended', 6, 'drink'), M('🥐', 'Croissant', 4)],
   'Bait & Tackle': [M('🎣', 'Fishing rod', 20, 'fish'), M('🪱', 'Bait', 2, 'play', { say: 'Wiggly! Fish love it' })],
+  'Bacon-wrapped hot dogs': [M('🌭', 'Bacon-wrapped hot dog with grilled onions and peppers', 8), M('🥤', 'Agua fresca', 4, 'drink')], 'Elote': [M('🌽', 'Elote with mayo, cheese and chili', 6), M('🌽', 'Esquites in a cup', 6)],
+  'Mango and fruit cups': [M('🥭', 'Mango on a stick with chili and lime', 7), M('🍉', 'Fruit cup: watermelon, pineapple, cucumber', 7)], 'Churros': [M('🥖', 'Churro', 4), M('🥖', 'Churro filled with caramel', 5)],
+  'Hats, sunglasses and bracelets': [...CAPS.slice(0, 4), M('🕶️', 'Beach sunglasses', 15, 'wear', { slot: 'shades', col: '#111111' }), M('📿', 'Friendship bracelet', 5, 'play', { say: 'Woven right there on the beach!' })], 'Bubbles': [M('🫧', 'Giant bubble wand', 5, 'play', { say: 'Whoosh! A bubble as big as you!' })],
   'John Reed Juice Bar': [M('🥤', 'Green smoothie', 9, 'drink'), M('🍓', 'Berry protein shake', 10, 'drink', { protein: true }), M('🥥', 'Coconut water', 6, 'drink'), M('🥣', 'Açaí bowl', 12)],   // (the pink juice bar at the front: mocktails, no cocktails)
   'Mariasol': [M('🌮', 'Tacos', 12), M('🧀', 'Quesadilla', 10), M('🥑', 'Chips and guacamole', 8), M('🥛', 'Horchata', 5, 'drink')],
   'Dining Deck': [M('🥟', 'Din Tai Fung soup dumplings', 14), M('🍜', 'Din Tai Fung noodles', 12), M('🍕', 'Sbarro pizza slice', 6), M('🍰', 'Cheesecake Factory cheesecake', 10), M('🍝', 'Cheesecake Factory pasta', 18), M('🥤', 'Lemonade', 5, 'drink')],
@@ -8535,12 +8549,38 @@ function openKiosk(){ initAudio(); let d = $('kioskPanel'); if (!d){ d = documen
     document.body.appendChild(d); d.querySelector('#kioskClose').onclick = closeKiosk; }
   d.querySelector('#kioskFrame').src = KIOSK_GAME; d.hidden = false; paused = true; }
 function closeKiosk(){ const d = $('kioskPanel'); if (!d) return; d.hidden = true; d.querySelector('#kioskFrame').src = 'about:blank'; paused = false; graceAfterPause?.(); }
+/* Street vendors where the pier's stairs and walkways meet the beach bike path, on both sides of the pier (pier research: bacon-wrapped hot dogs
+   off the grill, elote, mango and fruit cups with chili and lime, churros, hats, sunglasses and bracelets, bubbles). Walk up and buy something. */
+const VENDORS = [];
+function buildBeachVendors(g, P3){ const grp = new THREE.Group(), H = (s, t) => landH(s, t);
+  const person = (s, t, shirt, face) => { const p = new THREE.Group(), body = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, 1.0, 10), std(shirt, .8)); body.position.y = 1.05; p.add(body); const legs = new THREE.Mesh(new THREE.CylinderGeometry(.2, .2, .55, 8), std(0x2d3d58, .8)); legs.position.y = .28; p.add(legs);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.16, 10, 8), std([0xc99a74, 0x8d5a3b, 0xf1c9a5, 0xa86f4c][Math.abs(Math.round(s + t)) % 4], .7)); head.position.y = 1.72; p.add(head); const hat = new THREE.Mesh(new THREE.CylinderGeometry(.19, .2, .1, 10), std(0xf4f4f0, .7)); hat.position.y = 1.85; p.add(hat);
+    p.position.set(...P3(s, t, H(s, t))); p.rotation.y = face; grp.add(p); };
+  const cart = (s, t, col, umb, items) => { const c = new THREE.Group(), box = new THREE.Mesh(new THREE.BoxGeometry(1.5, .85, .8), std(col, .5, .2)); box.position.y = .75; c.add(box); const top = new THREE.Mesh(new THREE.BoxGeometry(1.55, .06, .85), std(0xc9ced3, .3, .7)); top.position.y = 1.2; c.add(top);
+    for (const x of [-.55, .55]){ const wh = new THREE.Mesh(new THREE.CylinderGeometry(.22, .22, .08, 12), std(0x222222, .7)); wh.rotation.x = Math.PI/2; wh.position.set(x, .22, .42); c.add(wh); }
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.5, 6), std(0x9aa0a6, .4, .6)); pole.position.y = 1.9; c.add(pole); const um = new THREE.Mesh(new THREE.ConeGeometry(1.2, .45, 10, 1, true), Object.assign(std(umb, .7), { side: THREE.DoubleSide })); um.position.y = 2.7; c.add(um);
+    items.forEach(([hex, x, z], k) => { const it = new THREE.Mesh(new THREE.SphereGeometry(.1, 8, 6), std(hex, .6)); it.position.set(x, 1.3, z); c.add(it); });
+    c.position.set(...P3(s, t, H(s, t))); c.rotation.y = .3; grp.add(c); return c; };
+  const stall = [
+    { name: 'Bacon-wrapped hot dogs', e: '🌭', col: 0xc62828, umb: 0xfdd835, items: [[0xb5532a, -.3, 0], [0xb5532a, 0, 0], [0xb5532a, .3, 0]], smoke: true },
+    { name: 'Elote', e: '🌽', col: 0xf2c230, umb: 0x2e7d32, items: [[0xf6d24b, -.3, .1], [0xf6d24b, .1, -.1]] },
+    { name: 'Mango and fruit cups', e: '🥭', col: 0xf4f4f0, umb: 0xff7043, items: [[0xffb300, -.35, 0], [0xe53935, 0, .1], [0x43a047, .35, 0]] },
+    { name: 'Churros', e: '🥖', col: 0x6d4c41, umb: 0xd81b60, items: [[0xc98a3a, -.2, 0], [0xc98a3a, .2, 0]] },
+    { name: 'Hats, sunglasses and bracelets', e: '🧢', col: 0x1e6fd9, umb: 0xf4f4f0, items: [[0xe53935, -.3, 0], [0x111111, 0, 0], [0xffd200, .3, 0]] },
+    { name: 'Bubbles', e: '🫧', col: 0x7b3fb5, umb: 0x26c6da, items: [[0xbfe8ff, 0, 0]] } ];
+  for (const [t0, dir] of [[-17.5, -1], [101.5, 1]]) stall.forEach((V, k) => { const s = k % 2 ? 144.5 : 137.2, t = t0 + dir*(1.5 + Math.floor(k/2)*4 + (k % 2)*1.6);
+    const c = cart(s, t, V.col, V.umb, V.items); person(s + (k % 2 ? 1.1 : -1.1), t, [0xf4f4f0, 0x26a69a, 0xff7043, 0x1d2d5a][k % 4], k % 2 ? Math.PI/2 : -Math.PI/2);
+    if (V.smoke) for (let j = 0; j < 4; j++){ const sm = new THREE.Mesh(new THREE.SphereGeometry(.18 + j*.08, 8, 6), new THREE.MeshStandardMaterial({ color: 0xd8d8d8, transparent: true, opacity: .35 - j*.07, depthWrite: false })); sm.position.set(...P3(s, t, H(s, t) + 1.5 + j*.35)); grp.add(sm); }
+    VENDORS.push({ s, t, name: V.name, e: V.e }); });
+  g.add(grp); }
+function vendorNear(o){ if (!o?.onLand || o.workout || o.car) return null; const [s, t] = landST(o.x, o.y); if (s < 120 || s > 165) return null; let best = null, bd = 2.3; for (const V of VENDORS){ const d = Math.hypot(V.s - s, V.t - t); if (d < bd){ bd = d; best = V; } } return best; }
 function placeAction(o){   // what you can do right where you're standing (or null)
   if (!o || mode !== 'ocean' || !o.onLand || o.car) return null;
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout }; if (o.workout?.k === 'slide') return null; if (o.workout?.k === 'spin') return { label: '🛑 Get off the spinner', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
   { const P2 = tplayAct(o) || playlandAct(o); if (P2) return P2; }
+  { const V = vendorNear(o); if (V) return { label: `${V.e} ${V.name}`, go: () => openPlaceMenu(V.name, 'food') }; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
   { const d = gettyAct(o) || matterAct(o); if (d) return d; }

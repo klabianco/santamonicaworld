@@ -6660,7 +6660,7 @@ function buildCoast(){
       x.fillStyle = 'rgb(200,128,200)'; x.fillRect(wx, wy, 5, wh); x.fillStyle = 'rgb(60,128,200)'; x.fillRect(wx + ww - 5, wy, 5, wh);   //  its sides,
       x.fillStyle = 'rgb(128,40,180)'; x.fillRect(wx - 6, wy + wh + 8, ww + 12, 3); }   //  and the edge of the sill)
     const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
-  const bldMat = addDetail(new THREE.MeshStandardMaterial({ map: winTex, normalMap: winNor, normalScale: new THREE.Vector2(1.4, 1.4), vertexColors: true, roughness: .85 }), 'wall');
+  const bldMat = addDetail(new THREE.MeshStandardMaterial({ map: winTex, normalMap: winNor, normalScale: new THREE.Vector2(1.4, 1.4), vertexColors: true, roughness: .85, side: THREE.DoubleSide }), 'wall');   // (two-sided: the walls are wound facing in, and shop rooms look at their inside)
   const parMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, side: THREE.DoubleSide });   // (the parapets along the rooflines)
   const PAL = [[0xf1e6cf, 0xf4f2ee, 0xe2cfae, 0xe9c6bd, 0xeadcc0, 0xd8a88a, 0xc9d3d6, 0xe8c98f], [0xf4efe4, 0xe8d9c0, 0xd9c2a8, 0xc9b79c, 0xcf9f82, 0xb9c7cc], [0xe9dcc6, 0xd8cfc4, 0xf0e2d0, 0xc7b8a8, 0xb9c4c8], [0xcfd3d6, 0xbfc6cc, 0xe0ddd6, 0xa9b4bb], [0xf4f2ee, 0x63c7bd, 0xeee3cf, 0xf1d9c4], [0xf2ede2], [0x9aa0a6], [0xc0bfbb]];
   const tiles = new Map(), cc = new THREE.Color(), rc = new THREE.Color();
@@ -6924,7 +6924,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8351,7 +8351,12 @@ const BLOCK1300 = [
   { side: -1, s: 640.8, t0: -548.4, t1: -518.0, h: 10, c: 0xf0efea, name: 'Skechers' },
   { side: -1, s: 640.8, t0: -518.4, t1: -501.4, h: 13.6, c: 0xf3f2ee, name: 'arch' },
   { side: -1, s: 640.8, t0: -501.6, t1: -488.0, h: 12.5, c: 0xf1f0eb, name: 'tower' },
-  { side: -1, s: 641.0, t0: -609.8, t1: -579.6, h: 12.4, ht: 12.4, c: 0xebbcb8, name: 'AMC 7' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
+  { side: -1, s: 641.0, t0: -609.8, t1: -579.6, h: 12.4, ht: 12.4, c: 0xebbcb8, name: 'AMC 7' },
+  { side: 1, s: 664.6, t0: -457.4, t1: -442.0, h: 14.5, c: 0xe6d9bc, name: 'Kress' },
+  { side: 1, s: 665.2, t0: -442.0, t1: -426.8, h: 15.3, c: 0xf0e8d3, name: 'Junipher' },
+  { side: -1, s: 641.6, t0: -488.0, t1: -475.4, h: 9.2, c: 0xe9e3d4, name: 'Grant' },
+  { side: -1, s: 640.6, t0: -457.6, t1: -445.2, h: 7.7, c: 0xe4ddcc, name: '1354' },
+  { side: -1, s: 642.6, t0: -445.8, t1: -425.2, h: 11, c: 0xd8cbb0, name: 'Bank of Italy' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
 function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, landH(sc, tc) + (y0 + y1)/2)); grp.add(me); return me; };
   // f: a slab on a facade (side 1 sticks out toward smaller s, side -1 toward bigger s); out: how far in front of the wall
@@ -8399,6 +8404,68 @@ function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     f(B, B.t0, B.t1, B.h - .4, B.h + .05, 0xe2e0d9, .3); }
   { const B = L('tower');   // a white front with two rows of windows (the stepped Art Deco tower once drawn here belongs to the old AMC Broadway 4 in the 1400 block: see buildBlock1400)
     for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25); }
+  g.add(grp); mergeStatic(grp); }
+/* 3rd St, the Santa Monica Blvd end of the 1300 block, from the Santa Monica Conservancy's walking tour and the city's historic inventory
+   (no photos or Street View tonight, so colors and window counts are partly guesses). Inland: the Kress Building (1349-1353: three bays
+   between pilasters with floral capitals, an arcade of arched windows, a classical frieze for a parapet) and the Junipher Building on the
+   corner (1355 / 301 Santa Monica Blvd, 1911, a landmark: four floors of cream glazed brick and terra cotta, pilasters, diamond tiles under
+   the windows, a frieze over the shops and a cornice). Ocean side: the W.T. Grant Building (1336-1338, 1937, Zara: blank upper wall with
+   three grooves, fluted piers, dentils, a curved parapet still reading W.T. GRANT), the 1930 Art Deco front at 1354 (a terra cotta frame
+   round a sign panel, stepped piers, a chevron parapet) and the old Bank of Italy on the corner (1929, travertine slabs since 1964, with
+   some Deco sunburst panels showing where slabs came off). */
+function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => { const a = B.side > 0 ? B.s - out - dep : B.s + out; return bx(a, a + dep, t0, t1, y0, y1, hex, gl(B)); };
+  // fS: a slab on a Santa Monica Blvd face (the plane t = tw, outside toward bigger t)
+  const fS = (B, tw, s0, s1, y0, y1, hex, dep = .12, out = 0) => bx(s0, s1, tw + out, tw + out + dep, y0, y1, hex, gl(B));
+  const at = (geo, hex, s, t, y, ry) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
+  const sign = (B, tc, y, w, h, text, bg, fg, size, out = .2) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(B.side > 0 ? B.s - out : B.s + out, tc, gl(B) + y)); sg.rotation.y = rot(B); grp.add(sg); return sg; };
+  const fo = (B, d) => B.side > 0 ? B.s - d : B.s + d;   // (a point d m out in front of the facade)
+  const GL = 0x2c3a44;
+  // ---- inland side ----
+  { const B = L('Kress'), C = B.c, C2 = 0xd6c7a4, n = 3, pw = .85, bw = (B.t1 - B.t0 - (n + 1)*pw)/n;
+    f(B, B.t0, B.t1, 4.7, 5.3, C2, .2);   // (the band over the shops)
+    for (let i = 0; i <= n; i++){ const a = B.t0 + i*(bw + pw); f(B, a, a + pw, 5.3, 11.6, C, .22); f(B, a - .1, a + pw + .1, 11.3, 11.9, C2, .3);   // pilasters and their capitals
+      for (let k = 0; k < 3; k++) at(new THREE.SphereGeometry(.11, 6, 4), 0xc9b58a, fo(B, .32), a + .2 + k*.22, gl(B) + 11.6, 0); }   // (the stylised flowers on each capital)
+    for (let i = 0; i < n; i++){ const a = B.t0 + pw + i*(bw + pw), c = a + bw/2, r = bw/2 - .35;
+      f(B, a + .35, a + bw - .35, 6.2, 9.7, GL, .1); at(new THREE.CircleGeometry(r, 18, 0, Math.PI), GL, fo(B, .1), c, gl(B) + 9.7, rot(B));   // the tall arched window
+      at(new THREE.TorusGeometry(r + .09, .12, 6, 18, Math.PI), C2, fo(B, .14), c, gl(B) + 9.7, rot(B)); f(B, a + .35, a + bw - .35, 7.9, 8.0, 0xf2ede0, .14); f(B, c - .04, c + .04, 6.2, 9.7 + r, 0xf2ede0, .14);   // (moulding, transom and mullion)
+      f(B, a + .2, a + bw - .2, 5.9, 6.2, C2, .18); }   // (the sill)
+    f(B, B.t0, B.t1, 11.9, 13.6, C, .2); for (let t = B.t0 + .5; t < B.t1 - .3; t += 1.1) f(B, t, t + .5, 12.3, 13.2, C2, .25);   // the frieze: a run of raised panels
+    f(B, B.t0 - .1, B.t1 + .1, 13.6, 14.0, C2, .45); f(B, B.t0, B.t1, 14.0, B.h + .1, C, .2); }
+  { const B = L('Junipher'), C = B.c, TC = 0xe3d3b0, sE = 711.2, ys = [[5.9, 7.9], [8.9, 10.9], [11.9, 13.5]];
+    const bays = (u0, u1, nb, slab, pt) => { const pw = .6, bw = (u1 - u0 - (nb + 1)*pw)/nb;   // pilasters and windows in pairs, diamond tiles under each window
+      slab(u0, u1, 5.5, 13.9, C, .05); slab(u0, u1, 4.7, 5.5, TC, .22); for (let k = 0; k < 4; k++) slab(u0 + .3 + k*(u1 - u0 - .6)/4, u0 + .3 + k*(u1 - u0 - .6)/4 + .5, 5.0, 5.2, 0xcdb98e, .26);   // (the frieze over the ground floor)
+      for (let i = 0; i <= nb; i++){ const a = u0 + i*(bw + pw); slab(a, a + pw, 5.5, 13.9, C, .2); }
+      for (let i = 0; i < nb; i++){ const a = u0 + pw + i*(bw + pw);
+        for (const [y0, y1] of ys) for (const [w0, w1] of [[a + .25, a + bw/2 - .12], [a + bw/2 + .12, a + bw - .25]]){ slab(w0 - .06, w1 + .06, y0 - .06, y1 + .06, 0xf7f3ea, .1); slab(w0, w1, y0, y1, GL, .12); slab(w0 - .1, w1 + .1, y0 - .16, y0 - .06, TC, .16); pt((w0 + w1)/2, y0 - .55); } }
+      slab(u0, u1, 13.9, 14.5, TC, .2); slab(u0 - .15, u1 + .15, 14.5, 14.85, TC, .5); slab(u0, u1, 14.85, B.h + .1, C, .2); };
+    bays(B.t0, B.t1, 3, (a, b, y0, y1, hex, dep) => f(B, a, b, y0, y1, hex, dep), (t, y) => { const d = at(new THREE.BoxGeometry(.05, .34, .34), 0x6f9a8c, fo(B, .13), t, gl(B) + y, 0); d.rotation.x = Math.PI/4; });
+    bays(B.s, sE, 8, (a, b, y0, y1, hex, dep) => fS(B, B.t1, a, b, y0, y1, hex, dep), (s, y) => { const d = at(new THREE.BoxGeometry(.34, .34, .05), 0x6f9a8c, s, B.t1 + .13, gl(B) + y, 0); d.rotation.z = Math.PI/4; });
+    for (const [s, t] of [[B.s - .25, B.t1 + .25]]) at(new THREE.CylinderGeometry(.05, .05, .3, 6), 0x3a3d40, s, t, gl(B) + 5.7, 0); }   // (one of the old trolley-wire hooks on the corner)
+  // ---- ocean side ----
+  { const B = L('Grant'), C = B.c, C2 = 0xd9d1bf, pw = .9;
+    for (const y of [5.0, 5.3, 5.6]) f(B, B.t0 + pw, B.t1 - pw, y, y + .12, C2, .08, .1);   // three grooves over the shops
+    for (const [a, b] of [[B.t0, B.t0 + pw], [B.t1 - pw, B.t1]]){ f(B, a, b, 4.7, 8.6, C, .25); for (let k = 0; k < 4; k++) f(B, a + .12 + k*.2, a + .2 + k*.2, 4.9, 8.4, C2, .04, .25); }   // (fluted piers)
+    for (let k = 0; k < 3; k++){ const w = (B.t1 - B.t0 - 2*pw)/3, a = B.t0 + pw + k*w; f(B, a + .5, a + w - .5, 6.1, 7.4, 0xe2dccb, .04); }   // (the filled-in upper windows)
+    for (const y of [7.6, 7.85, 8.1]) f(B, B.t0 + pw, B.t1 - pw, y, y + .1, C2, .06, .06);
+    for (let t = B.t0 + .2; t < B.t1 - .2; t += .45) f(B, t, t + .22, 8.35, 8.55, C2, .12, .06);   // the dentils
+    { const w = 7.5, sh = new THREE.Shape(); sh.moveTo(-w/2, 0); sh.lineTo(-w/2, .4); sh.quadraticCurveTo(0, 1.5, w/2, .4); sh.lineTo(w/2, 0); sh.lineTo(-w/2, 0);   // the curved parapet
+      at(new THREE.ExtrudeGeometry(sh, { depth: .25, bevelEnabled: false }), C, fo(B, .25), (B.t0 + B.t1)/2, gl(B) + B.h - .05, rot(B));
+      sign(B, (B.t0 + B.t1)/2, B.h + .45, 3.4, .42, 'W.T. GRANT', '#e9e3d4', '#9c9480', 300, .27); } }
+  { const B = L('1354'), a = B.t0 + .2, b = a + 6.1, TC = 0xd2b48c, TC2 = 0xc29e72;   // (Seasons By's 20 ft front; the rest of the building stays plain)
+    f(B, a + .7, b - .7, 4.8, 6.9, TC, .14); f(B, a + 1.1, b - 1.1, 5.1, 6.6, 0xe9e1cf, .18);   // the terra cotta frame round the flat sign panel
+    for (let k = 0; k < 5; k++){ const x = a + .9 + k*(b - a - 1.8)/4; f(B, x - .1, x + .1, 6.65, 6.85, TC2, .2); }   // (its leaf and scroll ornament)
+    for (const c of [a + .35, b - .35]) for (let k = 0; k < 4; k++){ const w = .7 - k*.15; f(B, c - w/2, c + w/2, 4.7 + k*.85, 4.7 + (k + 1)*.85 + (k === 3 ? .5 : 0), TC, .22 + (3 - k)*.04); }   // the stepped piers, like little skyscrapers
+    for (let t = a + 1, k = 0; t < b - 1; t += .5, k++){ const z = at(new THREE.BoxGeometry(.12, .5, .12), TC2, fo(B, .12), t, gl(B) + B.h + .1, 0); z.rotation.x = k % 2 ? .8 : -.8; }   // the chevron parapet
+    f(B, B.t0, B.t1, B.h - .2, B.h + .05, 0xd8d0bd, .2); }
+  { const B = L('Bank of Italy'), C = B.c, J = 0xc7b994, sW = 610.2;   // travertine slabs (lines every slab), and the Deco sunbursts where some came off
+    const slabs = (u0, u1, slab) => { slab(u0, u1, B.h - .3, B.h + .1, 0xcfc1a3, .25); for (let y = 6.1; y < B.h - .4; y += 1.4) slab(u0, u1, y, y + .03, J, .14); for (let u = u0 + 1.2; u < u1 - .2; u += 1.2) slab(u, u + .03, 4.7, B.h - .3, J, .14); };
+    slabs(B.t0, B.t1, (a, b, y0, y1, hex, dep) => f(B, a, b, y0, y1, hex, dep));
+    slabs(sW, B.s, (a, b, y0, y1, hex, dep) => fS(B, B.t1, a, b, y0, y1, hex, dep));
+    const sun = (t, ry, s) => { const y = gl(B) + 5.6; at(new THREE.CircleGeometry(1.5, 20, 0, Math.PI), 0xb98f5c, s, t, y, ry); for (let k = 1; k < 8; k++){ const r = at(new THREE.BoxGeometry(.07, 1.4, .05), 0xe8c98e, s, t, y, ry); r.rotateZ(-Math.PI/2 + k*Math.PI/8); r.translateY(.7); }
+      at(new THREE.TorusGeometry(1.5, .08, 6, 20, Math.PI), 0xa57a48, s, t, y, ry); };
+    sun(B.t0 + 3.5, rot(B), fo(B, .16)); sun(B.t0 + 8.5, rot(B), fo(B, .16)); }
   g.add(grp); mergeStatic(grp); }
 /* 3rd St, the Wilshire end of the 1200 block, from photos (Wikimedia Commons, Sept 2017 and July 2022): the 1935 streamline corner at 1201
    (the old Barnes & Noble, its round corner, speed lines and the steel lattice sign tower on the tall block behind), the Santa Monica Art
@@ -10476,7 +10543,9 @@ function buildPromenade(g, P3, at, instanceOf){
   for (const r of promRooms()) if (r.generic) stores.push({ side: r.side, t: (r.t0 + r.t1)/2, name: r.name, kind: r.kind, uv: genUV[r.name], w: Math.min(6, r.t1 - r.t0 - .4) });
   const signPos = [], signUV = [], awn = [], awnCol = [], cc = new THREE.Color(), AWN = [0xb8452e, 0x1f6b8a, 0x2e7d4f, 0x22303c, 0x7a3e1d];
   const quad = (arr, a, b, c, d) => arr.push(...a, ...b, ...c, ...a, ...c, ...d);
-  stores.forEach((q, i) => { if (q.side === 0 || q.name === 'Apple Store') return; const fs = q.side < 0 ? PROM.s0 : PROM.s1, out = -q.side, big = q.kind === 2, w = big ? 9 : q.w || 6, ta = q.t - w/2, tb = q.t + w/2, h0 = landH(fs + out*2, q.t), y0 = h0 + (big ? 4.6 : 3.75), y1 = y0 + (big ? 1.7 : .85), sx = fs + out*(big ? .9 : .14);
+  // (a sign hangs on its building's real front wall: some stand a little proud of the shop windows)
+  const signFace = (fs, out, ta, tb) => { let e = 0; for (let d = .1; d <= 1.5; d += .1) if ([ta + .4, (ta + tb)/2, tb - .4].some(tt => bldAt(fs + out*d, tt) != null)) e = d; return fs + out*e; };
+  stores.forEach((q, i) => { if (q.side === 0 || q.name === 'Apple Store') return; const out = -q.side, big = q.kind === 2, w = big ? 9 : q.w || 6, ta = q.t - w/2, tb = q.t + w/2, fs = signFace(q.side < 0 ? PROM.s0 : PROM.s1, out, ta, tb), h0 = landH(fs + out*2, q.t), y0 = h0 + (big ? 4.6 : 3.75), y1 = y0 + (big ? 1.7 : .85), sx = fs + out*(big ? .9 : .14);
     quad(signPos, P3(sx, ta, y1), P3(sx, tb, y1), P3(sx, tb, y0), P3(sx, ta, y0));
     const [u0, v0, u1, v1] = q.uv; signUV.push(...(q.side < 0 ? [u1, v1, u0, v1, u0, v0, u1, v1, u0, v0, u1, v0] : [u0, v1, u1, v1, u1, v0, u0, v1, u1, v0, u0, v0]));   // (reads the right way round from the street)
     if (big){ cc.setHex(0xa0101e); const A = P3(fs + out*.05, ta, y1 + .2), B = P3(fs + out*.05, tb, y1 + .2), C = P3(fs + out*1.6, tb, y0 - .2), D = P3(fs + out*1.6, ta, y0 - .2); quad(awn, A, B, C, D); for (let k = 0; k < 6; k++) awnCol.push(cc.r, cc.g, cc.b); }   // the marquee

@@ -3089,11 +3089,32 @@ function landH(s, t){   // the ground (what the 3D land shows)
   if (kp > 0){ const hP = .3 + smooth(0, 9, s)*20 + smooth(9, 90, s)*25*(.75 + .25*Math.sin(t*.06 + s*.03)) + smooth(30, 110, s)*14*Math.sin(t*.13)*Math.sin(s*.07); h = lerp(h, hP, kp); }   // the cliffs of Palos Verdes
   return h;
 }
+/* The Fairmont Miramar's buildings (research: fairmont_wilshire.json "fairmont_detail", from the 2020 EIR, the Coastal Commission's 2022 report,
+   OpenStreetMap/LA County footprints and aerial photos). OpenStreetMap merges the Palisades Building, the Ocean Tower and the Administration
+   Building into one 40.5 m block; here it is split back into the real buildings, each its real height and color: the 1924 Palisades Building
+   (six stories, 23.8 m, unpainted salmon-tan brick, L-shaped at 2nd and California), the 1959 Ocean Tower (ten stories, 32 m, white, a slab
+   at right angles to Ocean Ave on a one-story lobby podium) with its 41 m elevator tower at the northeast end, the 1939 Administration Building
+   and its 1959 ballroom wing (two stories, 8.5 m, cream), the porte-cochere block facing the fig, and the low connector on the pool side.
+   (The edges between these inside the merged outline are guesses, give or take 3 m.) Research frame: s = 404 + x, t = -833 - y. */
+const FAIR_PARTS = [
+  { n: 'Palisades Building', h: 23.8, wall: 0xb39378, roof: 0x6f7a70, p: [[97.5, 134.8], [97.6, 176.8], [79.6, 176.6], [79.7, 192.1], [112.9, 192.5], [113.0, 135.1]] },
+  { n: 'Palisades elevator link', h: 26, wall: 0xe8e1d2, roof: 0x9a9a94, p: [[96.4, 130.8], [113.0, 130.8], [113.0, 135.1], [96.4, 135.1]] },
+  { n: 'Ocean Tower podium', h: 5, wall: 0xf2efe6, roof: 0xd8d4ca, p: [[32.5, 102.7], [72.1, 103.2], [72.1, 132.5], [41.0, 132.2], [41.0, 130.4], [29.3, 130.2], [29.3, 128.5], [25.4, 128.4], [25.4, 129.6], [23.7, 129.5], [23.7, 111.2], [25.4, 111.2], [25.4, 112.3], [29.3, 112.4], [29.3, 110.9], [32.5, 111.0]] },
+  { n: 'Ocean Tower', h: 32, wall: 0xf2efe6, roof: 0xd8d4ca, tower: true, p: [[25, 110.5], [70, 110.5], [70, 130.5], [25, 130.5]] },
+  { n: 'Ocean Tower elevator tower', h: 41.1, wall: 0xece7da, roof: 0xcfcac0, p: [[64, 112], [73, 112], [73, 131], [64, 131]] },
+  { n: 'Fairmont porte-cochere block', h: 5, wall: 0xf2efe6, roof: 0xd8d4ca, p: [[72.1, 102.0], [75.6, 102.1], [75.6, 98.4], [77.4, 98.5], [77.4, 93.2], [79.5, 93.3], [79.5, 87.0], [75.5, 86.9], [75.5, 75.4], [71.5, 75.3], [71.5, 103.2]] },
+  { n: 'Administration Building', h: 8.5, wall: 0xece6d8, roof: 0xb5532f, p: [[79.5, 93.3], [112.7, 93.3], [112.7, 109.5], [115.3, 109.5], [115.3, 115.1], [113.6, 115.1], [113.0, 130.8], [79.5, 130.8]] },
+  { n: 'Fairmont ballroom wing', h: 8.5, wall: 0xf1eee6, roof: 0xd9d4c8, plain: true, p: [[71.5, 52.8], [105.4, 53.3], [105.4, 52.2], [114.8, 52.3], [114.8, 61.8], [112.6, 61.8], [112.6, 77.1], [108.3, 77.0], [108.3, 84.4], [112.7, 84.5], [112.7, 93.3], [79.5, 93.3], [79.5, 87.0], [75.5, 86.9], [75.5, 75.4], [71.5, 75.3]] },
+  { n: 'Fairmont connector', h: 5, wall: 0xf2efe6, roof: 0xd8d4ca, p: [[64.9, 132.5], [96.4, 132.5], [96.4, 133.6], [97.5, 134.8], [94.1, 134.5], [94.1, 148.4], [92.1, 148.4], [92.1, 153.1], [88.2, 153.1], [88.2, 152.3], [79.1, 152.5], [78.6, 147.7], [75.4, 147.6], [75.2, 145.4], [64.9, 137.7]] } ];
+function fairSplit(){ const i = CITY.bldgs.findIndex(b => b.h > 40 && b.h < 41 && b.p?.length > 30 && b.p.every(([s, t]) => s > 420 && s < 525 && t > -1030 && t < -880)); if (i < 0) return;
+  const base = CITY.bldgs[i]; CITY.bldgs.splice(i, 1, ...FAIR_PARTS.map(F => ({ h: F.h, k: base.k, yr: F.n.startsWith('Palisades') ? 1924 : 1959, name: F.n, p: F.p.map(([x, y]) => [404 + x, -833 - y]), look: { wall: F.wall, roof: F.roof, plain: !!F.plain }, fair: F })));
+  for (const b of CITY.bldgs) if (!b.fair && b.p?.every(([s, t]) => s > 420 && s < 525 && t > -1030 && t < -880) && b.h < 10) b.look = { wall: 0xe9e6cc, roof: 0x8a8a82 };   // (the bungalows: cream stucco, grey shingle roofs)
+  const bar = CITY.bldgs.find(b => !b.fair && b.p?.some(([s, t]) => Math.abs(s - 427.5) < .6 && Math.abs(t + 886.2) < .6)); if (bar) bar.h = 4.6; }   // (the Bungalow bar: one story, about 14 ft (EIR), not OSM's 9.2 m)
 // buildings: footprints in a grid of 25 m cells, so walking and driving only check the few nearby
 const BLD_CELL = 25, bldCells = new Map();
 const bldKey = (i, j) => (i + 500)*4096 + (j + 2000);
 function bldIndex(){
-  if (bldIndex.done) return; bldIndex.done = true;
+  if (bldIndex.done) return; bldIndex.done = true; fairSplit();
   CITY.bldgs.forEach((b, n) => { let s0 = 1e9, s1 = -1e9, t0 = 1e9, t1 = -1e9, lo = 1e9;
     for (const [s, t] of b.p){ s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t); lo = Math.min(lo, landH(s, t)); }
     const onPier = onPierDeck((s0 + s1)/2, (t0 + t1)/2); if (onPier && ((s0 > 195 && s1 < 242 && t0 > 5 && t1 < 50) || (s0 > 28 && s1 < 64 && t0 > 5 && t1 < 50) || ((s0 + s1)/2 > -222 && (s0 + s1)/2 < -190 && (t0 + t1)/2 < -1 && (t0 + t1)/2 > -26))){ b.base = pierDeckH((s0 + s1)/2); b.top = b.base + 12; b.box = [s0, t0, s1, t1]; return; }   b.base = onPier ? pierDeckH((s0 + s1)/2) : lo - .4; b.top = b.base + Math.max(3, b.h) + (onPier ? 0 : .4); b.box = [s0, t0, s1, t1];   // (the Hippodrome: you can walk in; its walls are solid by themselves, see buildPierTown)
@@ -3973,6 +3994,7 @@ function draw(scene){
   // with shadows off, a scene's shadow map still has to exist: draw it once, then wipe it blank
   const fresh = !renderer.shadowMap.autoUpdate && SUNS.some(sn => !sn.shadow.map && sn.parent === scene);
   if (fresh) renderer.shadowMap.needsUpdate = true;
+  if (window.__CAMFIX && scene === oceanScene){ const F = window.__CAMFIX; camera.position.set(...F.pos); camera.lookAt(...F.look); if (F.fov && camera.fov !== F.fov){ camera.fov = F.fov; camera.updateProjectionMatrix(); } }   // (testing only: hold the camera where a reference photo was taken)
   let done = false;
   if (composer && GFX[gfx].bloom){ renderPass.scene = scene; if (aoPass){ aoPass.enabled = !!GFX[gfx].ao && !underNow; aoPass.scene = scene; } try { composer.render(); done = true; } catch(e){ composer = null; } }
   if (!done) renderer.render(scene, camera);
@@ -5449,44 +5471,48 @@ function buildFairLobby(g, P3){ const [s0, s1, t0, t1] = FAIR.lobby, grp = new T
    pool's shape, size or exact spot: it's a mid-century rectangle in the open middle of the courtyard, a guess. No cabanas: none are mentioned.) */
 FAIR.court = [446, 486, -1010, -967];
 const inFairCourt = (s, t) => { const C = FAIR.court; return s > C[0] && s < C[1] && t > C[2] && t < C[3]; };
-function buildFairPool(g, P3){ let h = -1e9; for (let ss = 447; ss <= 485; ss += 2) for (let tt = -1009; tt <= -968; tt += 2) h = Math.max(h, landH(ss, tt)); h += .02; FAIR.poolH = h; LAND_BOXES.push([447, -1009, 485, -968, h + .06, h - 3]);   // (the deck sits level over the sloping ground)
-  const grp = new THREE.Group(), P = [455, 477, -993, -982], tub = [480, -1003, 1.7], stone = std(0xe9e2d2, .75);
+function buildFairPool(g, P3){ const KID = (() => { const c = [404 + 60.5, -833 - 150], pts = []; for (let k = 0; k < 40; k++){ const a = k/40*TAU, r = 1 + .18*Math.cos(2*a) - .22*Math.cos(a - .6)*(Math.cos(a - .6) > .4 ? 1 : 0); pts.push([c[0] + Math.cos(a)*9.3*r, c[1] + Math.sin(a)*8.6*r]); } return pts; })();   // (research: a free-form kidney pool about 19 x 18 m at x 51-70, y 141-159; the round spa, about 3.5 m, just off its ocean side)
+  let h = -1e9; for (let ss = 447; ss <= 485; ss += 2) for (let tt = -1009; tt <= -968; tt += 2) h = Math.max(h, landH(ss, tt)); h += .02; FAIR.poolH = h; LAND_BOXES.push([447, -1009, 485, -968, h + .06, h - 3]);   // (the deck sits level over the sloping ground)
+  const grp = new THREE.Group(), P = [455, 477, -993, -982], tub = [452, -990, 1.75], stone = std(0xe9e2d2, .75);
   const bx = (a, b, c, d, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(b - a), y1 - y0, Math.abs(d - c)), m); me.position.set(...P3((a + b)/2, (c + d)/2, h + (y0 + y1)/2)); me.castShadow = me.receiveShadow = true; grp.add(me); return me; };
-  // the deck, the pool (tile floor and walls, coping, the water) and its edge you can't walk off
-  { const dm = addDetail(std(0xcdc3ae, .85), 'paver'); for (const [a, b, c, d] of [[447, 485, -1009, P[2] - .4], [447, 485, P[3] + .4, -968], [447, P[0] - .4, P[2] - .4, P[3] + .4], [P[1] + .4, 485, P[2] - .4, P[3] + .4]]) bx(a, b, c, d, -2.5, .06, dm); }   // (the deck, round the pool)
-  bx(P[0], P[1], P[2], P[3], -1.45, -1.4, new THREE.MeshStandardMaterial({ map: rep(tileTex, 11, 6), color: 0x8fd3ee, roughness: .3 }));
-  for (const [a, b, c, d] of [[P[0], P[1], P[2], P[2] + .1], [P[0], P[1], P[3] - .1, P[3]], [P[0], P[0] + .1, P[2], P[3]], [P[1] - .1, P[1], P[2], P[3]]]) bx(a, b, c, d, -1.45, .05, new THREE.MeshStandardMaterial({ map: rep(tileTex, 6, 1), roughness: .3 }));
-  for (const [a, b, c, d] of [[P[0] - .4, P[1] + .4, P[2] - .4, P[2]], [P[0] - .4, P[1] + .4, P[3], P[3] + .4], [P[0] - .4, P[0], P[2], P[3]], [P[1], P[1] + .4, P[2], P[3]]]) bx(a, b, c, d, 0, .1, stone);   // (the coping)
-  bx(P[0] + .1, P[1] - .1, P[2] + .1, P[3] - .1, -.2, -.12, Object.assign(new THREE.MeshStandardMaterial({ color: 0x1f9fd0, roughness: .04, metalness: .1, transparent: true, opacity: .86 }), { userData: { water: true } }));
-  for (let k = 0; k < 8; k++){ const ln = new THREE.Mesh(new THREE.BoxGeometry(.25, .01, P[3] - P[2] - 2), new THREE.MeshBasicMaterial({ color: 0x1d4f7a })); ln.position.set(...P3(P[0] + 1.5 + k*2.7, (P[2] + P[3])/2, h - 1.39)); grp.add(ln); }   // (lane lines on the floor)
-  LAND_BOXES.push([P[0], P[2], P[1], P[3], h + .65, h - 2]);
+  // the deck with the kidney pool cut out of it, the pool (tile floor and walls, coping, the water), its edge you can't walk off, and the round spa
+  const shp = (pts, hole) => { const toXZ = ([s2, t2]) => { const v = P3(s2, t2, 0); return new THREE.Vector2(v[0], -v[2]); }, sh = new THREE.Shape(pts.map(toXZ)); if (hole) sh.holes.push(new THREE.Path(hole.map(toXZ))); return sh; };
+  const flatShape = (pts, hole, y, m, depth) => { const geo = depth ? new THREE.ExtrudeGeometry(shp(pts, hole), { depth, bevelEnabled: false }) : new THREE.ShapeGeometry(shp(pts, hole)); geo.rotateX(-Math.PI/2); const me = new THREE.Mesh(geo, m); me.position.y = y; me.receiveShadow = true; grp.add(me); return me; };
+  { const ring = (r) => { const c = [404 + 60.5, -833 - 150]; return KID.map(([s2, t2]) => [c[0] + (s2 - c[0])*r, c[1] + (t2 - c[1])*r]); }, outer = ring(1.045);
+    flatShape([[447, -968], [485, -968], [485, -1009], [447, -1009]], outer, h - 2.5, addDetail(std(0xcdc3ae, .85), 'paver'), 2.56);   // (the deck: light beige-grey pavers)
+    flatShape(outer, KID, h, stone, .1);   // (the coping)
+    flatShape(KID, null, h - 1.4, new THREE.MeshStandardMaterial({ map: rep(tileTex, 6, 6), color: 0x9fdcf0, roughness: .3 }));
+    for (let i2 = 0; i2 < KID.length; i2++){ const a = KID[i2], b = KID[(i2 + 1) % KID.length], A = new THREE.Vector3(...P3(...a, 0)), B = new THREE.Vector3(...P3(...b, 0)), w = new THREE.Mesh(new THREE.BoxGeometry(A.distanceTo(B) + .05, 1.45, .06), new THREE.MeshStandardMaterial({ map: rep(tileTex, 1, 1), color: 0xb8e6f4, roughness: .3 })); w.position.copy(A).add(B).multiplyScalar(.5); w.position.y = h - .7; w.rotation.y = -Math.atan2(B.z - A.z, B.x - A.x); grp.add(w); }
+    flatShape(KID, null, h - .16, Object.assign(new THREE.MeshStandardMaterial({ color: 0x22b3d6, roughness: .04, metalness: .1, transparent: true, opacity: .84 }), { userData: { water: true } }));
+    for (let tt = -1000; tt < -966; tt += 1.2){ let lo = 1e9, hi = -1e9; for (let s2 = 440; s2 < 480; s2 += .3) if (inPoly(KID, s2, tt + .6)){ lo = Math.min(lo, s2); hi = Math.max(hi, s2); } if (hi > lo) LAND_BOXES.push([lo - .2, tt, hi + .2, tt + 1.2, h + .65, h - 2]); } }   // (you walk round the edge, not across the water)
   { const tw = new THREE.Mesh(new THREE.CylinderGeometry(tub[2] + .3, tub[2] + .3, .5, 28), stone); tw.position.set(...P3(tub[0], tub[1], h + .25)); grp.add(tw); const tw2 = new THREE.Mesh(new THREE.CircleGeometry(tub[2], 28), new THREE.MeshStandardMaterial({ color: 0x5fc8e0, roughness: .1, transparent: true, opacity: .85 })); tw2.rotation.x = -Math.PI/2; tw2.position.set(...P3(tub[0], tub[1], h + .42)); grp.add(tw2);
     LAND_BOXES.push([tub[0] - tub[2] - .3, tub[1] - tub[2] - .3, tub[0] + tub[2] + .3, tub[1] + tub[2] + .3, h + .65, h - 2]); }
   // chaise lounges with white frames and striped cushions, and umbrellas, on both long sides; you can lie on any of them
-  for (const [tt, face] of [[-979.6, 1], [-995.6, -1]]) for (let ss = P[0] + .8; ss < P[1]; ss += 2.4){ const fr = bx(ss - .35, ss + .35, tt - 1, tt + 1, .25, .38, std(0xf4f4f2, .5)); bx(ss - .33, ss + .33, tt - .95, tt + .95, .38, .46, std(0x2e6f8e, .7)); const back = bx(ss - .33, ss + .33, tt - .25, tt + .25, .45, 1.05, std(0x2e6f8e, .7)); back.position.set(...P3(ss, tt - face*.85, h + .7)); back.rotation.x = 0;
+  for (const [tt, face] of [[-995.8, -1]]) for (let ss = P[0] + .8; ss < P[1]; ss += 2.4){ const fr = bx(ss - .35, ss + .35, tt - 1, tt + 1, .25, .38, std(0xf4f4f2, .5)); bx(ss - .33, ss + .33, tt - .95, tt + .95, .38, .46, std(0x2e6f8e, .7)); const back = bx(ss - .33, ss + .33, tt - .25, tt + .25, .45, 1.05, std(0x2e6f8e, .7)); back.position.set(...P3(ss, tt - face*.85, h + .7)); back.rotation.x = 0;
     addSeatST(ss, tt, h + .5, 0, -face); if (Math.round((ss - P[0])/2.4) % 3 === 1){ const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 2.4, 6), std(0xffffff, .4)); pole.position.set(...P3(ss + 1.2, tt, h + 1.2)); grp.add(pole); const um = new THREE.Mesh(new THREE.ConeGeometry(1.6, .5, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: .8, side: THREE.DoubleSide })); um.position.set(...P3(ss + 1.2, tt, h + 2.4)); grp.add(um); } }
+  for (let tt = -973.5; tt > -986; tt -= 2.3){ bx(448, 450, tt - .35, tt + .35, .25, .38, std(0xf4f4f2, .5)); bx(448.05, 449.95, tt - .33, tt + .33, .38, .46, std(0x2e6f8e, .7)); bx(447.9, 448.4, tt - .33, tt + .33, .45, 1.05, std(0x2e6f8e, .7)); addSeatST(449, tt, h + .5, 1, 0); }   // (and a row down the garden side, facing the water)
   // palms and the garden beds round the edge, and the Sunset Terrace's string lights
   for (const [ss, tt] of [[449, -971], [483, -971], [449, -1007], [452, -1000], [452, -976]]){ const tr = new THREE.Mesh(new THREE.CylinderGeometry(.18, .28, 9, 8), std(0x8a7560, .9)); tr.position.set(...P3(ss, tt, h + 4.5)); grp.add(tr); for (let k = 0; k < 9; k++){ const a = k/9*TAU, fr = new THREE.Mesh(new THREE.ConeGeometry(.35, 3, 4), std(0x3f7a3a, .8)); fr.position.set(...P3(ss + Math.cos(a)*1.2, tt + Math.sin(a)*1.2, h + 9)); fr.rotation.set(Math.sin(a)*1.9, 0, Math.cos(a)*1.9); grp.add(fr); } }
   { const bulbs = []; for (let k = 0; k <= 24; k++){ const f = k/24, ss = lerp(448, 466, f), q = new THREE.SphereGeometry(.07, 6, 4); q.translate(...P3(ss, -969, h + 3.6 - Math.sin(f*Math.PI*3)**2*.5)); bulbs.push(q); } grp.add(new THREE.Mesh(mergeGeometries(bulbs), new THREE.MeshBasicMaterial({ color: 0xffe2a0 }))); }
   // the mural: a giant painted portrait, warm sunset colors, on the bungalow wall that faces the pool
-  { const tex = canvasTex(512, 640, (x, w, hh) => { const gr = x.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, '#f6a04d'); gr.addColorStop(.55, '#f7d27a'); gr.addColorStop(1, '#5fb3c9'); x.fillStyle = gr; x.fillRect(0, 0, w, hh);
+  { const tex = canvasTex(512, 640, (x, w, hh) => { const gr = x.createLinearGradient(0, 0, 0, hh); gr.addColorStop(0, '#d8d8d8'); gr.addColorStop(.55, '#f2f2f2'); gr.addColorStop(1, '#bdbdbd'); x.fillStyle = gr; x.fillRect(0, 0, w, hh);
       x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.arc(w/2, hh*.42, w*.42, 0, TAU); x.fill();
-      x.fillStyle = '#8a5a3c'; x.beginPath(); x.ellipse(w/2, hh*.34, w*.17, w*.22, 0, 0, TAU); x.fill();   // (the face,
-      x.fillStyle = '#3b2a20'; x.beginPath(); x.ellipse(w/2, hh*.22, w*.18, w*.1, 0, Math.PI, TAU); x.fill();   //  the hair,
+      x.fillStyle = '#6e6e6e'; x.beginPath(); x.ellipse(w/2, hh*.34, w*.17, w*.22, 0, 0, TAU); x.fill();   // (the face,
+      x.fillStyle = '#1e1e1e'; x.beginPath(); x.ellipse(w/2, hh*.22, w*.18, w*.1, 0, Math.PI, TAU); x.fill();   //  the hair,
       x.fillStyle = '#121212'; x.fillRect(w*.33, hh*.31, w*.34, hh*.05);   //  the sunglasses,
-      x.fillStyle = '#7a4c32'; x.beginPath(); x.moveTo(w*.12, hh); x.quadraticCurveTo(w*.15, hh*.55, w/2, hh*.52); x.quadraticCurveTo(w*.85, hh*.55, w*.88, hh); x.fill();   //  the broad shoulders,
+      x.fillStyle = '#5a5a5a'; x.beginPath(); x.moveTo(w*.12, hh); x.quadraticCurveTo(w*.15, hh*.55, w/2, hh*.52); x.quadraticCurveTo(w*.85, hh*.55, w*.88, hh); x.fill();   //  the broad shoulders,
       for (const sd of [-1, 1]){ x.beginPath(); x.ellipse(w/2 + sd*w*.36, hh*.62, w*.13, hh*.09, sd*.5, 0, TAU); x.fill(); }   //  and the flexed arms)
       x.fillStyle = 'rgba(0,0,0,.18)'; x.font = '700 22px Nunito, sans-serif'; x.fillText('JONAS NEVER 2021', w - 230, hh - 18); }, false);
-    const A = [469, -971.25], B = [481, -981], L = Math.hypot(B[0] - A[0], B[1] - A[1]), n = [(B[1] - A[1])/L, -(B[0] - A[0])/L], ms = (A[0] + B[0])/2 + n[0]*.12, mt = (A[1] + B[1])/2 + n[1]*.12;   // (on the Ocean Tower's angled wall over the pool; n points out, toward the water)
-    const mu = new THREE.Mesh(new THREE.PlaneGeometry(11, 13.75), new THREE.MeshStandardMaterial({ map: tex, roughness: .9 })); mu.position.set(...P3(ms, mt, h + 10)); mu.lookAt(new THREE.Vector3(...P3(ms + n[0]*5, mt + n[1]*5, h + 10))); grp.add(mu); }
+    const ms = 404 + 68.5, mt = -833 - 131.12, gb = bldAt(ms, mt - 2)?.base ?? h;   // (research: black and white, about 3.5 m wide and 5.5 m tall, on the lower NW face of the Ocean Tower's elevator tower, floors 2 and 3, facing the pool)
+    const mu = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 5.6), new THREE.MeshStandardMaterial({ map: tex, roughness: .9 })); mu.position.set(...P3(ms, mt, gb + 8.2)); mu.lookAt(new THREE.Vector3(...P3(ms, mt - 5, gb + 8.2))); grp.add(mu); }
   // the glass doors in and out of the lobby
   { const dm = new THREE.MeshStandardMaterial({ color: 0x2a3a44, roughness: .05, metalness: .6 }); for (const tt of [-966.4, -959.1]){ const d = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.8), dm); d.position.set(...P3(465, tt, h + 1.4)); const a = new THREE.Vector3(...P3(462, tt, 0)), b = new THREE.Vector3(...P3(468, tt, 0)); d.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x) + (tt < -960 ? Math.PI : 0); grp.add(d); } }
   const sp = (s, t, r, label, go) => FAIR.spots.push({ s, t, r, label, go, court: true });
   sp(465, -969.5, 2, '🛎️ Back into the lobby', o => { const [x, y] = landXY(465, -956.5); o.x = x; o.y = y; walkRef = 1e9; o.gh = groundAt(x, y); walkRef = o.gh + .3; });
-  sp(466, -980.6, 2.6, '🏊 Swim in the pool', o => { const [x, y] = landXY(466, -987.5); o.workout = { k: 'sit', x, y, sy: h - .95, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; sfx(300, .4, 'sine', .04, 0, -150); banner('🏊 The Fairmont pool', 'Heated and calm, under the palms. Move to climb out'); });
-  sp(466, -994.8, 2.6, '🏊 Swim in the pool', o => { const [x, y] = landXY(466, -987.5); o.workout = { k: 'sit', x, y, sy: h - .95, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; sfx(300, .4, 'sine', .04, 0, -150); banner('🏊 The Fairmont pool', 'Heated and calm, under the palms. Move to climb out'); });
+  sp(460, -971.4, 2.4, '🏊 Swim in the pool', o => { const [x, y] = landXY(464.5, -983); o.workout = { k: 'sit', x, y, sy: h - .95, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; sfx(300, .4, 'sine', .04, 0, -150); banner('🏊 The Fairmont pool', 'Heated and calm, under the palms. Move to climb out'); });
+  sp(466, -994.6, 2.4, '🏊 Swim in the pool', o => { const [x, y] = landXY(464.5, -983); o.workout = { k: 'sit', x, y, sy: h - .95, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; sfx(300, .4, 'sine', .04, 0, -150); banner('🏊 The Fairmont pool', 'Heated and calm, under the palms. Move to climb out'); });
   sp(tub[0] - 2.4, tub[1] + 1.5, 2, '♨️ Soak in the hot tub', o => { const [x, y] = landXY(tub[0], tub[1]); o.workout = { k: 'sit', x, y, sy: h - .15, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; banner('♨️ The whirlpool', 'Bubbles and warm water. Ahhh. Move to get out'); });
-  sp(470, -981, 2.6, '🎨 Look up at the mural', () => banner('🎨 The pool mural', "Jonas Never's 2021 mural of Arnold Schwarzenegger watches over the pool"));
+  sp(472, -971, 2.8, '🎨 Look up at the mural', () => banner('🎨 The pool mural', "Jonas Never's 2021 mural of Arnold Schwarzenegger watches over the pool"));
   sp(450, -985, 2, '🧴 Towels and sunscreen', () => banner('🧴 Poolside', 'Hotel guests get towels, loungers and sunscreen. Open 9am to 9pm. No lifeguard on duty'));
   g.add(grp); }
 /* The Fairmont's Wilshire frontage (Street View, July 2025): tall clipped hedges (about 2.6 m) along the sidewalk, red bougainvillea spilling
@@ -5494,6 +5520,37 @@ function buildFairPool(g, P3){ let h = -1e9; for (let ss = 447; ss <= 485; ss +=
    boxwood; and the black wrought-iron gateway: two ornate pillars with lanterns either side of the walk, an arch of scrollwork between them
    crowned by the gold-ringed MH monogram, and the sign hung under it (gold Fairmont script, MIRAMAR HOTEL & BUNGALOWS); one more lantern
    pillar at the outer edge of each lane. (Exact lane widths and pillar spacing are measured by eye from the photos: a guess within a metre.) */
+/* The Ocean Tower's facades (research "fairmont_detail.exterior", photos 2019-2026): white concrete. Every floor from the 2nd to the 10th has a
+   continuous balcony slab with blue-tinted glass rails in dark frames on the motor-court (SE) face, and white solid balustrades alternating with
+   glass on the garden (NW) face; sage-khaki spandrel panels toward the Ocean Ave end; white sunshade louvres stacked in front of the NE half of
+   the SE face; the narrow SW end on Ocean Ave with white piers, corner balconies, pale yellow panels and a tall white fin rising above the roof;
+   and the elevator tower at the NE end with one vertical strip of blue glazing and a grey louvred vent near the top. The Palisades Building
+   gets its cream cast-stone ground floor, stringcourses and thin dark cornice. (Panel counts are read off photos: approximate.) */
+function buildFairTower(g, P3){ const grp = new THREE.Group(), XY = (x, y) => [404 + x, -833 - y], G = bldAt(...XY(47, 120))?.base ?? landH(...XY(47, 120));
+  const M = (hex, r = .6, m = 0) => std(hex, r, m), white = M(0xf2efe6, .7), sage = M(0xb9b88f, .8), yellow = M(0xe8e1c3, .8), frame = M(0x2b2f33, .5, .3);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x2f4a6a, roughness: .08, metalness: .4, transparent: true, opacity: .62 });
+  const box = (x0, x1, y0, y1, z0, z1, m) => { const [s0, t0] = XY(x0, y0), [s1, t1] = XY(x1, y1), me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0) || .02, z1 - z0, Math.abs(t1 - t0) || .02), m); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + (z0 + z1)/2)); me.castShadow = true; me.receiveShadow = true; grp.add(me); return me; };
+  const X0 = 25, X1 = 70, Y0 = 110.5, Y1 = 130.5;
+  for (let k = 0; k < 9; k++){ const z = 5 + k*3;
+    box(X0, X1 - 6, Y0 - 1.6, Y0, z - .1, z + .1, white); box(X0, X1 - 6, Y0 - 1.62, Y0 - 1.5, z + .1, z + 1.1, glass); box(X0, X1 - 6, Y0 - 1.66, Y0 - 1.5, z + 1.08, z + 1.14, frame);   // (SE face: the balconies over the motor court)
+    box(X0, X1 - 6, Y1, Y1 + 1.4, z - .1, z + .1, white); for (let x = X0; x < X1 - 6.5; x += 3.6){ const solid = Math.round((x - X0)/3.6) % 2 === 0; box(x, x + 3.6, Y1 + 1.3, Y1 + 1.42, z + .1, z + 1.1, solid ? white : glass); }   // (NW face: over the pool)
+    box(X0 + .2, X0 + 4.5, Y0 - .02, Y0 + .02, z + .1, z + 2.9, sage); box(X0 + .2, X0 + 4.5, Y1 - .02, Y1 + .02, z + .1, z + 2.9, sage);   // (sage spandrels at the Ocean Ave end)
+    box(X0 - 1.4, X0, Y0 + 3.3, Y1 - 3.3, z - .1, z + .1, white); box(X0 - 1.42, X0 - 1.3, Y0 + 3.3, Y1 - 3.3, z + .1, z + 1.1, k < 4 ? white : glass);   // (the SW end: balconies across the middle bays, solid with planters low down, blue glass higher up)
+    if (k < 4) for (let y = Y0 + 4; y < Y1 - 4; y += 2.2) box(X0 - 1.32, X0 - .9, y, y + 1.2, z + 1.1, z + 1.45, M(0x4f7a3a, .9));
+    box(X0 - .02, X0 + .02, Y0 + 6, Y1 - 6, z + .2, z + 2.8, k < 4 ? white : yellow); if (k < 4) for (let y = Y0 + 6.3; y < Y1 - 6; y += .7) box(X0 - .12, X0, y, y + .25, z + .2, z + 2.8, white); }   // (fluted white panels on the lower floors)
+  for (let z = 5.4; z < 32; z += .55) box(47.5, 63.5, Y0 - 2.2, Y0 - 2, z, z + .12, white);   // (the sunshade louvres across the NE half of the SE face)
+  for (const [y0, y1] of [[Y0 - .2, Y0 + 3.3], [Y1 - 3.3, Y1 + .2]]) box(X0 - .5, X0 + .3, y0, y1, 5, 32.4, white);   // (the wide solid white piers either side of the Ocean Ave end)
+  // the Ocean Ave entrance at the tower's foot: an arched white canopy over a travertine and glass front, planters (Street View, Aug 2024)
+  { box(23.4, 23.75, 112, 129, 0, 4.6, M(0xc9b48e, .7)); box(23.35, 23.4, 116.5, 124.5, .2, 3.2, glass); box(19.5, 23.8, 111.6, 129.4, 4.6, 5.1, white);
+    const [as, at] = XY(19.6, 120.5), arch = new THREE.Mesh(new THREE.CylinderGeometry(8.9, 8.9, .5, 32, 1, true, -Math.PI/2.6, Math.PI/1.3), white); arch.rotation.z = Math.PI/2; arch.scale.set(1, 1, .12); arch.position.set(...P3(as, at, G + 4.4)); grp.add(arch);
+    for (const y of [112, 129]) box(19.6, 20.2, y - .3, y + .3, 0, 4.6, white); for (const y of [114, 127]){ const pot = box(21, 22, y - .5, y + .5, 0, .8, M(0xd8cdb4, .8)); const sh = new THREE.Mesh(new THREE.SphereGeometry(.7, 10, 8), M(0x3f6b2f, .9)); sh.position.set(...P3(...XY(21.5, y), G + 1.4)); grp.add(sh); } }
+  box(X0 - .35, X0 + .35, 119.6, 121.4, 5, 37.5, white);   // (the tall fin rising above the roof at the Ocean Ave end)
+  box(X0, X1, Y0, Y0 + .4, 31.6, 32.5, white); box(X0, X1, Y1 - .4, Y1, 31.6, 32.5, white);   // (the parapet)
+  box(66.5, 70.5, 111.95, 112.05, 5, 39, glass); box(64.2, 72.8, 111.9, 112.1, 36.5, 40.5, M(0x8f9294, .6)); box(64, 64.3, 112, 131, 5, 41, sage);   // (the elevator tower: its strip of glazing, the louvred vent, the sage edge)
+  // the Palisades Building: cream cast-stone ground floor, stringcourses, a thin dark cornice
+  { const P = FAIR_PARTS[0].p, Gp = bldAt(...XY(105, 160))?.base ?? G; for (let i = 0; i < P.length; i++){ const a = P[i], b = P[(i + 1) % P.length], [sa, ta] = XY(...a), [sb, tb] = XY(...b), L = Math.hypot(sb - sa, tb - ta); if (L < 1) continue; const mid = [(sa + sb)/2, (ta + tb)/2], ang = -Math.atan2(...(() => { const A = new THREE.Vector3(...P3(sa, ta, 0)), B = new THREE.Vector3(...P3(sb, tb, 0)); return [B.z - A.z, B.x - A.x]; })());
+      for (const [z0, z1, hex, d] of [[0, 4.2, 0xc8b896, .12], [4.2, 4.5, 0xd8ccae, .22], [19.6, 20, 0xd8ccae, .2], [23.3, 23.9, 0x3a3330, .3]]){ const me = new THREE.Mesh(new THREE.BoxGeometry(L + d*2, z1 - z0, d*2), M(hex, .8)); me.position.set(...P3(mid[0], mid[1], Gp + (z0 + z1)/2)); me.rotation.y = ang; grp.add(me); } } }
+  g.add(grp); }
 function buildFairFront(g, P3){ const grp = new THREE.Group(), T0 = -848, H = (s2, t2) => landH(s2, t2), black = std(0x141414, .45, .4), hedgeM = addDetail(std(0x2f5a2a, .9), 'ground'), lamp = new THREE.MeshBasicMaterial({ color: 0xfff1c8 });
   const put = (geo, m, s2, t2, y, base) => { const me = new THREE.Mesh(geo, m); me.position.set(...P3(s2, t2, (base ?? H(s2, t2)) + y)); me.castShadow = me.receiveShadow = true; grp.add(me); return me; };
   const turn = (me, s2, t2) => { const a = new THREE.Vector3(...P3(s2 - 1, t2, 0)), b = new THREE.Vector3(...P3(s2 + 1, t2, 0)); me.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); return me; };
@@ -5517,12 +5574,12 @@ function buildFairFront(g, P3){ const grp = new THREE.Group(), T0 = -848, H = (s
   g.add(grp); }
 function fairAct(o){ if (!o?.onLand || o.workout) return null; const [s, t] = landST(o.x, o.y), court = inFairCourt(s, t); if (!inFairLobby(s, t) && !court) return null; let best = null, bd = 9; for (const P of FAIR.spots){ if (!!P.court !== court) continue; const d = Math.hypot(P.s - s, P.t - t); if (d < P.r && d < bd){ bd = d; best = P; } } return best ? { label: best.label, go: () => best.go(o) } : null; }
 function buildFairmont(g, P3){ const grp = new THREE.Group(), at = (sv, t, y) => P3(sv, t, landH(sv, t) + y);
-  buildFairLobby(g, P3); buildFairPool(g, P3); buildFairFront(g, P3);
+  buildFairLobby(g, P3); buildFairPool(g, P3); buildFairFront(g, P3); buildFairTower(g, P3);
   { const wall = new THREE.Mesh(new THREE.BoxGeometry(1, 1.1, 9), std(0xf1e6cf, .9)); wall.position.set(...at(419, -860, .55)); grp.add(wall);
     for (const ry of [-Math.PI/2, Math.PI/2]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(8.4, .8), new THREE.MeshBasicMaterial({ map: labelTex('FAIRMONT MIRAMAR', '#1f3b2c', '#d4b46a', 1024, 98, 70) })); sg.position.set(...at(419, -860, .6)); sg.rotation.y = ry; sg.translateZ(.52); grp.add(sg); } }
   for (const k of [0, 1, 2]){ const pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 9, 6), std(0xdddddd, .4, .6)); pole.position.set(...at(424 + k*3, -872, 4.5)); grp.add(pole);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshBasicMaterial({ color: [0x1f3b2c, 0xffffff, 0x1f3b2c][k], side: THREE.DoubleSide })); fl.position.set(...at(424 + k*3 + .8, -872, 8.4)); grp.add(fl); }
-  { const R = mulberry(1889), c = [462, -908], bark = std(0x8a7f74, .9);   // (in the middle of the oval motor court off Wilshire, where the map has the open loop: research says about 56 m in from Ocean and 70 m back from Wilshire, a guess)   // the fig: a fat trunk with roots spreading out, big branches, a wide dark-green canopy
+  { const R = mulberry(1889), c = [462, -917], bark = std(0x8a7f74, .9);   // (in the middle of the oval motor court off Wilshire, where the map has the open loop: research says about 56 m in from Ocean and 70 m back from Wilshire, a guess)   // the fig: a fat trunk with roots spreading out, big branches, a wide dark-green canopy
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 7, 10), bark); trunk.position.set(...at(c[0], c[1], 3.5)); grp.add(trunk);
     for (let k = 0; k < 8; k++){ const a = k/8*TAU + R()*.4, root = new THREE.Mesh(new THREE.CylinderGeometry(.25, .7, 5, 6), bark); const [x, y, z] = at(c[0] + Math.cos(a)*2.8, c[1] + Math.sin(a)*2.8, .35); root.position.set(x, y, z); root.rotation.set(Math.sin(a)*1.35, 0, -Math.cos(a)*1.35); grp.add(root); }
     for (let k = 0; k < 6; k++){ const a = k/6*TAU + .3, br = new THREE.Mesh(new THREE.CylinderGeometry(.35, .8, 9, 7), bark), [x, y, z] = at(c[0] + Math.cos(a)*4, c[1] + Math.sin(a)*4, 9); br.position.set(x, y, z); br.rotation.set(Math.sin(a)*.9, 0, -Math.cos(a)*.9); grp.add(br); }
@@ -6186,7 +6243,7 @@ function buildCoast(){
     if (pav){ pavilions.push(b); continue; }
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
-    if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof); continue; }   // (the Civic Center and the beach hotels, in their real colors)
+    if (b.look){ extrude(b.p, b.base, b.top, b.look.wall, b.look.roof, b.look.plain); continue; }   // (the Civic Center and the beach hotels, in their real colors)
     { const H = OCEAN_HOTELS.find(H => Math.abs(s0 - H.box[0]) < 1.5 && Math.abs(t0 - H.box[1]) < 1.5); if (H){ extrude(H.round ? roundCorner(b.p, H.round) : b.p, b.base, H.ht ? b.base + H.ht : b.top, H.c, H.c, true); continue; } }   // (the Georgian and the Shangri-La: see buildOceanHotels)
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)

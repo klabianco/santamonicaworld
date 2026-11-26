@@ -810,6 +810,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 (() => {
@@ -3922,7 +3923,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .5;
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const camera = new THREE.PerspectiveCamera(55, 1, .05, 4000);
-let composer = null, renderPass = null, maxPR = 1.5, shadowWipe = false; const SUNS = [];
+let composer = null, renderPass = null, aoPass = null, maxPR = 1.5, shadowWipe = false; const SUNS = [];
 function wipeShadows(){ const cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha();
   for (const sun of SUNS) if (sun.shadow.map){ renderer.setRenderTarget(sun.shadow.map); renderer.setClearColor(0xffffff, 1); renderer.clear(); }
   renderer.setRenderTarget(null); renderer.setClearColor(cc, ca); }
@@ -3936,10 +3937,11 @@ const GFX = [   // lowest to highest
   { pr:1,   bloom:false, shadow:true,  view:6, near:3, fish:32 },
   { pr:1,   bloom:true,  shadow:true,  view:6, near:3, fish:32 },
   { pr:1.25,bloom:true,  shadow:true,  view:6, near:3, fish:32 },
-  { pr:1.5, bloom:true,  shadow:true,  view:6, near:3, fish:32 } ];
+  { pr:1.5, bloom:true,  shadow:true,  view:6, near:3, fish:32 },
+  { pr:1.5, bloom:true,  shadow:true,  view:6, near:3, fish:32, ao:true } ];   // (the top level adds soft contact shadows: ambient occlusion where things meet; slower devices step down and go without)
 const TOUCH_DEVICE = navigator.maxTouchPoints > 1 || matchMedia('(pointer: coarse)').matches;
 document.body.classList.toggle('touch', TOUCH_DEVICE);   // (the start screen shows the phone way to play, or the keyboard way)
-let gfx = TOUCH_DEVICE ? 2 : 5, gfxCap = GFX.length - 1, gfxT = 0, gfxUpAt = -99, frameMs = 16, VIEW_R = 6, NEAR_R = 3, FISH_R = 32;
+let gfx = TOUCH_DEVICE ? 2 : 6, gfxCap = GFX.length - 1, gfxT = 0, gfxUpAt = -99, frameMs = 16, VIEW_R = 6, NEAR_R = 3, FISH_R = 32;
 function applyGfx(first){
   const g = GFX[gfx]; maxPR = g.pr; VIEW_R = g.view; NEAR_R = g.near; FISH_R = g.fish;
   // Shadows switch off by no longer redrawing the shadow map and wiping it blank, which is instant. (Turning shadows fully off
@@ -3950,6 +3952,7 @@ function applyGfx(first){
 function resize3D(){ renderer.setPixelRatio(Math.min(DPR, maxPR)); renderer.setSize(W, H, false); camera.aspect = W/H; camera.updateProjectionMatrix();
   if (composer){ composer.setPixelRatio(Math.min(DPR, 1.25)); composer.setSize(W, H); } }
 try { composer = new EffectComposer(renderer); renderPass = new RenderPass(new THREE.Scene(), camera); composer.addPass(renderPass);
+  try { aoPass = new GTAOPass(new THREE.Scene(), camera, 512, 512); aoPass.output = GTAOPass.OUTPUT.Default; aoPass.blendIntensity = .9; aoPass.updateGtaoMaterial({ radius: .9, distanceExponent: 1.4, thickness: 1.2, scale: 1.1, samples: 12, distanceFallOff: 1 }); aoPass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 }); aoPass.enabled = false; composer.addPass(aoPass); } catch(e){ aoPass = null; }
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), .2, .45, .95)); composer.addPass(new OutputPass()); } catch(e){ composer = null; }
 function adaptQuality(dt){
   frameMs += (dt*1000 - frameMs)*.05; gfxT += dt;
@@ -3963,7 +3966,7 @@ function draw(scene){
   const fresh = !renderer.shadowMap.autoUpdate && SUNS.some(sn => !sn.shadow.map && sn.parent === scene);
   if (fresh) renderer.shadowMap.needsUpdate = true;
   let done = false;
-  if (composer && GFX[gfx].bloom){ renderPass.scene = scene; try { composer.render(); done = true; } catch(e){ composer = null; } }
+  if (composer && GFX[gfx].bloom){ renderPass.scene = scene; if (aoPass){ aoPass.enabled = !!GFX[gfx].ao && !underNow; aoPass.scene = scene; } try { composer.render(); done = true; } catch(e){ composer = null; } }
   if (!done) renderer.render(scene, camera);
   if (fresh || shadowWipe){ shadowWipe = false; wipeShadows(); } }
 applyGfx(true); window.__r3d = true; resize3D();

@@ -7796,7 +7796,7 @@ function iceBuild(){ if (iceVis) return iceVis; const I = ICE, [S0, S1, T0, T1] 
    things that happened (e). It's how the world gets built out where people actually play. */
 let attnT = 0, attnSaveT = 0; const _camDir = new THREE.Vector3();
 function attnBox(){ const A = save.attn && typeof save.attn === 'object' ? save.attn : (save.attn = {}); A.c ||= {}; A.l ||= {}; A.p ||= {}; A.e ||= []; A.since ||= Date.now(); return A; }
-function attnNote(txt){ try { if (mode !== 'ocean' || !txt) return; const A = attnBox(), m = Math.round((Date.now() - A.since)/6e4); A.e.push([m, String(txt).replace(/[^\p{L}\p{N} '!:.,&-]/gu, '').trim().slice(0, 40)]); if (A.e.length > 60) A.e.splice(0, A.e.length - 60); } catch(e){} }
+function attnNote(txt){ try { if (mode !== 'ocean' || !txt) return; const A = attnBox(), m = Math.round((Date.now() - A.since)/6e4); const tx = String(txt).replace(/[^\p{L}\p{N} '!:.,&-]/gu, '').trim().slice(0, 40), last = A.e[A.e.length - 1]; if (last && last[1] === tx && m - last[0] < 3) return; A.e.push([m, tx]); if (A.e.length > 60) A.e.splice(0, A.e.length - 60); } catch(e){} }
 // the trip report (Menu → Copy trip report): where you've spent your time, in words, to paste to Claude so the world gets built out there
 function tripReport(){ const A = save.attn || {}, since = A.since ? new Date(A.since).toLocaleDateString() : '?', mins = v => `${Math.round(v/60)} min`;
   const byPlace = Object.entries(A.p || {}).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `  ${k}: ${mins(v)}`);

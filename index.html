@@ -4249,12 +4249,29 @@ function caps(r, len, m, off = 0){ const g = new THREE.CapsuleGeometry(r, len, 6
 function ellip(r, sx, sy, sz, m, seg = 20){ const g = new THREE.SphereGeometry(r, seg, Math.max(8, seg*.7|0)); g.scale(sx, sy, sz);
   const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; return mesh; }
 const SKIN = std(0xd49b78, .5);
+/* A smooth body part along the x axis: P is a list of [x, half-depth (y), half-width (z), y-shift], one oval cross-section each, joined by a
+   spline so it swells and tapers like a real torso or limb; the ends close up. */
+function sculpt(P, m, seg = 18, rings = 6){ const pts = [], n = P.length; const at = (i, f) => { const a = P[Math.max(0, i - 1)], b = P[i], c = P[Math.min(n - 1, i + 1)], d = P[Math.min(n - 1, i + 2)];   // (Catmull-Rom between the stations)
+    return b.map((v, k) => { const p0 = a[k], p1 = v, p2 = c[k], p3 = d[k]; return .5*((2*p1) + (-p0 + p2)*f + (2*p0 - 5*p1 + 4*p2 - p3)*f*f + (-p0 + 3*p1 - 3*p2 + p3)*f*f*f); }); };
+  for (let i = 0; i < n - 1; i++) for (let k = 0; k < rings; k++) pts.push(at(i, k/rings)); pts.push(P[n - 1]);
+  const pos = [], idx = [], R = pts.length; for (const [x, ry, rz, yo] of pts) for (let j = 0; j <= seg; j++){ const a = j/seg*TAU; pos.push(x, (yo || 0) + Math.cos(a)*Math.max(ry, .0005), Math.sin(a)*Math.max(rz, .0005)); }
+  for (let i = 0; i < R - 1; i++) for (let j = 0; j < seg; j++){ const a = i*(seg + 1) + j, b = a + seg + 1; if (P[n - 1][0] > P[0][0]) idx.push(a, a + 1, b, a + 1, b + 1, b); else idx.push(a, b, a + 1, a + 1, b, b + 1); }   // (faces outward whichever way the part runs)
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); const me = new THREE.Mesh(g, m); me.castShadow = true; return me; }
+// the person's shape (x up the body, -y the front, z the sides), in the swimmer rig's units
+const BODY_SHAPE = {
+  chest: [[-.2, .1, .15, .006], [-.12, .098, .148], [0, .097, .142, -.004], [.12, .108, .158, -.01], [.24, .118, .172, -.014], [.34, .112, .185, -.008], [.42, .085, .165, 0], [.47, .055, .09, .005], [.5, .045, .05, .01]],
+  hips: [[-.37, .03, .04, .01], [-.34, .095, .125, .012], [-.27, .115, .162, .018], [-.17, .113, .165, .014], [-.08, .104, .152, .006], [-.02, .1, .148, .004]],
+  upper: [[-.02, .045, .045], [.03, .056, .058], [.1, .05, .05, -.004], [.18, .045, .046, -.006], [.27, .036, .037], [.32, .03, .03]],
+  fore: [[-.02, .033, .033], [.06, .041, .04, -.003], [.15, .036, .034], [.25, .027, .03], [.3, .025, .028]],
+  thigh: [[.03, .08, .08, .004], [-.05, .086, .084, -.004], [-.18, .077, .072], [-.32, .062, .058], [-.42, .05, .048], [-.46, .045, .044]],
+  calf: [[.02, .046, .046], [-.06, .054, .05, .012], [-.14, .056, .05, .016], [-.26, .042, .04, .008], [-.38, .03, .03], [-.43, .028, .028]] };
+const shapeScale = (P, k, kz = k, dx = 0) => P.map(([x, ry, rz, yo]) => [x + dx, ry*k, rz*kz, yo || 0]);
 function buildSwimmer(){
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
   const suit = std(0xe0402f, .42), capM = std(0x1f5fe0, .22), gog = std(0x0b1522, .08, .6);
-  const torso = caps(.155, .4, suit); torso.geometry.scale(1, .72, 1.25); torso.position.x = .12; body.add(torso);
-  const hips = caps(.15, .12, suit); hips.geometry.scale(1, .76, 1.18); hips.position.x = -.2; body.add(hips);
-  const neck = caps(.055, .08, SKIN); neck.position.x = .5; body.add(neck);
+  const torso = sculpt(BODY_SHAPE.chest, suit, 22, 5); body.add(torso);   // (a real chest and waist, not a capsule)
+  const hips = sculpt(BODY_SHAPE.hips, suit, 22, 5); body.add(hips);
+  const neck = sculpt([[.44, .052, .055, .005], [.5, .048, .05, .006], [.56, .046, .047, .004], [.6, .04, .042]], SKIN, 14, 3); body.add(neck);
   const head = ellip(.108, 1.12, .95, .92, SKIN); head.position.set(.64, .01, 0); body.add(head);
   const cap = new THREE.Mesh(new THREE.SphereGeometry(.116, 24, 16, 0, TAU, 0, Math.PI*.6), capM);
   cap.scale.set(1.12, .97, .94); cap.rotation.z = .95; cap.position.copy(head.position); cap.castShadow = true; body.add(cap);
@@ -4262,17 +4279,17 @@ function buildSwimmer(){
   const arms = {}, legs = {};
   for (const [id, s] of [['la',-1],['ra',1]]){
     const sh = new THREE.Group(); sh.position.set(.4, .02, s*.2); body.add(sh);
-    sh.add(caps(.048, .22, SKIN, .16));
+    sh.add(sculpt(BODY_SHAPE.upper, SKIN, 14, 4));   // (deltoid, biceps, tapering to the elbow)
     const el = new THREE.Group(); el.position.x = .31; sh.add(el);
-    el.add(caps(.04, .2, SKIN, .14));
+    el.add(sculpt(BODY_SHAPE.fore, SKIN, 14, 4));   // (forearm swelling below the elbow, slim wrist)
     const hand = ellip(.06, 1.25, .35, .8, SKIN); hand.position.x = .31; el.add(hand);
     arms[id] = { sh, el };
   }
   for (const [id, s] of [['ll',-1],['rl',1]]){
     const hp = new THREE.Group(); hp.position.set(-.3, -.01, s*.09); body.add(hp);
-    hp.add(caps(.074, .3, SKIN, -.22));
+    hp.add(sculpt(BODY_SHAPE.thigh, SKIN, 16, 4));   // (a thigh that narrows to the knee)
     const kn = new THREE.Group(); kn.position.x = -.44; hp.add(kn);
-    kn.add(caps(.054, .3, SKIN, -.2));
+    kn.add(sculpt(BODY_SHAPE.calf, SKIN, 16, 4));   // (the calf muscle at the back, a slim ankle)
     const ft = ellip(.06, 1.6, .42, .8, SKIN); ft.position.x = -.43; kn.add(ft);
     legs[id] = { hp, kn, ft };
   }
@@ -4288,10 +4305,10 @@ function buildSwimmer(){
   const goggles = body.children.filter(c => c.material === gog);
   // street clothes for walking around on land (a T-shirt, shorts and hair instead of the swim cap and goggles); hidden in the water
   const shirt = std(0x3f9fd2, .8), shortsM = std(0x2d3d58, .8), hairM = std(0x3a2a1f, .9), street = [];
-  const tee = caps(.166, .4, shirt); tee.geometry.scale(1, .76, 1.28); tee.position.x = .13; body.add(tee); street.push(tee);
-  const shorts = caps(.162, .12, shortsM); shorts.geometry.scale(1, .8, 1.2); shorts.position.x = -.2; body.add(shorts); street.push(shorts);
-  for (const id of ['la', 'ra']){ const sl = caps(.062, .08, shirt, .07); arms[id].sh.add(sl); street.push(sl); }
-  for (const id of ['ll', 'rl']){ const leg = caps(.084, .12, shortsM, -.12); legs[id].hp.add(leg); street.push(leg); }
+  const tee = sculpt(shapeScale(BODY_SHAPE.chest.slice(0, 8), 1.08, 1.07).concat([[.495, .056, .063, .01], [.505, .052, .058, .01]]), shirt, 22, 5); body.add(tee); street.push(tee);   // (the T-shirt: the chest shape, a little bigger, open at the neck)
+  const shorts = sculpt(shapeScale(BODY_SHAPE.hips.slice(1), 1.07, 1.06).concat([[.02, .1, .15]]), shortsM, 22, 5); body.add(shorts); street.push(shorts);
+  for (const id of ['la', 'ra']){ const sl = sculpt([[-.03, .062, .064], [.04, .066, .068], [.12, .06, .061], [.15, .058, .059]], shirt, 14, 3); arms[id].sh.add(sl); street.push(sl); }   // (short sleeves)
+  for (const id of ['ll', 'rl']){ const leg = sculpt(shapeScale(BODY_SHAPE.thigh.slice(0, 4), 1.12).concat([[-.3, .07, .066]]), shortsM, 16, 3); legs[id].hp.add(leg); street.push(leg); }   // (shorts legs to just above the knee)
   const hair = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 16, 0, TAU, 0, Math.PI*.56), hairM);
   hair.scale.setScalar(1.14); hair.rotation.z = -1.02; hair.position.copy(head.position); hair.castShadow = true; body.add(hair); street.push(hair);
   for (const o of street) o.visible = false;

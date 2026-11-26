@@ -4701,7 +4701,7 @@ function sfStreets(D, g, W3, add, flatGeo, off){ const L = SF.LAND, m4 = new THR
         const pole = new THREE.Mesh(poleG, poleM); pole.position.set(...W3(px, py, L + 1.8)); g.add(pole);
         for (const [R, U2, y] of [[A, ua, 3.3], [B, ub, 3.75]]) for (const flip of [0, Math.PI]){ const bl = new THREE.Mesh(bladeG, blade(short(R.n))); bl.position.set(...W3(px, py, L + y)); bl.rotation.y = Math.atan2(U2[1], U2[0]) + flip; bl.translateZ(.015); g.add(bl); } } } }
   // storefronts: every named shop and restaurant in OpenStreetMap on its own building, on the side facing its street
-  { const glass = new THREE.MeshStandardMaterial({ color: 0x8fb3c4, roughness: .12, metalness: .25, emissive: 0x2a3a44, emissiveIntensity: .8 }), frame = std(0x3a3a3a, .5), gG = [], fG = [], aw = new Map(); SF.fronts = [];
+  { const glass = new THREE.MeshStandardMaterial({ color: 0x6f8794, roughness: .04, metalness: .65, emissive: 0x2a3a44, emissiveIntensity: .35, envMapIntensity: 1.5 }), frame = std(0x3a3a3a, .5), gG = [], fG = [], aw = new Map(); SF.fronts = [];
     const LOOK = { 'In-N-Out Burger': ['#ffffff', '#d32f2f'], 'Boudin Bakery': ['#f5f0e1', '#8d1c1c'], 'Ghirardelli Chocolate Experience': ['#3b1f14', '#e8c77a'], 'Hard Rock Cafe': ['#111111', '#e8b84a'], 'Bubba Gump Shrimp Co.': ['#1f4e8c', '#ffffff'], 'Starbucks': ['#00704a', '#ffffff'] };
     const PAL = [['#1f3b4d', '#ffffff'], ['#7b1f2b', '#ffffff'], ['#2e5d3a', '#ffffff'], ['#f4efe2', '#2b2b2b'], ['#0d47a1', '#ffffff'], ['#5d4037', '#fff3d6'], ['#263238', '#ffd54f']];
     const box = (arr, x, y, h, w, hh, d, ang) => { const q = new THREE.BoxGeometry(w, hh, d); q.rotateY(ang); const [wx, , wz] = W3(x, y, 0); q.translate(wx, L + h, wz); arr.push(q); };
@@ -5585,7 +5585,7 @@ function nearestFacade(s, t){ let best = null; for (let i = Math.floor((s - 20)/
         if (d > 18) continue; const len = Math.sqrt(L2); let nx = -dy/len, ny = dx/len; if ((px + nx - cs)*nx + (py + ny - ct)*ny < (px - cs)*nx + (py - ct)*ny) { nx = -nx; ny = -ny; }   // (outward, away from the middle of the building)
         const road = [5, 8, 11, 15].some(k => onRoadway(px + nx*k, py + ny*k)) ? 0 : 30;   // (strongly prefer a side that faces a street)
         if (!best || d + road < best.score) best = { score: d + road, b, px, py, nx, ny, ex: [A, B], u, len }; } } } return best; }
-function buildStorefronts(g){ bldIndex(); const glass = new THREE.MeshStandardMaterial({ color: 0x8fb3c4, roughness: .12, metalness: .25, emissive: 0x2a3a44, emissiveIntensity: .8 }), frame = std(0x3a3a3a, .5), groups = new Map(), signs = [];
+function buildStorefronts(g){ bldIndex(); const glass = new THREE.MeshStandardMaterial({ color: 0x6f8794, roughness: .04, metalness: .65, emissive: 0x2a3a44, emissiveIntensity: .35, envMapIntensity: 1.5 }), frame = std(0x3a3a3a, .5), groups = new Map(), signs = [];
   const box = (geos, cx, cy, y, w, h, d, ang) => { const q = new THREE.BoxGeometry(w, h, d); q.rotateY(ang); const [x, z] = landXY(cx, cy); q.translate(x*U, y, z*U); geos.push(q); };
   const G = k => groups.get(k) || groups.set(k, []).get(k);
   for (const [name, kind, s, t] of TOWN_SHOPS){ if (onPierDeck(s, t) || inSMP(s, t)) continue; const f = nearestFacade(s, t); if (!f) continue;

@@ -3147,7 +3147,8 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
   { const st = pierStairH(s, t); if (st != null) h = Math.max(h, st); }
-  { const rh = rampH(s, t); if (rh != null && !(rh - h > 2.2 && walkRef < rh - 1.2)) h = Math.max(h, rh); }   // (the temporary vehicle ramp up to the deck parking)
+  { const rh = rampH(s, t); if (rh != null && !(rh - h > 2.2 && walkRef < rh - 1.2)) h = Math.max(h, rh); }
+  { const ah = amphH(s, t); if (ah != null) h = Math.max(h, ah); }   // (the temporary vehicle ramp up to the deck parking)
   if (t > 4250 && t < 4420 && s < 160 && VPIER.poly && vpierAt(s, t)){ const dk = vpierDeck(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the Venice Fishing Pier)
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20 && !inFairLobby(s, t)){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }   /* (the Fairmont's lobby is open inside) */
@@ -5724,6 +5725,46 @@ function townFront(o){ const [s, t] = landST(o.x, o.y); if (s < 380) return null
 // The bridge works (see BRIDGEWORK): the old bridge's concrete bents standing with the deck gone from the middle, a dirt pad, green-screened
 // fencing with the project's banners, a yellow excavator and a crawler crane; the temporary pedestrian bridge's chain-link sides; the
 // temporary vehicle ramp up from the paved beach lot (with its stalls and parked cars) to the deck parking, and its signs.
+/* Carousel Park (pier research; Moore Ruble Yudell, 1984-87, a city landmark since 2018): down at beach level between the pier's east end and
+   the Hippodrome. A 5,000 sq ft playground with a concrete ship and a dragon made of river-washed granite boulders, concrete light standards,
+   and a wood-plank amphitheater of steps up to the pier deck, flanked by two octagonal towers like the carousel building's. (The exact layout
+   inside the park is a guess.) */
+const CPARK = { box: [252, 272, 14, 44], spots: [] };
+function amphH(s, t){ if (s < 251.5 || s > 258.7 || t < 17 || t > 43) return null; return lerp(pierDeckH(251), landH(258.7, t), (s - 251.5)/7.2); }   // (walking up and down the amphitheater's steps)
+/* The licensed carts on the pier deck (pier research): Japadog and Pier Photo across from Playland Arcade, Downtown Fruit across from Pacific
+   Park's main gate, Pier Tamales further out, and Candy Carousel, 66 to Cali and Hats Amazing across from Bubba Gump. Most face the park from
+   the north side of the walkway. (Each cart's exact spot is a guess from those descriptions.) */
+const PIER_CARTS = [['Japadog', 344, 7, '#d32f2f'], ['Pier Photo', 350, 7, '#263238'], ['Downtown Fruit', 420, 7, '#43a047'], ['Pier Tamales', 371, 7, '#ef6c00'], ['Candy Carousel', 262, -7, '#ec407a'], ['66 to Cali', 256, -7, '#1565c0'], ['Hats Amazing', 250, -7, '#6d4c41']];
+function buildPierCarts(g, P3){ const grp = new THREE.Group();
+  for (const C of PIER_CARTS){ const [name, A, off0, col] = C, s = 390 - A, [ea, eb] = pierSides(s), t = off0 > 0 ? ea + 1.6 : Math.min(-off0, eb - 1.6), off = C[2] = -t, h = pierDeckH(s), c = new THREE.Group();   // (north-side carts sit just inside the deck's north rail) c.position.set(...P3(s, t, h)); grp.add(c);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1.1), std(0xf4f4f0, .5)); body.position.y = .85; c.add(body); const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.02, .25, 1.12), std(parseInt(col.slice(1), 16), .5)); stripe.position.y = 1.2; c.add(stripe);
+    for (const x of [-.7, .7]) for (const z of [-.5, .5]){ const w = new THREE.Mesh(new THREE.CylinderGeometry(.18, .18, .08, 12), std(0x333333, .6)); w.rotation.x = Math.PI/2; w.position.set(x, .2, z); c.add(w); }
+    const um = new THREE.Mesh(new THREE.ConeGeometry(1.5, .5, 8, 1, true), new THREE.MeshStandardMaterial({ color: parseInt(col.slice(1), 16), roughness: .8, side: THREE.DoubleSide })); um.position.y = 2.7; c.add(um); const pole = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.5, 6), std(0xdddddd, .4)); pole.position.y = 2; c.add(pole);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.9, .4), new THREE.MeshBasicMaterial({ map: labelTex(name.toUpperCase(), col, '#ffffff', 512, 108, 54), side: THREE.DoubleSide })); sg.position.set(0, 1.62, 0); c.add(sg);
+    const a = new THREE.Vector3(...P3(s - 1, t, 0)), b = new THREE.Vector3(...P3(s + 1, t, 0)); c.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);
+    PIER_DO.push(['menu:' + name, A, off + (off > 0 ? -1.6 : 1.6), 1.6, { Japadog: '🌭', 'Pier Photo': '📸', 'Downtown Fruit': '🍉', 'Pier Tamales': '🫔', 'Candy Carousel': '🍭', '66 to Cali': '🛣️', 'Hats Amazing': '👒' }[name] + ' ' + name]); }
+  g.add(grp); }
+function buildCarouselPark(g, P3){ const grp = new THREE.Group(), H = (s, t) => landH(s, t), conc = std(0xd8d2c4, .85), wood = addDetail(std(0x9c7a55, .85), 'dirt'), gran = std(0x9a948a, .9);
+  const put = (geo, m, s, t, y) => { const me = new THREE.Mesh(geo, m); me.position.set(...P3(s, t, y)); me.castShadow = me.receiveShadow = true; grp.add(me); return me; };
+  const spot = (s, t, r, label, go) => CPARK.spots.push({ s, t, r, label, go });
+  // the amphitheater: wood-plank steps from the sand-level park up to the pier deck
+  { const top = pierDeckH(251), N = 8; for (let k = 0; k < N; k++){ const s0 = 251.5 + k*.9, y = top - (k + 1)*(top - H(262, 30))/N; put(new THREE.BoxGeometry(.9*40*U, Math.max(.2, y - H(s0, 30) + .3), 26*40*U), wood, s0 + .45, 30, (y + H(s0, 30) - .3)/2); } }
+  // the two octagonal towers flanking it (cream, with green roofs like the Hippodrome)
+  for (const tt of [15.5, 44.5]){ const g0 = H(254, tt); put(new THREE.CylinderGeometry(2, 2, 7, 8), std(0xf0e6cf, .7), 254, tt, g0 + 3.5); put(new THREE.ConeGeometry(2.4, 2.2, 8), std(0x4c8a6a, .6), 254, tt, g0 + 8.1); LAND_BOXES.push([252, tt - 2, 256, tt + 2, g0 + 7]); }
+  // the concrete ship: a hull with a pointed bow, a deck and a mast; climb aboard
+  { const ss = 265, tt = 22, g0 = H(ss, tt), hull = new THREE.Shape(); hull.moveTo(-1.8, -4); hull.lineTo(1.8, -4); hull.lineTo(1.8, 2.5); hull.quadraticCurveTo(0, 5.5, -1.8, 2.5); hull.closePath();
+    const hg = new THREE.ExtrudeGeometry(hull, { depth: 1.4, bevelEnabled: false }); hg.rotateX(-Math.PI/2); const hm = put(hg, conc, ss, tt, g0); hm.rotation.y = 0;
+    put(new THREE.CylinderGeometry(.12, .12, 4, 8), std(0x8a6a48, .8), ss, tt + 1, g0 + 3.4); put(new THREE.BoxGeometry(.05*40*U, 1.6, 2.2*40*U), std(0xf4f4f0, .7), ss, tt + 1.2, g0 + 4); LAND_BOXES.push([ss - 1.8, tt - 4, ss + 1.8, tt + 3, g0 + 1.4]);
+    spot(ss, tt - 5.3, 2.2, '⛵ Climb aboard the concrete ship', o => { const [x, y] = landXY(ss, tt + 1.8); o.x = x; o.y = y; walkRef = g0 + 3; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner('⛵ Ahoy!', "Up on the deck of Carousel Park's concrete ship. Land ho!"); }); }
+  // the dragon of river-washed granite boulders, snaking through the sand, with its head up
+  { const sg = (k) => [262 + Math.sin(k*.7)*3.5, 30 + k*1.15]; for (let k = 0; k < 11; k++){ const [ss, tt] = sg(k), r = k === 10 ? 1.1 : .55 + Math.sin(k/10*Math.PI)*.35, b = put(new THREE.IcosahedronGeometry(r, 1), gran, ss, tt, H(ss, tt) + r*.7 + (k === 10 ? .5 : 0)); b.scale.set(1.15, .85, 1); b.rotation.y = k; }
+    const [hs, ht] = sg(10); for (const e of [-.4, .4]) put(new THREE.SphereGeometry(.12, 8, 6), std(0x222222, .4), hs + e, ht + .9, H(hs, ht) + 1.9); put(new THREE.ConeGeometry(.25, .7, 6), gran, hs - .5, ht, H(hs, ht) + 2.4); put(new THREE.ConeGeometry(.25, .7, 6), gran, hs + .5, ht, H(hs, ht) + 2.4);
+    spot(262, 35, 2.6, '🐉 Climb the boulder dragon', o => { const [ss, tt] = sg(5), [x, y] = landXY(ss, tt); o.workout = { k: 'sit', x, y, sy: H(ss, tt) + 1.1, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; banner('🐉 The boulder dragon', 'Smooth river-washed granite, warm in the sun. Move to hop off'); }); }
+  // concrete light standards round the octagonal entry, and a little sign
+  for (const [ss, tt] of [[259, 16], [271, 16], [259, 43], [271, 43], [271, 30]]){ put(new THREE.CylinderGeometry(.18, .25, 4.5, 8), conc, ss, tt, H(ss, tt) + 2.25); put(new THREE.SphereGeometry(.35, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff1c8 }), ss, tt, H(ss, tt) + 4.7); }
+  { const sgn = put(new THREE.PlaneGeometry(3.2, .7), new THREE.MeshBasicMaterial({ map: labelTex('CAROUSEL PARK', '#4c8a6a', '#ffffff', 512, 112, 64), side: THREE.DoubleSide }), 271.6, 30, H(271.6, 30) + 2.2); const a = new THREE.Vector3(...P3(271.6, 29, 0)), b = new THREE.Vector3(...P3(271.6, 31, 0)); sgn.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }
+  g.add(grp); }
+function cparkAct(o){ if (!o?.onLand || o.workout) return null; const [s, t] = landST(o.x, o.y), B = CPARK.box; if (s < B[0] - 3 || s > B[1] + 3 || t < B[2] - 3 || t > B[3] + 3) return null; let best = null, bd = 9; for (const P of CPARK.spots){ const d = Math.hypot(P.s - s, P.t - t); if (d < P.r && d < bd){ bd = d; best = P; } } return best ? { label: best.label, go: () => best.go(o) } : null; }
 function buildBridgeWorks(g, P3){ const grp = new THREE.Group(), [o0, o1, ta, tb] = BRIDGEWORK.old, H = (s, t) => landH(s, t), concrete = std(0xbdb7ab, .9), yellow = std(0xf2b705, .5), dark = std(0x2a2a2a, .6);
   const put = (geo, m, s, t, y) => { const me = new THREE.Mesh(geo, m); me.position.set(...P3(s, t, y)); me.castShadow = true; grp.add(me); return me; };
   { const dirt = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), std(0x8a6f52, 1)); dirt.rotation.x = -Math.PI/2; const [x0, z0] = landXY(o0, ta - 2), [x1, z1] = landXY(BRIDGEWORK.zone, tb + 2); dirt.scale.set(Math.abs(x1 - x0)*U + 4, Math.abs(z1 - z0)*U + 4, 1); dirt.position.set((x0 + x1)/2*U, H((o0 + BRIDGEWORK.zone)/2, 0) + .05, (z0 + z1)/2*U); grp.add(dirt); }
@@ -6264,7 +6305,7 @@ function buildCoast(){
         // the plank walkway across the sand: landward to the bike path, seaward toward the water
         for (const [s0, s1] of [[ls + w/2 + .8, 141], [ls - w/2 - .8, 18]]){ const n2 = Math.ceil(Math.abs(s1 - s0)/1.2), dir = Math.sign(s1 - s0);
           for (let k = 0; k < n2; k++){ const sa = s0 + dir*k*1.2, sb = sa + dir*1.2, sm = (sa + sb)/2, pl = new THREE.Mesh(new THREE.BoxGeometry(1.15, .06, 2.4), k % 2 ? wood : std(0x96775a, .85)); pl.position.set(...P3(sm, lt, sand(sm, lt) + .05)); br.add(pl); } } } }
-    buildBeachVendors(g, P3); buildBridgeWorks(g, P3);
+    buildBeachVendors(g, P3); buildBridgeWorks(g, P3); buildCarouselPark(g, P3); buildPierCarts(g, P3);
     g.add(br); mergeStatic(br); }
   // the Dive Shop: a stand on the sand just north of the pier (walk in to shop)
   { const [ds, dt] = DIVE_SHOP, gh = landH(ds, dt), hut = new THREE.Group(), blue = std(0x1f6b8a, .6), wh = std(0xf4f4f0, .6);
@@ -6405,6 +6446,17 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Oatman Rock Shop': [M('💎', 'Geode', 12, 'play', { say: 'Crack it open: crystals inside!' }), M('🔮', 'Crystal', 10, 'play', { say: 'It sparkles in the sun!' }), M('🦈', 'Shark tooth', 8, 'play', { say: 'A real fossil shark tooth!' }), M('🪨', 'Polished stones', 5, 'play', { say: 'So smooth!' })],
   'Pier Gear': [M('🧢', 'Pier cap', 15, 'wear', { slot: 'hat', col: '#1565c0' }), M('👕', 'Pier T-shirt', 25, 'wear', { slot: 'shirt', col: '#26a69a' })],
   'Cosmic Funnel Cakes': [M('🎂', 'Funnel cake', 9), M('🍓', 'Strawberry funnel cake', 11)],
+  'Japadog': [M('🌭', 'Terimayo dog (teriyaki, mayo, seaweed)', 9), M('🌭', 'Oroshi dog (grated radish, soy)', 9), M('🥤', 'Ramune soda', 4, 'drink')],
+  'Pier Photo': [M('📸', 'Souvenir photo on the pier', 10, 'selfie')],
+  'Downtown Fruit': [M('🍉', 'Cup of watermelon', 6), M('🥭', 'Mango on a stick with chili and lime', 7), M('🍍', 'Pineapple spear', 5)],
+  'Pier Tamales': [M('🫔', 'Pork tamal', 5), M('🫔', 'Cheese and jalapeño tamal', 5), M('🥤', 'Horchata', 4, 'drink')],
+  'Candy Carousel': [M('🍭', 'Giant swirl lollipop', 5), M('🍬', 'Saltwater taffy', 6), M('☁️', 'Cotton candy', 6)],
+  '66 to Cali': [M('🔑', 'Route 66 End of the Trail keychain', 8, 'play', { say: 'The end of Route 66!' }), M('🧲', 'Santa Monica magnet', 6, 'play', { say: 'For the fridge at home' })],
+  'Hats Amazing': [M('👒', 'Straw sun hat', 18, 'wear', { slot: 'hat', col: '#e8d39a' }), M('🧢', 'Santa Monica cap', 15, 'wear', { slot: 'hat', col: '#d32f2f' })],
+  'Dippin Dots': [M('🍨', 'Cookies n cream Dippin Dots', 7), M('🍓', 'Strawberry Dippin Dots', 7), M('🌈', 'Rainbow ice', 7)],
+  'Chicken Shack & eegees': [M('🍗', 'Chicken tenders and fries', 14), M('🍋', 'eegee\'s frozen lemonade', 6, 'drink')],
+  'Wetzels Pretzels': [M('🥨', 'Original pretzel', 6), M('🌭', 'Wetzel Dog', 8), M('🧀', 'Pretzel bites with cheese', 8)],
+  'Churrita Churros': [M('🥖', 'Churro', 5), M('🍫', 'Churro with chocolate dip', 7)],
   'Smashies Burger': [M('🍔', 'Smash burger', 11), M('🍟', 'Fries', 5)],
   'The Coffee Bean': [M('🍫', 'Hot chocolate', 5, 'drink'), M('🧋', 'Ice blended', 6, 'drink'), M('🥐', 'Croissant', 4)],
   'Bait & Tackle': [M('🎣', 'Fishing rod', 20, 'fish'), M('🪱', 'Bait', 2, 'play', { say: 'Wiggly! Fish love it' })],
@@ -6814,6 +6866,23 @@ const PP = { wheel: { s: -38.1, t: 66.1, R: 12, hub: 13.6, n: 20, a: [-29.9, 56.
   coaster: [[-35.0,77.9,2.0],[-26.3,78.0,2.0],[-17.7,78.0,2.0],[-9.1,78.0,2.88],[-0.5,78.0,5.04],[8.1,78.0,7.97],[16.8,78.0,11.16],[25.4,78.0,14.03],[34.0,78.0,16.08],[42.6,78.0,16.8],[49.8,77.3,16.32],[51.6,76.8,16.08],[53.2,75.7,15.79],[55.7,72.9,15.15],[56.9,69.6,14.47],[56.3,65.9,13.68],[55.6,64.3,13.31],[54.5,62.8,12.92],[53.1,61.6,12.54],[51.6,60.6,12.17],[49.3,59.8,11.7],[47.3,59.6,11.34],[44.4,59.9,10.87],[42.7,60.9,10.6],[40.4,63.1,10.25],[39.1,65.6,10.06],[38.6,68.2,10.0],[39.1,71.4,9.93],[40.5,74.1,9.74],[42.6,76.1,9.48],[45.2,77.0,9.16],[47.9,77.1,8.8],[51.3,76.5,8.29],[52.9,75.4,8.0],[55.1,73.0,7.5],[56.3,70.2,7.05],[56.8,67.4,6.67],[56.5,65.7,6.46],[55.8,63.8,6.24],[54.6,62.4,6.08],[52.1,60.5,5.8],[49.0,59.3,5.8],[40.6,59.2,6.02],[32.1,59.1,6.62],[23.7,59.0,7.46],[15.2,58.9,8.45],[6.8,58.8,9.46],[-1.7,58.7,10.38],[-10.1,58.6,11.08],[-15.6,57.8,11.38],[-21.3,56.1,11.5],[-29.0,52.8,11.47],[-36.6,49.5,11.38],[-44.3,46.3,11.26],[-48.8,45.1,11.17],[-54.5,45.8,11.07],[-58.0,47.4,10.99],[-59.7,49.7,10.93],[-61.3,52.1,10.88],[-62.3,55.2,10.82],[-62.5,57.2,10.78],[-62.3,59.5,10.74],[-61.2,62.2,10.69],[-59.4,64.5,10.65],[-56.8,66.9,10.6],[-53.8,67.9,10.57],[-51.0,68.2,10.54],[-48.2,67.9,10.52],[-45.1,66.5,10.5],[-43.3,64.9,10.5],[-42.6,64.2,10.5],[-41.0,61.7,10.29],[-40.3,59.0,9.82],[-40.2,54.8,8.8],[-41.2,52.3,8.04],[-42.5,50.0,7.29],[-44.7,47.8,6.48],[-47.3,46.5,5.9],[-50.3,46.0,5.55],[-54.2,46.1,5.5],[-57.8,47.8,5.5],[-60.0,49.0,5.5],[-61.8,51.6,5.5],[-62.8,55.1,5.5],[-62.6,66.8,5.5],[-61.6,70.9,5.5],[-60.2,73.2,5.5],[-58.8,74.3,5.5],[-56.0,76.2,5.5],[-52.3,77.1,5.17],[-43.6,77.5,3.28]] };   // the West Coaster's real track (OpenStreetMap, in the direction the train goes): out of the station toward land up the lift hill, two turns of a helix down, back along the north side, round twice over Inkie's Scrambler (high, then low), and into the station. Heights are estimates (17 m at the top, like the real one)
 let pacPark = null;
 const PIER_SPOTS = [{ k: 'wheel', s: -35.6, t: 68.6, rad: 2.5, es: -31.5, et: 66 }, { k: 'coaster', s: -25, t: 75.6, rad: 2.5, es: -15, et: 72 }];
+/* The Pacific Wheel's LED show: after sunset it runs a new pattern every 30 seconds (rainbow chase, color pulses from the hub, a wipe round
+   the rim, sparkles, and red, white and blue on the Fourth of July, Memorial Day and Veterans Day), on the real clock so everyone sees the same
+   show. By day the bulbs are off. */
+function wheelLEDs(){ const L = PP.leds; if (!L) return; const now = performance.now(); if (now < L.next) return; L.next = now + 66;   // (15 times a second is plenty)
+  const deg = sunNow().alt*180/Math.PI, on = deg < -1, c = new THREE.Color(), T = Date.now()/1000;
+  if (!on){ if (L.off) return; L.off = true; for (let i = 0; i < L.LN*2; i++) L.rim.setColorAt(i, c.setRGB(.25, .25, .25)); for (let i = 0; i < L.n*2*L.SN; i++) L.spk.setColorAt(i, c.setRGB(.22, .22, .22)); L.rim.instanceColor.needsUpdate = L.spk.instanceColor.needsUpdate = true; return; }
+  L.off = false; const d = new Date(), md = (d.getMonth() + 1)*100 + d.getDate(), patriot = md === 704 || md === 1111 || (d.getMonth() === 4 && d.getDay() === 1 && d.getDate() > 24), show = patriot ? 5 : Math.floor(T/30) % 5;
+  const col = (frac, r) => { switch (show){   // frac: round the wheel (0..1); r: out from the hub (0..1)
+    case 0: return c.setHSL((frac + T*.15) % 1, 1, .55);
+    case 1: { const w = (r - (T*.8 % 1.4) + 1.4) % 1.4; return c.setHSL((Math.floor(T*.8/1.4)*.17) % 1, 1, w < .25 ? .6 : .08); }
+    case 2: { const h = (T*.08) % 1, f = (T*.25) % 1; return c.setHSL(frac < f ? h : (h + .5) % 1, 1, .5); }
+    case 3: { const k = Math.sin(frac*977 + r*311 + Math.floor(T*6)*13.7); return k > .7 ? c.setRGB(1, 1, 1) : c.setHSL(.62, 1, .12); }
+    case 4: return c.setHSL((r*.6 + T*.2) % 1, .9, .3 + .25*Math.sin(frac*TAU*4 + T*3)**2);
+    default: { const b = Math.floor(frac*12 + T*.5) % 3; return b === 0 ? c.setRGB(1, .1, .1) : b === 1 ? c.setRGB(1, 1, 1) : c.setRGB(.15, .3, 1); } } };
+  for (let k = 0; k < L.LN; k++){ col(k/L.LN, 1); L.rim.setColorAt(k*2, c); L.rim.setColorAt(k*2 + 1, c); }
+  for (let k = 0; k < L.n; k++) for (let q = 0; q < L.SN; q++){ col(k/L.n, q/(L.SN - 1)); L.spk.setColorAt(k*2*L.SN + q, c); L.spk.setColorAt((k*2 + 1)*L.SN + q, c); }
+  L.rim.instanceColor.needsUpdate = L.spk.instanceColor.needsUpdate = true; }
 function buildPacificPark(g, P3){
   const W = PP.wheel, steel = std(0xf2f2f2, .35, .4), wheel = new THREE.Group(), spin = new THREE.Group(); wheel.position.set(...P3(W.s, W.t, pierDeckH(W.s) + W.hub)); wheel.add(spin); g.add(wheel);
   { const a = new THREE.Vector3(...P3(...W.a, 0)), b = new THREE.Vector3(...P3(...W.b, 0)); wheel.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }   // (turned to stand on its real diagonal)
@@ -6825,6 +6894,10 @@ function buildPacificPark(g, P3){
   const LN = 80, lights = new THREE.InstancedMesh(new THREE.SphereGeometry(.13, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffffff }), LN*2), m4 = new THREE.Matrix4(), c = new THREE.Color();
   for (let k = 0; k < LN; k++) for (const [j, z] of [[0, -.9], [1, .9]]){ const a = k/LN*TAU; m4.makeTranslation(Math.cos(a)*(W.R + .2), Math.sin(a)*(W.R + .2), z); lights.setMatrixAt(k*2 + j, m4); lights.setColorAt(k*2 + j, c.setHSL(k/LN, .9, .6)); }
   spin.add(lights);
+  // the LED show (research: 174,000+ LEDs on the 40 spokes and the hubs since 2016, computer-made shows every evening): lights all along every spoke too
+  const SN = 12, spk = new THREE.InstancedMesh(new THREE.SphereGeometry(.09, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }), W.n*2*SN);
+  for (let k = 0; k < W.n; k++) for (const [j, z] of [[0, -.95], [1, .95]]) for (let q = 0; q < SN; q++){ const a = k/W.n*TAU, r = 1 + (W.R - 1.2)*q/(SN - 1); m4.makeTranslation(Math.cos(a)*r, Math.sin(a)*r, z); spk.setMatrixAt((k*2 + j)*SN + q, m4); spk.setColorAt((k*2 + j)*SN + q, c.setRGB(.2, .2, .2)); }
+  spin.add(spk); PP.leds = { rim: lights, spk, LN, SN, n: W.n, next: 0 };
   const gond = [], GC = [0xe53935, 0xfdd835];
   for (let k = 0; k < W.n; k++){ const gp = new THREE.Group(), cm = std(GC[k % GC.length], .5);   // (open cars: a floor, a low wall, posts and a roof, so you can see who's riding)
     const floor = new THREE.Mesh(new THREE.BoxGeometry(1.7, .1, 1.5), cm); floor.position.y = -2.35; gp.add(floor); for (const z of [-.5, .5]){ const bn = new THREE.Mesh(new THREE.BoxGeometry(1.5, .12, .4), std(0xf4f4f0, .6)); bn.position.set(0, -1.95, z); gp.add(bn); }
@@ -6933,12 +7006,16 @@ function airStep(dt){ const now = Date.now()/1000, cam = camera.position, v = ne
     if (A.kind === 'jet') m.rotateZ(.12); if (A.kind === 'prop') m.userData.pr.rotation.x += dt*60; if (A.kind === 'heli'){ m.userData.rot.rotation.y += dt*28; m.rotateZ(-.08); heliD = v.distanceTo(cam); } }
   if (heliD < 700 && ac && (AIR.thumpT -= dt) <= 0){ AIR.thumpT = .11; const vol = .05*Math.max(0, 1 - heliD/700)**1.5; if (vol > .002) sfx(55 + Math.random()*8, .08, 'square', vol, 0, -20); } }
 // the little rides turn all day; when you're on one it starts slow, whirls, and slows to a stop
-function kiddieStep(dt, w){ for (const key of ['airlift', 'frenzy']){ const K = PARK_ANIM[key]; if (!K) continue; const mine = w?.k === 'ride2' && w.key === key, T = mine ? w.T : 0, sp = mine ? Math.min(1, T/4)*Math.min(1, Math.max(0, (45 - T)/5)) : .55;
+function kidCoveStep(dt, w){ const run = key => { const mine = w?.k === 'ride2' && w.key === key, T = mine ? w.T : 0; return mine ? Math.min(1, T/4)*Math.min(1, Math.max(0, (RIDES[key].dur - 2 - T)/4)) : .45; };
+  { const K = PARK_ANIM.wavejump; if (K){ const sp = run('wavejump'); K.ang -= dt*.63*sp; K.spin.rotation.y = K.ang; K.cars.forEach(C => { C.car.position.y = .55*sp*Math.max(0, Math.sin(time*2.2 + C.ph)); C.car.rotation.z = .12*sp*Math.sin(time*2.2 + C.ph + .8); }); } }   // (clockwise, 6 rpm at most, bobbing over the waves)
+  { const K = PARK_ANIM.swing; if (K){ const sp = run('swing'), mine = w?.k === 'ride2' && w.key === 'swing'; K.pivot.rotation.x = (mine ? Math.PI/4 : .25)*sp*Math.sin(time*1.25); } }   // (to and fro through a 45 degree arc)
+  { const K = PARK_ANIM.seaplanes; if (K){ const sp = run('seaplanes'), mine = w?.k === 'ride2' && w.key === 'seaplanes'; K.ang += dt*1.2*sp; K.spin.rotation.y = K.ang; K.cars.forEach((C, i) => { const up = mine && i === 0 ? (w.climb ?? 0) : .4 + .4*Math.sin(time*.6 + i); C.car.position.y = -1.2 + 1.6*up*sp; C.car.rotation.x = .2*Math.cos(time*.6 + i)*sp; C.prop.rotation.z += dt*25*sp; }); } } }
+function kiddieStep(dt, w){ kidCoveStep(dt, w); for (const key of ['airlift', 'frenzy']){ const K = PARK_ANIM[key]; if (!K) continue; const mine = w?.k === 'ride2' && w.key === key, T = mine ? w.T : 0, sp = mine ? Math.min(1, T/4)*Math.min(1, Math.max(0, (45 - T)/5)) : .55;
     K.ang += dt*(key === 'airlift' ? 1.1 : 1.3)*sp; K.spin.rotation.y = K.ang;
     if (key === 'airlift') K.cars.forEach((C, i) => { C.car.position.y = 1.2*sp*(.5 + .5*Math.sin(K.ang*1.5 + i*1.1)); C.car.rotation.y = -K.ang*.5; });   // (the balloons rise and fall as they go round)
     else K.cars.forEach((C, i) => { C.car.rotation.y += dt*sp*(2.4 + 1.6*Math.sin(K.ang*.9 + C.ph)); }); } }   // (and each shark car spins on its own: sometimes slow, sometimes wild)
 function parkStep(dt){ const P = pacPark; if (!P) return; const w = ocean?.workout; carouselStep(dt); kiddieStep(dt, w);
-  P.ang += dt*.26; P.spin.rotation.z = P.ang;   /* (2.5 turns a minute, like the real one) */ const W = PP.wheel;
+  P.ang += dt*.26; P.spin.rotation.z = P.ang; wheelLEDs();   /* (2.5 turns a minute, like the real one) */ const W = PP.wheel;
   P.gond.forEach((gp, k) => { const a = P.ang + k/W.n*TAU; gp.position.set(Math.cos(a)*W.R, Math.sin(a)*W.R, 0); });   // (the cars hang straight down as the wheel turns)
   { const rw = w?.k === 'ride2' && w.key === 'scrambler' ? w.p?.sp ?? 0 : 1; P.scrV = lerp(P.scrV ?? 1, rw, Math.min(1, dt*2)); P.scrSpin.rotation.y += dt*1.6*P.scrV; P.scrPh = (P.scrPh || 0) + dt*2.6*P.scrV;   // (it stops to let you on, then whips you round)
     P.scrSpin.children.forEach(a => { if (a.children[1]) a.children[1].rotation.y = -P.scrPh; }); }
@@ -8424,9 +8501,18 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
     sign(344, o1 + .35, 3.9, 9, .8, 'PLAYLAND ARCADE', '#f6f6f2', '#1565c0', 'n'); sign(337, o1 + .35, 3.95, 3.6, .4, 'Kiddie Rides', '#f6f6f2', '#c62828', 'n', 60); }
   // (the trapeze school's rig stood here until March 2026, when the school moved to Santa Monica Airport)
   // ---- Snackville: orange, white roll-up shutters, the mural, and the stands (Pier Gear, Cosmic Funnel Cakes, Smashies, Coffee Bean)
-  { const A0 = 386, A1 = 415, o0 = -45, o1 = -11; bx(A0, A1, o0, o1, 0, 5.2, 0xef6c00); bx(A0, A1, o0, o0 + 8, 5.2, 6.4, 0x5e35b1);
+  { const A0 = 386, A1 = 415, o0 = -27.5, o1 = -11; bx(A0, A1, o0, o1, 0, 5.2, 0xef6c00); bx(A0, A1, o0, o0 + 3, 5.2, 6.4, 0x5e35b1);
     for (const [k, [n, bg, fg]] of [['Pier Gear', '#26a69a', '#fff'], ['Cosmic Funnel Cakes', '#fdd835', '#4a148c'], ['Smashies Burger', '#c62828', '#fff'], ['The Coffee Bean', '#4e342e', '#fff']].entries()){ const a = A0 + 1 + k*7; bx(a, a + 5.6, o1 + .02, o1 + .12, .3, 2.8, 0xf4f4f4); sign(a + 2.8, o1 + .2, 3.4, 5.4, .55, n, bg, fg, 'n', 56); }
-    sign((A0 + A1)/2, o0 + 8.2, 4.4, 12, 1, 'SNACKVILLE AT PACIFIC PARK', '#ef6c00', '#ffffff', 'n', 72); }
+    sign((A0 + A1)/2, o0 + 3.2, 4.4, 12, 1, 'SNACKVILLE AT PACIFIC PARK', '#ef6c00', '#ffffff', 'n', 72);
+    // the rest of Snackville's stands (research: Dippin' Dots, Chicken Shack & eegee's, Scoops Creamery, Wetzel's Pretzels, Churrita Churros), round the landward end
+    for (const [k, [n, bg, fg]] of [['Dippin Dots', '#1565c0', '#fff'], ["Chicken Shack & eegee's", '#d84315', '#fff'], ['Wetzels Pretzels', '#0d47a1', '#ffeb3b'], ['Churrita Churros', '#6d4c41', '#ffcc80']].entries()){ const o = o1 - 1.5 - k*4; bx(A0 - .12, A0 - .02, o - 3.4, o, .3, 2.8, 0xf4f4f4); sign(A0 - .2, o - 1.7, 3.4, 3.2, .5, n, bg, fg, 'e', 44); } }
+  // ---- the Midway Games (research: the big light-blue building in the middle of the park, between Snackville and the Sea Dragon, with solar
+  //      panels on its roof): ten skill games in booths round it. $5 a play here; win a plush. (Which game sits in which booth is a guess.)
+  { const A0 = 386, A1 = 415, o0 = -45, o1 = -30.5; bx(A0, A1, o0, o1, 0, 4.6, 0x8fd3f4); bx(A0 - .2, A1 + .2, o0 - .2, o1 + .2, 4.6, 4.9, 0xffffff);
+    for (let a = A0 + .8; a < A1 - 1.5; a += 2.2) for (let o = o0 + .8; o < o1 - 1.5; o += 1.6) bx(a, a + 2, o, o + 1.4, 4.95, 5.08, 0x1a2c4a);   // (the solar panels)
+    sign((A0 + A1)/2, o0 - .25, 4, 12, .9, 'MIDWAY GAMES', '#0277bd', '#ffffff', 's', 76);
+    MIDWAY.forEach((M2, k) => { const a = A0 + 1 + k*2.8; bx(a, a + 2.4, o0 - .12, o0 - .02, .9, 2.9, 0x10202f); bx(a - .1, a + 2.5, o0 - .9, o0, .9, 1.05, 0xffffff); for (let j = 0; j < 5; j++) bx(a + .1 + j*.45, a + .45 + j*.45, o0 - .1, o0, 2.2, 2.6, [0xe53935, 0xfdd835, 0x1e88e5, 0x43a047, 0xf06292][(j + k) % 5]);   // (a counter, a dark booth hung with prizes)
+      sign(a + 1.2, o0 - .3, 3.25, 2.3, .4, M2[0], ['#e53935', '#fdd835', '#43a047', '#8e24aa', '#ff7043'][k % 5], '#ffffff', 's', 40); PIER_DO.push(['midway:' + k, a + 1.2, o0 - 1.8, 1.5, M2[1] + ' ' + M2[0]]); }); }
   // ---- Pacific Park's front gate, with Inkie the octopus sitting on top
   { const A0 = 416, A1 = 425; bx(A0, A0 + 1, -35, -10, 0, 5.6, 0x7b1fa2); bx(A1 - 1, A1, -35, -10, 0, 5.6, 0x7b1fa2); bx(A0, A1, -35, -10, 5.6, 6.4, 0x6a1b9a);
     const ink = mat(0x8e2a6b, .6), s = S((A0 + A1)/2), head = new THREE.Mesh(new THREE.SphereGeometry(2.4, 16, 12), ink); head.scale.y = 1.25; head.position.set(...P3(s, 22, dh(s) + 9)); grp.add(head);
@@ -8492,6 +8578,9 @@ const RIDES = {
   plunge: { name: 'Pacific Plunge', exit: [443, -63.5], dur: 9, f: T => { const y = T < 4 ? T/4*12 : T < 5.6 ? 12 : T < 6.3 ? 12 - (T - 5.6)/.7*11.2 : .8 + Math.abs(Math.sin((T - 6.3)*5))*.4*Math.max(0, 1 - (T - 6.3)/1.5); return { A: 443 + 1.7, off: -70.5, y, sit: true, arms: T > 5.5 && T < 7, ang: 0 }; } },
   scrambler: { name: "Inkie's Scrambler", exit: [436, -46.5], dur: 16, f: T => { const sp = Math.min(1, T/3)*Math.min(1, Math.max(0, (16 - T)/3)), a = T*1.3*sp, b = T*3.4*sp; return { sit: true, arms: sp > .9, sp }; } },
   airlift: { name: "Inkie's Air Lift", exit: [376, -64.5], dur: 45, f: T => ({ sit: true, arms: T > 6 && T < 38 }) },
+  wavejump: { name: "Inkie's Wave Jumper", exit: [338, -66.5], dur: 40, f: T => ({ sit: true, arms: T > 6 && T < 34 }) },
+  swing: { name: 'the Seaside Swing', exit: [345, -77.5], dur: 40, f: T => ({ sit: true, arms: T > 8 && T < 32 }) },
+  seaplanes: { name: 'the Sea Planes', exit: [382, -75.5], dur: 45, f: T => ({ sit: true }) },
   frog: { name: "Inkie's Frog Hopper", exit: [366, -77.5], dur: 30, f: T => { const go = T > 3 && T < 27, k = (T*1.6) % 1, h = go ? (k < .7 ? 4.2*(k/.7) : 4.2*(1 - (k - .7)/.3)*(.6 + .4*Math.sin(T*3))) : .0; return { sit: true, arms: go && k > .7, h }; } },
   frenzy: { name: 'Shark Frenzy', exit: [388, -60.5], dur: 45, f: T => ({ sit: true, arms: T > 5 && T < 40 }) },
   bumper: { name: 'Sig Alert bumper cars', exit: [356, -68.5], dur: 15, f: T => ({ A: 356 + 5*Math.sin(T*.9), off: -75 + 3*Math.sin(T*1.3 + 1), y: .1, sit: true, car: true, ang: Math.atan2(3*1.3*Math.cos(T*1.3 + 1), -5*.9*Math.cos(T*.9)) }) },
@@ -8544,7 +8633,8 @@ function ride2Step(o, w, dt){ const R = RIDES[w.key]; w.T += dt; o.vx = o.vy = 0
     const fw = new THREE.Vector3(-Math.sign(PARK_ANIM.dragonSeat.x), 0, 0).applyQuaternion(PARK_ANIM.dragon.parent.quaternion); o.ang = Math.atan2(fw.z, fw.x); return; }   // (facing the middle of the ship, like the real seats: you watch the other end swing up)
   if (w.key === 'carousel' && PARK_ANIM.carousel){ const K = PARK_ANIM.carousel, c = carouselSeat(w.horse ?? 0); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; o.ang = c.ang; if (K.running) w.went = true; if (w.went && !K.running && K.stopT > 1.5){ w.done = true; return stopWorkout(); } return; }   // (on your horse, round and up and down with the band organ, until it stops)
   if (w.key === 'frog' && PARK_ANIM.frog){ const F = PARK_ANIM.frog; F.car.position.y = .6 + p.h; const c = F.seat.clone().applyMatrix4(F.car.matrixWorld); F.car.updateMatrixWorld(true); o.x = c.x/U; o.y = c.z/U; w.py = c.y; o.gh = w.py; w.p = p; const ctr = F.car.getWorldPosition(new THREE.Vector3()); o.ang = Math.atan2(c.z - ctr.z, c.x - ctr.x); return; }   // (up the tower in little hops, then the drop)
-  if ((w.key === 'airlift' || w.key === 'frenzy') && PARK_ANIM[w.key]){ const K = PARK_ANIM[w.key], C = K.cars[0], c = C.car.getWorldPosition(new THREE.Vector3()), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y + (w.key === 'airlift' ? .1 : .15); o.gh = w.py; w.p = p; w.ride = true; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px); return; }   // (in your balloon basket, or your shark car)
+  if (w.key === 'seaplanes' && PARK_ANIM.seaplanes){ const up = !!(keys.w || keys.arrowup || (typeof wantHeading === 'function' && wantHeading())); w.climb = clamp((w.climb ?? .3) + dt*(up ? .5 : -.35), 0, 1); if (w.T > 4 && !w.told){ w.told = true; banner('✈️ Sea Planes', 'Hold forward (W / up) to fly higher, let go to come down'); } }
+  if ((w.key === 'airlift' || w.key === 'frenzy' || w.key === 'wavejump' || w.key === 'swing' || w.key === 'seaplanes') && PARK_ANIM[w.key]){ const K = PARK_ANIM[w.key], C = K.cars[0], c = C.car.getWorldPosition(new THREE.Vector3()), px = o.x, py = o.y; o.x = c.x/U; o.y = c.z/U; w.py = c.y + (w.key === 'airlift' ? .1 : w.key === 'swing' ? .35 : w.key === 'seaplanes' ? .2 : .15); o.gh = w.py; w.p = p; w.ride = true; if (Math.hypot(o.x - px, o.y - py) > .002*METERS) o.ang = Math.atan2(o.y - py, o.x - px); return; }   // (in your balloon basket, or your shark car)
   if (w.key === 'scrambler' && pacPark?.scrCup){ const S = pacPark.scrCup, c = S.getWorldPosition(new THREE.Vector3()), f = new THREE.Vector3(0, 0, 1).applyQuaternion(S.getWorldQuaternion(new THREE.Quaternion())); o.x = c.x/U; o.y = c.z/U; w.py = c.y - .35; o.gh = w.py; w.p = p; o.ang = Math.atan2(f.z, f.x); return; }   // (you sit in your car, facing the way it faces, flung round with it)
   const s = 390 - p.A, t = -p.off, [x, y] = landXY(s, t), px = o.x, py = o.y; o.x = x; o.y = y; w.py = pierDeckH(s) + p.y; o.gh = w.py; w.p = p;   // (the camera follows you up)
   if (p.ang != null) o.ang = p.ang; else if (Math.hypot(x - px, y - py) > .02*METERS) o.ang = Math.atan2(y - py, x - px);
@@ -8571,20 +8661,28 @@ function fishTap(o, it){ initAudio(); if (it.bite){ const ok = time - it.bite < 
   it.cast = true; it.biteAt = time + 2 + Math.random()*5; sfx(1200, .25, 'sine', .03, 0, -900); banner('🎣 Cast!', 'Wait for a bite...'); }
 function fishStep(dt, o){ const it = treat; if (!it || it.act !== 'fish' || !it.cast || paused) return; if (!it.bite && time > it.biteAt){ it.bite = time; sfx(300, .08, 'square', .05); sfx(300, .08, 'square', .05, .15); coach('🎣 Fish on! Tap Reel in!', 2.2); }
   if (it.bite && time - it.bite > 2.6){ it.bite = 0; it.cast = false; banner('It got away!', 'Cast again'); } }
+// the Midway's ten games (research): $5 a play, a plush if you win
+const MIDWAY = [['Top Glow', '✨'], ['Whac-A-Mole', '🔨'], ['Long Range', '🎯'], ['Ring Toss', '⭕'], ['Roll A Ball', '🎳'], ['Pop-a-Lot', '🎈'], ['Water Race', '🔫'], ['Goblet Toss', '🥂'], ['Beach Bash', '🏐'], ['Penalty Kick', '⚽']];
+const PLUSH = ['a giant banana', 'a rainbow unicorn', 'a sea turtle', 'Inkie the octopus', 'a pink flamingo', 'a big shark', 'a smiling avocado', 'a dolphin'];
+function midwayPlay(k){ const [name, em] = MIDWAY[k]; if ((save.coins || 0) < 5) return banner(`${em} ${name}`, 'You need 5 coins to play'); save.coins -= 5; persist(); sfx(600, .08, 'square', .03);
+  banner(`${em} ${name}`, { 'Top Glow': 'Toss the ball so it lands on a lit-up cup...', 'Whac-A-Mole': 'Bop the moles as fast as they pop up!', 'Long Range': 'Aim down the gallery and squeeze...', 'Ring Toss': 'Flick a ring at the bottle necks...', 'Roll A Ball': 'Roll it up the lane into the holes...', 'Pop-a-Lot': 'Throw the dart at the balloons...', 'Water Race': 'Squirt the target to race your horse up!', 'Goblet Toss': 'Bounce a ball into a glass goblet...', 'Beach Bash': 'Knock the stack down with a beach ball...', 'Penalty Kick': 'Kick it past the goalie...' }[name]);
+  setTimeout(() => { const win = Math.random() < .38; if (win){ sfx(880, .12, 'square', .04); sfx(1175, .14, 'square', .04, .12); sfx(1568, .2, 'square', .04, .26); banner('🧸 Winner!', `You win ${PLUSH[(Math.random()*PLUSH.length)|0]} plush!`); } else { sfx(300, .3, 'sawtooth', .03, 0, -120); banner(`${em} So close!`, 'Try again for $5?'); } }, 2000); }
 // what you can do where on the pier
 const PIER_DO = [
-  ['frog', 366, -77.8, 2, "🐸 Ride Inkie's Frog Hopper"], ['airlift', 376, -64.5, 2.4, "🎈 Ride Inkie's Air Lift"], ['frenzy', 388, -60.5, 2.2, '🦈 Ride Shark Frenzy'], ['dragon', 406, -61, 2.2, '🐉 Ride the Sea Dragon'], ['plunge', 443, -64, 2, '🗼 Ride the Pacific Plunge'], ['scrambler', 436, -47, 2.2, "🌀 Ride Inkie's Scrambler"], ['bumper', 356, -69, 2.4, '🚗 Bumper cars'], 
+  ['frog', 366, -77.8, 2, "🐸 Ride Inkie's Frog Hopper"], ['wavejump', 338, -66.5, 2.2, "🌊 Ride Inkie's Wave Jumper"], ['swing', 345, -77.5, 2.2, '⛵ Ride the Seaside Swing'], ['seaplanes', 382, -75.5, 2.2, '✈️ Fly the Sea Planes'], ['airlift', 376, -64.5, 2.4, "🎈 Ride Inkie's Air Lift"], ['frenzy', 388, -60.5, 2.2, '🦈 Ride Shark Frenzy'], ['dragon', 406, -61, 2.2, '🐉 Ride the Sea Dragon'], ['closed:Pacific Plunge', 443, -64, 2, '🚧 Pacific Plunge: closed for maintenance'], ['scrambler', 436, -47, 2.2, "🌀 Ride Inkie's Scrambler"], ['bumper', 356, -69, 2.4, '🚗 Bumper cars'], 
   ['arcade', 344, -8.8, 2.6, '🕹️ Playland Arcade'], ['bikes', 288, -10, 2.4, '🚲 Rent a bike at Blazing Saddles'],
   ['menu:PierBurger', 318.5, -9.6, 2.4, '🍔 Pier Burger'], ["menu:Marlene's Beachcomber", 327.5, -9.6, 2.2, "🏖️ Marlene's Beachcomber"], ['menu:Soda Jerks', 157, -10.5, 2.4, '🥤 Soda Jerks'], ['menu:Pier Shop', 182, -11, 2.2, '🎁 Pier Shop'],
   ['menu:Seaside on the Pier', 196, -9, 2.4, '🦐 Seaside on the Pier'], ['menu:The Albright', 228, -9, 2.4, '🦞 The Albright'], ['menu:Bubba Gump', 268, 2, 2.6, '🍤 Bubba Gump Shrimp Co.'], ['menu:Oatman Rock Shop', 304, .8, 2, '💎 Oatman Rock Shop'],
-  ['menu:Pier Gear', 389.8, -10, 1.8, '🧢 Pier Gear'], ['menu:Cosmic Funnel Cakes', 396.8, -10, 1.8, '🎡 Cosmic Funnel Cakes'], ['menu:Smashies Burger', 403.8, -10, 1.8, '🍔 Smashies Burger'], ['menu:The Coffee Bean', 410.8, -10, 1.8, '☕ The Coffee Bean'],
+  ['menu:Pier Gear', 389.8, -10, 1.8, '🧢 Pier Gear'], ['menu:Dippin Dots', 384.5, -14.2, 1.6, "🍨 Dippin' Dots"], ['menu:Chicken Shack & eegees', 384.5, -18.2, 1.6, "🍗 Chicken Shack & eegee's"], ['menu:Wetzels Pretzels', 384.5, -22.2, 1.6, "🥨 Wetzel's Pretzels"], ['menu:Churrita Churros', 384.5, -26.2, 1.6, '🥖 Churrita Churros'], ['menu:Cosmic Funnel Cakes', 396.8, -10, 1.8, '🎡 Cosmic Funnel Cakes'], ['menu:Smashies Burger', 403.8, -10, 1.8, '🍔 Smashies Burger'], ['menu:The Coffee Bean', 410.8, -10, 1.8, '☕ The Coffee Bean'],
   ['menu:Bait & Tackle', 610, -9, 2.2, '🎣 Bait & Tackle'], ['menu:Mariasol', 597.5, 19.6, 2.4, '🌮 Order at Mariasol'], ['menu:Mariasol', 597.5, 6.5, 2, '🌮 Order at your table'] ];
 function pierDo(o){ if (!onPierNow(o)) return null; const [s, t] = landST(o.x, o.y), A = 390 - s, off = -t; let best = null, bd = 1e9;
   { const dc = Math.hypot(A - CAROUSEL.A, off - CAROUSEL.off); if (dc < CAROUSEL.R + 1.5 && PARK_ANIM.carousel){ const K = PARK_ANIM.carousel; if (K.running) return { label: `🎠 It's going round: next ride in ${Math.max(1, Math.ceil(K.toStop + 4))} s`, go: () => banner('🎠 Wait for it to stop', 'Then walk up to any horse, the goat, the rabbit or a chariot') };
     const h = carouselNear(o); if (h) return { label: CAROUSEL_LABEL[h.F.kind](h.F), go: () => { startRide2(o, 'carousel'); o.workout.horse = h.i; } }; } }   // (it stops to load: pick any figure you like)
-  { const G = inRideLine(A, off); if (G && RIDES[G[0]]) return { label: PIER_DO.find(P => P[0] === G[0])?.[4] || `Ride ${G[5]}`, go: () => startRide2(o, G[0]) }; }
+  { const G = inRideLine(A, off); if (G && G[0] === 'plunge') return { label: '🚧 Pacific Plunge: closed for maintenance', go: () => banner('🚧 Pacific Plunge', 'Temporarily closed for maintenance (Pacific Park, November 2026). Try the Scrambler or the Sea Dragon!') }; if (G && RIDES[G[0]]) return { label: PIER_DO.find(P => P[0] === G[0])?.[4] || `Ride ${G[5]}`, go: () => startRide2(o, G[0]) }; }
   for (const P of PIER_DO){ const d = Math.hypot(A - P[1], off - P[2]); if (d < P[3] && d < bd){ bd = d; best = P; } } if (!best) return null; const [k, , , , label] = best;
   if (k.startsWith('menu:')) return { label, go: () => openPlaceMenu(k.slice(5), 'food') };
+  if (k.startsWith('midway:')) return { label, go: () => midwayPlay(+k.slice(7)) };
+  if (k.startsWith('closed:')) return { label, go: () => banner('🚧 ' + k.slice(7), 'Temporarily closed for maintenance (Pacific Park, November 2026). Try the Scrambler or the Sea Dragon!') };
   if (k === 'arcade') return { label, go: () => openArcadeMenu() };
   if (k === 'bikes') return o.bike ? null : { label: label + ' · 10 coins', go: () => bikeOn(o, 10, 'BLAZING SADDLES') };
   return { label, go: () => startRide2(o, k) }; }
@@ -8712,7 +8810,27 @@ function buildParkRides(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   { const bc = new THREE.Group(), roof = new THREE.Mesh(new THREE.BoxGeometry(14, .4, 10), mat(0x0277bd)); roof.position.y = 4.4; bc.add(roof); for (const [x, z] of [[-6.8, -4.8], [6.8, -4.8], [-6.8, 4.8], [6.8, 4.8]]){ const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 4.4, 6), mat(0xeeeeee)); p.position.set(x, 2.2, z); bc.add(p); }
     for (let k = 0; k < 6; k++){ const car = new THREE.Mesh(new THREE.CylinderGeometry(.8, .9, .6, 12), mat([0xe53935, 0xfdd835, 0x43a047, 0x1e88e5, 0xff7043, 0x8e24aa][k])); car.position.set(-4 + (k % 3)*4, .3, k < 3 ? -2 : 2); bc.add(car); }
     put(bc, 356, -75); const sg = new THREE.Mesh(new THREE.PlaneGeometry(4, .6), new THREE.MeshBasicMaterial({ map: labelTex('SIG ALERT', '#0277bd', '#ffffff', 512, 77, 55), side: THREE.DoubleSide })); put(sg, 356, -69.8, 5); }
-  { const wj = new THREE.Group(); for (const [c, x] of [[0xff7043, -2], [0x26c6da, 2]]){ const sail = new THREE.Mesh(new THREE.ConeGeometry(4, .6, 3), mat(c)); sail.position.set(x, 5, 0); wj.add(sail); } for (let k = 0; k < 6; k++){ const a = k/6*TAU, sk = new THREE.Mesh(new THREE.BoxGeometry(1.2, .5, .7), mat(0x1e88e5)); sk.position.set(Math.cos(a)*3, .8, Math.sin(a)*3); sk.rotation.y = -a; wj.add(sk); } put(wj, 338, -72); }
+  // Kid's Cove by the east entrance (pier research), all rideable: Inkie's Wave Jumper (seats round a center that turns clockwise at up to 6 rpm
+  // and bounce like waves, under two sails), the Seaside Swing (a blue A-frame and a red sign, a 16-seat gondola swinging through a 45 degree arc)
+  // and the Sea Planes (six little crop-duster planes going round; riders steer them up and down). (Where the Sea Planes stand is a guess.)
+  { const wj = new THREE.Group(); put(wj, 338, -72); grp.remove(wj); g.add(wj); for (const [c, x] of [[0xff7043, -2], [0x26c6da, 2]]){ const sail = new THREE.Mesh(new THREE.ConeGeometry(4, .6, 3), std(c, .7)); sail.position.set(x, 5, 0); wj.add(sail); }
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.2, .3, 5, 8), std(0xf4f4f0, .5)); mast.position.y = 2.5; wj.add(mast); const base = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, .35, 24), std(0x1565c0, .6)); base.position.y = .18; wj.add(base);
+    const spin = new THREE.Group(); wj.add(spin); const cars = []; for (let k = 0; k < 6; k++){ const a = k/6*TAU, holder = new THREE.Group(); holder.position.set(Math.cos(a)*3, .35, Math.sin(a)*3); holder.rotation.y = -a; spin.add(holder); const car = new THREE.Group(); holder.add(car);
+      const sk = new THREE.Mesh(new THREE.BoxGeometry(1.3, .45, .8), std([0x1e88e5, 0xffd200, 0x26c6da][k % 3], .5)); sk.position.y = .3; car.add(sk); const bk = new THREE.Mesh(new THREE.BoxGeometry(.12, .6, .8), std(0xf4f4f0, .5)); bk.position.set(-.6, .7, 0); car.add(bk); cars.push({ holder, car, ph: k*1.05 }); }
+    PARK_ANIM.wavejump = { spin, cars, ang: 0 }; }
+  { const sw = new THREE.Group(); put(sw, 345, -83); grp.remove(sw); g.add(sw); const blue = std(0x1e5fb4, .5);
+    for (const z of [-2.2, 2.2]) for (const x of [-2.6, 2.6]){ const lg = new THREE.Mesh(new THREE.BoxGeometry(.22, 6.4, .22), blue); lg.position.set(x*.55, 3, z); lg.rotation.z = -x*.09; sw.add(lg); }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(.3, .3, 4.8), blue); beam.position.y = 6.1; sw.add(beam); const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .6), new THREE.MeshBasicMaterial({ map: labelTex('SEA SIDE SWING', '#d32f2f', '#ffffff', 512, 90, 52), side: THREE.DoubleSide })); sg.position.set(0, 6.75, 0); sg.rotation.y = Math.PI/2; sw.add(sg);
+    const pivot = new THREE.Group(); pivot.position.y = 6; sw.add(pivot); for (const z of [-1.6, 1.6]){ const arm = new THREE.Mesh(new THREE.BoxGeometry(.08, 4.6, .08), std(0x9aa0a6, .4, .5)); arm.position.set(0, -2.3, z); pivot.add(arm); }
+    const car = new THREE.Group(); car.position.y = -4.8; pivot.add(car); const tub = new THREE.Mesh(new THREE.BoxGeometry(1.6, .5, 3.6), std(0xd32f2f, .5)); car.add(tub); for (const x of [-.4, .4]){ const bench = new THREE.Mesh(new THREE.BoxGeometry(.4, .15, 3.4), std(0xffd200, .5)); bench.position.set(x, .3, 0); car.add(bench); }
+    PARK_ANIM.swing = { pivot, car, cars: [{ car }], ang: 0 }; }
+  { const sp = new THREE.Group(); put(sp, 382, -81); grp.remove(sp); g.add(sp); const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, .35, 24), std(0x8bc34a, .6)); base.position.y = .18; sp.add(base);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 3.4, 10), std(0xe53935, .5)); hub.position.y = 1.9; sp.add(hub); const spin = new THREE.Group(); spin.position.y = 2.2; sp.add(spin); const cars = [];
+    for (let k = 0; k < 6; k++){ const a = k/6*TAU, arm = new THREE.Group(); arm.rotation.y = a; spin.add(arm); const bar = new THREE.Mesh(new THREE.BoxGeometry(3.6, .1, .1), std(0x9aa0a6, .4, .5)); bar.position.x = 1.8; arm.add(bar);
+      const car = new THREE.Group(); car.position.set(3.6, -1.2, 0); arm.add(car); const col = [0xffd200, 0xe53935, 0x1e88e5][k % 3], body = new THREE.Mesh(new THREE.CylinderGeometry(.32, .22, 1.8, 10), std(col, .45)); body.rotation.x = Math.PI/2; car.add(body);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(2.4, .07, .5), std(col, .45)); wing.position.set(0, .12, .15); car.add(wing); const wing2 = wing.clone(); wing2.position.y = .55; car.add(wing2); for (const x of [-1, 1]){ const st = new THREE.Mesh(new THREE.BoxGeometry(.04, .45, .04), std(0x333333, .5)); st.position.set(x, .33, .15); car.add(st); }
+      const prop = new THREE.Mesh(new THREE.BoxGeometry(.9, .08, .03), std(0x333333, .5)); prop.position.z = .95; car.add(prop); cars.push({ arm, car, prop }); }
+    PARK_ANIM.seaplanes = { spin, cars, ang: 0 }; }
   { const fh = new THREE.Group(); put(fh, 366, -81); grp.remove(fh); g.add(fh); const p = new THREE.Mesh(new THREE.CylinderGeometry(.35, .45, 6.2, 10), std(0xffd200, .5)); p.position.y = 3.1; fh.add(p);   // Inkie's Frog Hopper: a yellow tower; a ring of frog seats bounces up it and drops (rideable)
     const cap = new THREE.Mesh(new THREE.SphereGeometry(.7, 12, 8), std(0x43a047, .5)); cap.position.y = 6.4; fh.add(cap); for (const x of [-.25, .25]){ const eye = new THREE.Mesh(new THREE.SphereGeometry(.18, 8, 6), std(0xffffff, .4)); eye.position.set(x, 6.85, .45); fh.add(eye); }
     const car = new THREE.Group(); fh.add(car); const ring = new THREE.Mesh(new THREE.TorusGeometry(.95, .22, 8, 18), std(0x43a047, .5)); ring.rotation.x = Math.PI/2; car.add(ring);
@@ -8857,7 +8975,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout }; if (o.workout?.k === 'slide') return null; if (o.workout?.k === 'spin') return { label: '🛑 Get off the spinner', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
-  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o) || fairAct(o) || caytonAct(o); if (P2) return P2; }
+  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o) || fairAct(o) || caytonAct(o) || cparkAct(o); if (P2) return P2; }
   { const V = vendorNear(o); if (V) return { label: `${V.e} ${V.name}`, go: () => openPlaceMenu(V.name, 'food') }; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }

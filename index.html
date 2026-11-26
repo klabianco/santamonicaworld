@@ -8352,6 +8352,7 @@ const BLOCK1300 = [
   { side: -1, s: 640.8, t0: -518.4, t1: -501.4, h: 13.6, c: 0xf3f2ee, name: 'arch' },
   { side: -1, s: 640.8, t0: -501.6, t1: -488.0, h: 12.5, c: 0xf1f0eb, name: 'tower' },
   { side: -1, s: 641.0, t0: -609.8, t1: -579.6, h: 12.4, ht: 12.4, c: 0xebbcb8, name: 'AMC 7' },
+  { side: 1, s: 665.2, t0: -487.6, t1: -456.6, h: 13.7, c: 0xd8ccb2, name: 'Dodgers' },
   { side: 1, s: 664.6, t0: -457.4, t1: -442.0, h: 14.5, c: 0xe6d9bc, name: 'Kress' },
   { side: 1, s: 665.2, t0: -442.0, t1: -426.8, h: 15.3, c: 0xf0e8d3, name: 'Junipher' },
   { side: -1, s: 641.6, t0: -488.0, t1: -475.4, h: 9.2, c: 0xe9e3d4, name: 'Grant' },
@@ -8456,6 +8457,7 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
   const at = (geo, hex, s, t, y, ry) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
   const sign = (B, tc, y, w, h, text, bg, fg, size, out = .2) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(B.side > 0 ? B.s - out : B.s + out, tc, gl(B) + y)); sg.rotation.y = rot(B); grp.add(sg); return sg; };
   const fo = (B, d) => B.side > 0 ? B.s - d : B.s + d;   // (a point d m out in front of the facade)
+  const win = (B, t0, t1, y0, y1, n, frame, glass) => { const w = (t1 - t0)/n; for (let k = 0; k < n; k++){ const a = t0 + k*w + w*.2, b = t0 + (k + 1)*w - w*.2; f(B, a - .07, b + .07, y0 - .07, y1 + .07, frame, .1); f(B, a, b, y0, y1, glass, .12); } };
   const GL = 0x2c3a44;
   // ---- inland side ----
   { const B = L('Kress'), C = B.c, C2 = 0xd6c7a4, n = 3, pw = .85, bw = (B.t1 - B.t0 - (n + 1)*pw)/n;
@@ -8478,6 +8480,11 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     bays(B.t0, B.t1, 3, (a, b, y0, y1, hex, dep) => f(B, a, b, y0, y1, hex, dep), (t, y) => { const d = at(new THREE.BoxGeometry(.05, .34, .34), 0x6f9a8c, fo(B, .13), t, gl(B) + y, 0); d.rotation.x = Math.PI/4; });
     bays(B.s, sE, 8, (a, b, y0, y1, hex, dep) => fS(B, B.t1, a, b, y0, y1, hex, dep), (s, y) => { const d = at(new THREE.BoxGeometry(.34, .34, .05), 0x6f9a8c, s, B.t1 + .13, gl(B) + y, 0); d.rotation.z = Math.PI/4; });
     for (const [s, t] of [[B.s - .25, B.t1 + .25]]) at(new THREE.CylinderGeometry(.05, .05, .3, 6), 0x3a3d40, s, t, gl(B) + 5.7, 0); }   // (one of the old trolley-wire hooks on the corner)
+  { const B = L('Dodgers'), a = B.t0 + .3, b = a + 9;   // Dodgers Clubhouse (Commons photo, Sept 2022): a white frame round a navy fluted panel with white letters and gooseneck lamps, the tan block set back behind
+    f(B, a, b, 4.7, 7.9, 0xf4f4f1, .45); f(B, a + .35, b - .35, 4.95, 7.55, 0x1f3466, .1, .45); for (let t = a + .5; t < b - .4; t += .25) f(B, t, t + .08, 4.95, 7.55, 0x2a4278, .05, .55);
+    sign(B, (a + b)/2, 6.2, 7, .62, 'DODGERS CLUBHOUSE', '#1f3466', '#ffffff', 84, .62);
+    for (let k = 0; k < 5; k++){ const t = a + 1 + k*(b - a - 2)/4; f(B, t - .03, t + .03, 7.8, 7.86, 0x2a2d30, .55, .45); f(B, t - .12, t + .12, 7.6, 7.75, 0x2a2d30, .2, .85); }
+    f(B, b + .3, B.t1, B.h - .3, B.h + .05, 0xcabd9f, .2); for (const y of [6.2, 9.6]) win(B, b + 1, B.t1 - 1, y, y + 2, 7, 0xe9e1cf, 0x34434d); }   // (the rest, where Patagonia is: tan stucco with two rows of windows, a guess)
   // ---- ocean side ----
   { const B = L('Grant'), C = B.c, C2 = 0xd9d1bf, pw = .9;
     for (const y of [5.0, 5.3, 5.6]) f(B, B.t0 + pw, B.t1 - pw, y, y + .12, C2, .08, .1);   // three grooves over the shops

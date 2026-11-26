@@ -3774,7 +3774,7 @@ function updOcean(dt){
   updCannons(o, dt); if (mode === 'dead') return;
   questStep(o, dt);
   leagueStep(o, dt);
-  mpTick(dt); seatChatTick(dt); if (mode === 'ocean' && AIR.list.length) airStep(dt); if (mode === 'ocean') tplayStep(dt); skyClock(dt); if (SKYCLOCK.stars) SKYCLOCK.stars.position.copy(camera.position);
+  mpTick(dt); seatChatTick(dt); if (mode === 'ocean' && AIR.list.length) airStep(dt); if (mode === 'ocean'){ tplayStep(dt); grassStep(); } skyClock(dt); if (SKYCLOCK.stars) SKYCLOCK.stars.position.copy(camera.position);
   o.tripT = (o.tripT || 0) + dt;
   if (!o.wentFar && Math.hypot(o.x - HOUSE.x, o.y - HOUSE.y) > 300*METERS){ o.wentFar = true; o.homeDone = false; }   // a real trip: coming back home counts
   { const hx = HOUSE.x - o.x, hy = HOUSE.y - o.y, hd = Math.hypot(hx, hy);
@@ -4023,6 +4023,34 @@ function canvasTex(w, h, draw, repeat = true){
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = MAXANI;
   if (repeat){ t.wrapS = t.wrapT = THREE.RepeatWrapping; } return t;
 }
+/* Close-up detail, painted in world space so nothing needs UVs: one small tiling noise texture (R: fine grain, G: soft blotches, B: thin cracks)
+   sampled at three scales and mixed into a material's color and roughness. Fine grain fades out with distance (no shimmer far away), so up
+   close asphalt has aggregate, tar seams and cracks; sidewalks have their scored joints every 5 ft; grass, dirt and sand have clumps; and
+   stucco walls have grain and faint rain streaks. Three texture reads a pixel, so it stays cheap on an iPad. */
+const DETAIL_TEX = (() => { const N = 256, R = mulberry(77), blur = (a, r) => { const o = new Float32Array(N*N); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++){ let v = 0, c = 0; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++){ v += a[((y + dy + N) % N)*N + ((x + dx + N) % N)]; c++; } o[y*N + x] = v/c; } return o; };
+  const w = new Float32Array(N*N).map(() => R()), fine = blur(w, 1), mid = blur(blur(new Float32Array(N*N).map(() => R()), 5), 4), cr = blur(new Float32Array(N*N).map(() => R()), 3);
+  const norm = a => { let lo = 1, hi = 0; for (const v of a){ lo = Math.min(lo, v); hi = Math.max(hi, v); } return a.map(v => (v - lo)/(hi - lo || 1)); }; const F = norm(fine), M = norm(mid), C = norm(cr);
+  const d = new Uint8Array(N*N*4); for (let i = 0; i < N*N; i++){ d[i*4] = F[i]*255; d[i*4 + 1] = M[i]*255; d[i*4 + 2] = Math.max(0, 1 - Math.abs(C[i] - .5)*14)*255; d[i*4 + 3] = 255; }
+  const t = new THREE.DataTexture(d, N, N, THREE.RGBAFormat); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = Math.min(8, MAXANI); t.needsUpdate = true; return t; })();
+// kind: [fine grain strength, blotch strength, crack strength, joint spacing in m (0: none), fine scale in m, streaks (walls)]
+const DETAIL_KINDS = { asph: [.22, .16, .5, 0, .45, 0], walk: [.12, .1, .25, 1.52, .6, 0], conc: [.12, .1, .25, 1.52, .6, 0], curb: [.1, .08, .15, 0, .5, 0], ground: [.3, .34, 0, 0, .5, 2], dirt: [.2, .22, .1, 0, .5, 0], wall: [.07, .1, 0, 0, .9, 1], paver: [.08, .08, 0, 0, .7, 0] };
+function addDetail(mat, kind){ const K = DETAIL_KINDS[kind]; if (!K || mat.userData.detail) return mat; mat.userData.detail = kind;
+  const prev = mat.onBeforeCompile; mat.onBeforeCompile = (sh, r) => { prev?.call(mat, sh, r); sh.uniforms.uDet = { value: DETAIL_TEX }; sh.uniforms.uDK = { value: new THREE.Vector4(K[0], K[1], K[2], K[3]) }; sh.uniforms.uDK2 = { value: new THREE.Vector2(K[4], K[5]) };
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW; varying vec3 vDN;').replace('#include <project_vertex>', '#include <project_vertex>\n vDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normalize(mat3(modelMatrix) * objectNormal);');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+uniform sampler2D uDet; uniform vec4 uDK; uniform vec2 uDK2; varying vec3 vDW; varying vec3 vDN; float dRough = 1.0;`).replace('#include <color_fragment>', `#include <color_fragment>
+{ vec2 p = abs(vDN.y) > .55 ? vDW.xz : vec2(abs(vDN.x) > abs(vDN.z) ? vDW.z : vDW.x, vDW.y);
+  float dist = distance(cameraPosition, vDW), nearF = 1.0 - smoothstep(25.0, 90.0, dist);
+  float f = texture2D(uDet, p / (uDK2.x * 64.0)).r, f2 = texture2D(uDet, p / (uDK2.x * 64.0) * 3.7 + .31).r, m = texture2D(uDet, p / 38.0).g, c = texture2D(uDet, p / 11.0).b;
+  float k = 1.0 + ((f + f2) * .5 - .5) * uDK.x * nearF * 2.0 + (m - .5) * uDK.y * 1.6 - c * uDK.z * .45 * (1.0 - smoothstep(40.0, 140.0, dist));
+  if (uDK.w > 0.0){ vec2 j = abs(fract(p / uDK.w + .5) - .5) * uDK.w; float line = 1.0 - smoothstep(.006, .02, min(j.x, j.y)); k -= line * .22 * (1.0 - smoothstep(15.0, 60.0, dist)); }
+  if (uDK2.y > 1.5){ vec3 col = diffuseColor.rgb; float green = smoothstep(.02, .12, col.g - max(col.r, col.b));   // grass: a real lawn's olive green, clumps, and dry yellowed patches
+    float lum = dot(col, vec3(.3, .59, .11)); col = mix(col, vec3(lum), .22 * green) * mix(1.0, .9, green); float dry = smoothstep(.5, .8, texture2D(uDet, p / 23.0 + .5).g) * green; col = mix(col, col * vec3(1.25, 1.08, .62), dry * .7);
+    float tuft = texture2D(uDet, p / 6.0).r; col *= mix(1.0, .8 + tuft * .4, green * nearF); diffuseColor.rgb = col; }
+  else if (uDK2.y > 0.0){ float st = texture2D(uDet, vec2(p.x / 9.0, p.y / 70.0)).g; k -= smoothstep(.55, .85, st) * .08; }
+  diffuseColor.rgb *= clamp(k, .55, 1.35); dRough = 1.0 + (f - .5) * .3 + c * uDK.z * .2; }`).replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = clamp(roughnessFactor * dRough, .04, 1.0);'); };
+  const pk = prev ? prev.toString() : ''; mat.customProgramCacheKey = () => pk + '|det';   // (detail materials share one program; the kind is just uniforms)
+  mat.needsUpdate = true; return mat; }
 function rep(t, rx, ry){ const c = t.clone(); c.repeat.set(rx, ry); c.needsUpdate = true; return c; }
 const tileTex = canvasTex(512, 512, (g,w,h) => {       // 2 m of pool mosaic tile
   const n = 16, s = w/n; g.fillStyle = '#9fb9c2'; g.fillRect(0,0,w,h);
@@ -5856,7 +5884,7 @@ function buildCoast(){
     for (const [s0, s1, t0, t1] of WELLS){ S.push(s0 - .05, s0 + .05, s1 - .05, s1 + .05); Tl.push(t0 - .05, t0 + .05, t1 - .05, t1 + .05); }
     S.sort((a, b) => a - b); Tl.sort((a, b) => a - b);
     const inWell = (s, t) => { for (const w of WELLS) if (s > w[0] && s < w[1] && t > w[2] && t < w[3]) return w[4]; return null; };
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), c = new THREE.Color(), NS = S.length;
+    const mat = addDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), 'ground'), c = new THREE.Color(), NS = S.length;
     for (let j0 = 0; j0 < Tl.length - 1;){ const j1 = Math.min(Tl.length - 1, j0 + 24), NT = j1 - j0 + 1, pos = new Float32Array(NS*NT*3), col = new Float32Array(NS*NT*3);
       for (let j = 0; j < NT; j++) for (let i = 0; i < NS; i++){ const s = S[i], t = Tl[j0 + j], k = (j*NS + i)*3, [x, y] = landXY(s, t), wl = inWell(s, t), h = i === 0 ? -shelfD(7.6) - 1.2 : wl ?? landH(s, t);   // (a skirt under the edge; and dropped away under a stairwell)
         pos[k] = x*U; pos[k + 1] = h; pos[k + 2] = y*U; landColor(s, t, h, c); col[k] = c.r; col[k + 1] = c.g; col[k + 2] = c.b; }
@@ -5875,7 +5903,7 @@ function buildCoast(){
         if (!idx.length) continue; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere(); const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); } } }
   // ---- streets, paths and the Promenade (from OpenStreetMap), draped on the ground ----
   const strips = new Map();   // material key -> [positions]
-  const strip = (pts, w, key, lift = .06, hf = (s, t) => landH(s, t)) => { const out = strips.get(key) || strips.set(key, []).get(key);
+  const strip = (pts, w, key, lift = .06, hf = (s, t) => landH(s, t)) => { const out = strips.get(key) || strips.set(key, []).get(key); if (key !== 'yellow') for (let i = 0; i < pts.length - 1; i++) pathSeg(pts[i], pts[i + 1], w);
     const P = []; for (let i = 0; i < pts.length - 1; i++){ const [a, b] = pts[i], [c, d] = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(c - a, d - b)/6)); for (let k = 0; k < n; k++) P.push([lerp(a, c, k/n), lerp(b, d, k/n)]); } P.push(pts[pts.length - 1]);
     let prev = null;
     for (let i = 0; i < P.length; i++){ const [s, t] = P[i], [s0, t0] = P[Math.max(0, i - 1)], [s1, t1] = P[Math.min(P.length - 1, i + 1)], L = Math.hypot(s1 - s0, t1 - t0) || 1, ns = -(t1 - t0)/L*w/2, nt = (s1 - s0)/L*w/2;
@@ -5909,7 +5937,7 @@ function buildCoast(){
     for (let t = -14; t > -205; t -= 5){ const f = fenceS(t, 1); if (!isNaN(f)) bl.push([f + 1.8, t]); } if (bl.length > 1) strip(bl, 2.4, 'conc', .06); }
   for (const [key, arr] of strips){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
     if (key === 'paver' || key === 'conc' || key === 'hex'){ const k = key === 'hex' ? 1.4 : key === 'conc' ? 1.5 : 1.6, uv = []; for (let i = 0; i < arr.length; i += 3) uv.push(arr[i]/k, arr[i + 2]/k); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); }
-    geo.computeVertexNormals(); const m = STRIPMAT[key]; m.polygonOffset = true; { const lay = key === 'conc' ? 1 : key === 'curb' ? 2 : key === 'yellow' ? 5 : 3.5; m.polygonOffsetFactor = -lay; m.polygonOffsetUnits = -lay*2; } const mesh = new THREE.Mesh(geo, m); mesh.receiveShadow = true; g.add(mesh); }   // (layered: sidewalk under the curb under the road under the paint, so far-off sidewalk never shows through the road)
+    geo.computeVertexNormals(); const m = STRIPMAT[key]; addDetail(m, { asph: 'asph', walk: 'walk', conc: 'conc', curb: 'curb', bike: 'asph', dg: 'dirt', hex: 'paver', paver: 'paver' }[key]); m.polygonOffset = true; { const lay = key === 'conc' ? 1 : key === 'curb' ? 2 : key === 'yellow' ? 5 : 3.5; m.polygonOffsetFactor = -lay; m.polygonOffsetUnits = -lay*2; } const mesh = new THREE.Mesh(geo, m); mesh.receiveShadow = true; g.add(mesh); }   // (layered: sidewalk under the curb under the road under the paint, so far-off sidewalk never shows through the road)
   // ---- parks, playgrounds, ball fields and parking lots ----
   { const PCOL = [0x5f9a45, 0xc9a77a, 0x5b9a4a, 0x55585d, null, null], pos = [], col = [], cc = new THREE.Color();
     for (const q of CITY.polys){ const hex = PCOL[q.k]; if (hex == null || q.p.length < 3 || (q.k === 2 && q.p[0][0] < 300)) continue; cc.setHex(hex);   // (the ball fields on the sand are volleyball courts: sand)
@@ -5919,7 +5947,7 @@ function buildCoast(){
         for (const v of [a, b, c]){ pos.push(...P3(v[0], v[1], landH(v[0], v[1]) + .04)); col.push(cc.r, cc.g, cc.b); } };
       for (const [i, j, k] of tri) put(q.p[i], q.p[k], q.p[j], 0); }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-    const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, side: THREE.DoubleSide }); const mesh = new THREE.Mesh(geo, m); mesh.receiveShadow = true; g.add(mesh); }
+    const m = addDetail(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, side: THREE.DoubleSide }), 'ground'); const mesh = new THREE.Mesh(geo, m); mesh.receiveShadow = true; g.add(mesh); }
   // ---- buildings: every footprint from OpenStreetMap at its real height, with windows; merged in tiles ----
   const WIN = [[18, 26, 34, 50], [74, 26, 34, 50]];   // (two windows a floor, every 3.2 m: x, y, w, h on a 128 px cell)
   const winTex = (() => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d');
@@ -5936,7 +5964,7 @@ function buildCoast(){
       x.fillStyle = 'rgb(200,128,200)'; x.fillRect(wx, wy, 5, wh); x.fillStyle = 'rgb(60,128,200)'; x.fillRect(wx + ww - 5, wy, 5, wh);   //  its sides,
       x.fillStyle = 'rgb(128,40,180)'; x.fillRect(wx - 6, wy + wh + 8, ww + 12, 3); }   //  and the edge of the sill)
     const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
-  const bldMat = new THREE.MeshStandardMaterial({ map: winTex, normalMap: winNor, normalScale: new THREE.Vector2(1.4, 1.4), vertexColors: true, roughness: .85 });
+  const bldMat = addDetail(new THREE.MeshStandardMaterial({ map: winTex, normalMap: winNor, normalScale: new THREE.Vector2(1.4, 1.4), vertexColors: true, roughness: .85 }), 'wall');
   const parMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .9, side: THREE.DoubleSide });   // (the parapets along the rooflines)
   const PAL = [[0xf1e6cf, 0xf4f2ee, 0xe2cfae, 0xe9c6bd, 0xeadcc0, 0xd8a88a, 0xc9d3d6, 0xe8c98f], [0xf4efe4, 0xe8d9c0, 0xd9c2a8, 0xc9b79c, 0xcf9f82, 0xb9c7cc], [0xe9dcc6, 0xd8cfc4, 0xf0e2d0, 0xc7b8a8, 0xb9c4c8], [0xcfd3d6, 0xbfc6cc, 0xe0ddd6, 0xa9b4bb], [0xf4f2ee, 0x63c7bd, 0xeee3cf, 0xf1d9c4], [0xf2ede2], [0x9aa0a6], [0xc0bfbb]];
   const tiles = new Map(), cc = new THREE.Color(), rc = new THREE.Color();
@@ -6829,6 +6857,27 @@ function buildAir(g){ const white = std(0xf4f5f6, .4, .3), grey = std(0x9aa0a6, 
   for (let k = 0; k < 2; k++){ const m = prop(); g.add(m); AIR.list.push({ m, kind: 'prop', period: 210, off: k*105, path: [P(3400, 900, 60), P(1800, 700, 330), P(-600, 300, 520), P(-3200, -400, 700)] }); }   // (Santa Monica Airport, west over town and out to sea)
   { const m = heli(); g.add(m); AIR.list.push({ m, kind: 'heli', period: 300, off: 0, path: [P(-120, -2400, 150), P(-160, -800, 140), P(-140, 0, 150), P(-150, 1500, 150), P(-120, 3200, 160), P(-150, 1500, 150), P(-140, 0, 150), P(-160, -800, 140), P(-120, -2400, 150)] }); }   // (up and down the beach past the pier)
   for (const A of AIR.list){ A.curve = new THREE.CatmullRomCurve3(A.path); A.m.traverse(o => { if (o.isMesh){ o.material = o.material.clone(); o.material.fog = false; } }); } }   // (seen through the sea haze, like real planes against the sky)
+/* Grass up close: little clumps of blades on the lawns within about 12 m of you (none on paths, roads, sand or in buildings). They sit on a
+   fixed 0.8 m grid with a random nudge per cell, so they stay put as you walk; only the patch around you is drawn, and fewer on slower devices. */
+const PATHS = new Map(), PATH_C = 20;
+function pathSeg(a, b, w){ const s0 = Math.min(a[0], b[0]) - w, s1 = Math.max(a[0], b[0]) + w, t0 = Math.min(a[1], b[1]) - w, t1 = Math.max(a[1], b[1]) + w;
+  for (let i = Math.floor(s0/PATH_C); i <= Math.floor(s1/PATH_C); i++) for (let j = Math.floor(t0/PATH_C); j <= Math.floor(t1/PATH_C); j++){ const k = i*100000 + j; (PATHS.get(k) || PATHS.set(k, []).get(k)).push(a[0], a[1], b[0], b[1], w/2 + .35); } }
+function onPath(s, t){ const L = PATHS.get(Math.floor(s/PATH_C)*100000 + Math.floor(t/PATH_C)); if (!L) return false;
+  for (let i = 0; i < L.length; i += 5){ const ax = L[i], ay = L[i + 1], bx = L[i + 2], by = L[i + 3], dx = bx - ax, dy = by - ay, q = clamp(((s - ax)*dx + (t - ay)*dy)/(dx*dx + dy*dy || 1), 0, 1); if (Math.hypot(s - ax - dx*q, t - ay - dy*q) < L[i + 4]) return true; } return false; }
+const GRASS = { mesh: null, at: null, cell: .55, R: 12 };
+function grassStep(){ const o = ocean; if (!o?.onLand || o.x < coastX(o.y) || gfx < 2 || o.inside){ if (GRASS.mesh) GRASS.mesh.visible = false; return; }
+  const [ps, pt] = landST(o.x, o.y); if (GRASS.at && Math.hypot(ps - GRASS.at[0], pt - GRASS.at[1]) < 2 && GRASS.mesh.visible) return; GRASS.at = [ps, pt];
+  const max = gfx >= 3 ? 2400 : 900;
+  if (!GRASS.mesh){ const bl = []; for (let k = 0; k < 5; k++){ const a = k/5*Math.PI + .3, q = new THREE.BufferGeometry(), h = .16 + (k % 3)*.05, lean = .05; q.setAttribute('position', new THREE.Float32BufferAttribute([-.032, 0, 0, .032, 0, 0, lean, h, 0], 3)); q.setAttribute('color', new THREE.Float32BufferAttribute([.8, .85, .7, .8, .85, .7, 1.2, 1.2, 1], 3)); q.rotateY(a); q.translate(Math.cos(a*3)*.06, 0, Math.sin(a*3)*.06); bl.push(q); }
+    const geo = mergeGeometries(bl); geo.computeVertexNormals(); const nm = geo.attributes.normal; for (let i = 0; i < nm.count; i++) nm.setXYZ(i, 0, 1, 0);   // (lit like the lawn under them)
+    GRASS.mesh = new THREE.InstancedMesh(geo, Object.assign(new THREE.MeshStandardMaterial({ color: 0x7d9c4a, vertexColors: true, roughness: .95, side: THREE.DoubleSide }), { onBeforeCompile: sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n normal = normalize(vNormal);'); } }), 2400);   /* (both sides of a blade lit like the lawn) */ GRASS.mesh.frustumCulled = false; GRASS.mesh.receiveShadow = true; oceanScene.add(GRASS.mesh); }
+  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), c = new THREE.Color(), C = GRASS.cell, R = GRASS.R; let n = 0;
+  for (let i = Math.floor((ps - R)/C); i <= Math.ceil((ps + R)/C) && n < max; i++) for (let j = Math.floor((pt - R)/C); j <= Math.ceil((pt + R)/C) && n < max; j++){
+    let hsh = Math.imul(i, 73856093) ^ Math.imul(j, 19349663); hsh = Math.imul(hsh ^ (hsh >>> 13), 1274126177); const r1 = (hsh & 1023)/1023, r2 = ((hsh >>> 10) & 1023)/1023, r3 = ((hsh >>> 20) & 1023)/1023;
+    if (gfx < 3 && r3 < .5) continue; const s = (i + r1)*C, t = (j + r2)*C; if (Math.hypot(s - ps, t - pt) > R) continue;
+    const h = landH(s, t); landColor(s, t, h, c); if (!(c.g - Math.max(c.r, c.b) > .06) || onPath(s, t) || bldAt(s, t) || onRoadway(s, t)) continue;
+    const [x, y] = landXY(s, t); e.set(0, r3*TAU, 0); q.setFromEuler(e); const k = .7 + r1*.7; sc.set(k, k*(.8 + r2*.6), k); M.compose(new THREE.Vector3(x*U, h + .02, y*U), q, sc); GRASS.mesh.setMatrixAt(n++, M); }
+  GRASS.mesh.count = n; GRASS.mesh.instanceMatrix.needsUpdate = true; GRASS.mesh.visible = n > 0; }
 function airStep(dt){ const now = Date.now()/1000, cam = camera.position, v = new THREE.Vector3(), tg = new THREE.Vector3(); let heliD = 1e9;
   for (const A of AIR.list){ const f = (((now - RT_EPOCH + A.off) % A.period) + A.period) % A.period/A.period, m = A.m;
     if (A.kind === 'jet' && f > .8){ m.visible = false; continue; } m.visible = true; const u = A.kind === 'jet' ? f/.8 : f;

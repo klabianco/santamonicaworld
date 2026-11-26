@@ -4460,6 +4460,25 @@ function poseClimb(m, ph){
 // walking on land: the swimmer stands and swings arms and legs; animals just scuttle
 function footFlex(u, on){ if (u.footOn === on) return; u.footOn = on;   // feet: pointed for swimming, turned forward to stand and walk on
   for (const id of ['ll', 'rl']){ const L = u.legs[id]; for (const f of [L.ft, L.sh]) if (f){ f.rotation.z = on ? Math.PI/2 : 0; f.position.set(-.43, on ? -.05 : f === L.sh ? -.004 : 0, 0); } } }
+/* Life on top of the walk: a step bob, the hips and shoulders twisting against each other, arms swinging from the shoulder with a little elbow
+   bend (more when you run, elbows bent and leaning in), knees bending through the swing and the foot rolling heel to toe; standing still you
+   breathe, shift your weight and your arms hang loose. */
+function poseLife(m, o, dt){ const u = m.userData, v = Math.hypot(o.vx || 0, o.vy || 0)/METERS, run = v > 5.5, ph = o.walkPh || 0, sw = Math.sin(ph), moving = o.walking && v > .3;
+  if (moving){ const amp = run ? 1 : .7; m.position.y += Math.abs(Math.cos(ph))*(run ? .07 : .035) - (run ? .03 : .015); m.rotation.z += run ? .14 : .03;   // (bob; lean forward into a run)
+    u.body.rotation.x = sw*(run ? .16 : .09);   // (hips and shoulders counter-twist)
+    u.arms.la.sh.rotation.set(0, 0, Math.PI - sw*.65*amp); u.arms.ra.sh.rotation.set(0, 0, Math.PI + sw*.65*amp); u.arms.la.sh.rotation.x = -.08; u.arms.ra.sh.rotation.x = .08;
+    const eb = run ? -1.35 : -.3; u.arms.la.el.rotation.set(0, 0, eb - Math.max(0, sw)*(run ? .2 : .35)); u.arms.ra.el.rotation.set(0, 0, eb - Math.max(0, -sw)*(run ? .2 : .35));
+    u.legs.ll.hp.rotation.z = sw*.6*amp; u.legs.rl.hp.rotation.z = -sw*.6*amp;
+    u.legs.ll.kn.rotation.z = -Math.max(0, -Math.sin(ph - .6))*(run ? 1.3 : .8); u.legs.rl.kn.rotation.z = -Math.max(0, Math.sin(ph - .6))*(run ? 1.3 : .8);
+    for (const [id, f] of [['ll', 1], ['rl', -1]]){ const L = u.legs[id], roll = Math.sin(ph*f + .4)*.25; for (const ft of [L.ft, L.sh]) if (ft) ft.rotation.x = 0, ft.rotation.y = roll*.0, ft.rotation.z = Math.PI/2 + roll*.6; } }
+  else { const t = time, br = Math.sin(t*1.6)*.5 + .5, shift = Math.sin(t*.37);   // (breathing, a slow weight shift)
+    if (u.torso && u.tee){ u.tee.scale.x *= 1; } m.position.y += br*.004; u.body.rotation.x = shift*.02; m.rotation.x += shift*.025;
+    u.arms.la.sh.rotation.set(-.06, 0, Math.PI - .05 - br*.025); u.arms.ra.sh.rotation.set(.06, 0, Math.PI + .05 + br*.025); u.arms.la.el.rotation.set(0, 0, -.18); u.arms.ra.el.rotation.set(0, 0, -.18);
+    u.legs.ll.hp.rotation.z = .02 + shift*.03; u.legs.rl.hp.rotation.z = -.02 + shift*.03; u.legs.ll.kn.rotation.z = -Math.max(0, shift)*.08; u.legs.rl.kn.rotation.z = -Math.max(0, -shift)*.08;
+    for (const id of ['ll', 'rl']){ const L = u.legs[id]; for (const ft of [L.ft, L.sh]) if (ft) ft.rotation.set(0, 0, Math.PI/2); } } }
+function poseJump(m, vUp){ const u = m.userData; footFlex(u, true); poseWalk(m, 0, false); const up = clamp(vUp/5, -1, 1), tuck = 1 - Math.abs(up);   // (arms swing up on the way up, come down for the landing; knees tuck at the top)
+  u.body.rotation.set(0, 0, 0); const ar = Math.PI + 1.3 + up*1.1; u.arms.la.sh.rotation.set(-.25, 0, ar); u.arms.ra.sh.rotation.set(.25, 0, ar);   /* (forward and up: the bike pose shows forward is +z) */ u.arms.la.el.rotation.set(0, 0, -.35); u.arms.ra.el.rotation.set(0, 0, -.35);
+  u.legs.ll.hp.rotation.z = .25 + tuck*.5; u.legs.rl.hp.rotation.z = .25 + tuck*.5; u.legs.ll.kn.rotation.z = -.4 - tuck*.7; u.legs.rl.kn.rotation.z = -.4 - tuck*.7; }
 function poseWalk(m, ph, moving){
   const u = m.userData;
   if (u.kind !== 'swimmer'){ poseModel(m, null, moving ? ph*.3 : 0); return; }
@@ -12240,7 +12259,7 @@ function render3D(dt){
         if (human) for (const l of ['ll', 'rl']){ m.userData.legs[l].hp.rotation.z = 1.1; m.userData.legs[l].kn.rotation.z = -1.3; } m.position.y += ocean.walking ? Math.abs(Math.sin(ocean.walkPh))*.12 : 0; }
       else if (ocean.climb){ m.position.set(px, gy + 1.2 + ocean.climb.h, pz); m.rotation.set(0, -ocean.ang, Math.PI/2); if (ocean.climb.h >= ocean.climb.top) poseWalk(m, 0, false); else poseClimb(m, ocean.climb.ph); }   // on the rope ladder, standing up in the lookout at the top
       else { m.position.set(px, gy + (human ? 1.2 : .12), pz); m.rotation.set(0, -ocean.ang, human ? Math.PI/2 : 0);
-      poseWalk(m, ocean.walkPh || 0, ocean.walking); }
+      poseWalk(m, ocean.walkPh || 0, ocean.walking); if (human) poseLife(m, ocean, dt); }
     } else if (ocean.vehicle){   // sitting in your boat (inside the submarine you're hidden)
       const V = VEH[ocean.vehicle], human = m.userData.kind === 'swimmer';
       const at = (V.at || 0)*Math.cos(ocean.ang), atz = (V.at || 0)*Math.sin(ocean.ang);
@@ -12252,11 +12271,12 @@ function render3D(dt){
       m.rotation.set(0, -ocean.ang, rideModel.rotation.z); poseModel(m, RIDE_POSE, t);
     } else {
       const air = ocean.jumpY || 0, airPitch = air > 0 ? clamp(Math.atan2(ocean.jumpV, Math.max(2.5, Math.hypot(ocean.vx, ocean.vy)/METERS))*.7, -.8, .8) : 0;   // nose up on the way up, down on the way down
-      m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
-      m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); }
+      if (ocean.landJump && air > 0 && m.userData.kind === 'swimmer'){ m.position.set(px, air + 1.2, pz); m.rotation.set(0, -ocean.ang, Math.PI/2); poseJump(m, ocean.jumpV); }   // (a jump on land: upright, arms swinging up, knees tucking)
+      else { m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
+      m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); } }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
     amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); setTattoo(m, save.tattoo); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
-    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, !!ocean.onLand && !ocean.onShip && !ocean.onBoat); updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
+    fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, (!!ocean.onLand || !!ocean.landJump) && !ocean.onShip && !ocean.onBoat);   /* (a jump on land keeps your clothes on) */ updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? (ocean.workout?.pier || ocean.workout?.k === 'ride2' ? ocean.workout.py + .6 : landY(ocean) + .6 + (ocean.climb?.h || 0)) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
     const cUnder = camera.position.y < waveH(camera.position.x, camera.position.z, OC.amp, 1) - .02;

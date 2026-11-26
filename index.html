@@ -4268,6 +4268,21 @@ const BODY_SHAPE = {
   fore: [[-.02, .033, .033], [.06, .041, .04, -.003], [.15, .036, .034], [.25, .027, .03], [.3, .025, .028]],
   thigh: [[.03, .08, .08, .004], [-.05, .086, .084, -.004], [-.18, .077, .072], [-.32, .062, .058], [-.42, .05, .048], [-.46, .045, .044]],
   calf: [[.02, .046, .046], [-.06, .054, .05, .012], [-.14, .056, .05, .016], [-.26, .042, .04, .008], [-.38, .03, .03], [-.43, .028, .028]] };
+// a hand (in the forearm's frame: x along the arm, the palm flat in x-z): a palm, four slightly curled fingers of different lengths, a thumb
+function handGeo(s){ const parts = [], add = (P, z, rotY = 0, tx = 0, ty = 0) => { const g = sculpt(P, null, 8, 3).geometry; if (rotY) g.rotateY(rotY); g.translate(tx, ty, z); parts.push(g); };
+  add([[.285, .014, .024], [.31, .0165, .033], [.35, .0155, .037, .001], [.383, .0125, .035, .002]], 0);   // (the palm)
+  [.058, .066, .062, .05].forEach((L, k) => { const x0 = .378; add([[x0, .0085, .0088, .002], [x0 + L*.35, .0078, .0082, .004], [x0 + L*.7, .0072, .0076, .008], [x0 + L, .0058, .0064, .014]], (k - 1.5)*.0182); });
+  add([[0, .0095, .0098], [.024, .0088, .009, .002], [.046, .0074, .0078, .006], [.055, .006, .0065, .009]], -s*.028, -s*.75, .305, -.006);   // (the thumb, angled out from the palm)
+  const g = mergeGeometries(parts); g.computeVertexNormals(); return g; }
+// a foot and a sneaker, in the frame footFlex turns forward to stand (local -x toward the toes, local +y toward the sole)
+const FOOT_P = [[-.115, .011, .019, .019], [-.1, .018, .035, .012], [-.07, .023, .043, .007], [-.03, .029, .041, .001], [.01, .034, .035, -.004], [.045, .033, .031, -.003], [.066, .018, .024, .012]];
+function sneaker(upperM){ const g = new THREE.Group(); const up = sculpt(shapeScale(FOOT_P, 1.18, 1.14).map(([x, ry, rz, yo]) => [x*1.06, ry, rz, yo - .002]), upperM, 16, 3); g.add(up);
+  const sole = sculpt(FOOT_P.map(([x, , rz]) => [x*1.1, .009, rz*1.22, .033]), std(0xf2f0ea, .6), 16, 3); g.add(sole);   // (the white sole)
+  const heel = sculpt([[.03, .03, .036, -.004], [.06, .03, .03, -.002], [.078, .02, .022, .008]], std(0xdedbd2, .6), 12, 2); g.add(heel);   // (the heel counter)
+  const tongue = sculpt([[-.05, .006, .022, -.036], [-.01, .007, .024, -.042], [.02, .007, .022, -.05]], upperM, 10, 2); g.add(tongue);   // (the tongue)
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.03, .008, 8, 18), std(0xe8e4da, .7)); collar.rotation.x = Math.PI/2; collar.scale.set(1.25, 1, 1); collar.position.set(.032, -.04, 0); g.add(collar);   // (the padded collar round the ankle)
+  for (let k = 0; k < 5; k++){ const l = new THREE.Mesh(new THREE.BoxGeometry(.005, .004, .034), std(0x3a3a3a, .7)); l.position.set(-.062 + k*.016, -.039 - k*.0028, 0); l.rotation.z = .18; g.add(l); }   // (laces across the top)
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; }); return g; }
 const shapeScale = (P, k, kz = k, dx = 0) => P.map(([x, ry, rz, yo]) => [x + dx, ry*k, rz*kz, yo || 0]);
 function buildSwimmer(){
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
@@ -4300,7 +4315,7 @@ function buildSwimmer(){
     sh.add(sculpt(BODY_SHAPE.upper, SKIN, 14, 4));   // (deltoid, biceps, tapering to the elbow)
     const el = new THREE.Group(); el.position.x = .31; sh.add(el);
     el.add(sculpt(BODY_SHAPE.fore, SKIN, 14, 4));   // (forearm swelling below the elbow, slim wrist)
-    const hand = ellip(.06, 1.25, .35, .8, SKIN); hand.position.x = .31; el.add(hand);
+    const hand = new THREE.Mesh(handGeo(s), SKIN); hand.castShadow = true; hand.userData.hand = id; el.add(hand);   // (a hand with fingers)
     arms[id] = { sh, el };
   }
   for (const [id, s] of [['ll',-1],['rl',1]]){
@@ -4308,7 +4323,7 @@ function buildSwimmer(){
     hp.add(sculpt(BODY_SHAPE.thigh, SKIN, 16, 4));   // (a thigh that narrows to the knee)
     const kn = new THREE.Group(); kn.position.x = -.44; hp.add(kn);
     kn.add(sculpt(BODY_SHAPE.calf, SKIN, 16, 4));   // (the calf muscle at the back, a slim ankle)
-    const ft = ellip(.06, 1.6, .42, .8, SKIN); ft.position.x = -.43; kn.add(ft);
+    const ft = sculpt(FOOT_P, SKIN, 14, 3); ft.position.x = -.43; kn.add(ft);   // (a bare foot: heel, arch, ball, toes)
     legs[id] = { hp, kn, ft };
   }
   // gear (shown only when owned): fins, mask & snorkel, scuba tank, golden cap
@@ -4344,9 +4359,9 @@ function buildSwimmer(){
   const wearM = { hat: std(0xe53935, .7), shades: Object.assign(std(0x111111, .25, .25), { emissiveIntensity: .25 }), shoes: std(0xf4f4f0, .7), phones: std(0x222222, .4) }, wear = { hat: [], shades: [], shoes: [], phones: [] };
   { const h = new THREE.Mesh(new THREE.SphereGeometry(.119, 24, 12, 0, TAU, 0, Math.PI*.52), wearM.hat); h.scale.setScalar(1.2); h.rotation.z = -.8; h.position.copy(head.position); h.castShadow = true; body.add(h); wear.hat.push(h);
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .014, 20), wearM.hat); brim.scale.set(1, 1, .95); brim.rotation.z = Math.PI/2 - .15; brim.position.set(.735, -.1, 0); body.add(brim); wear.hat.push(brim); }
-  for (const s of [-1, 1]){ const l = ellip(.042, .8, .6, 1.15, wearM.shades, 14); l.position.set(.708, -.093, s*.047); body.add(l); wear.shades.push(l); }   // (big enough to see)
-  { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.712, -.088, 0); body.add(bar); wear.shades.push(bar); }
-  for (const id of ['ll', 'rl']){ const sh = ellip(.066, 1.65, .5, .88, wearM.shoes, 16); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); legs[id].sh = sh; }
+  for (const s of [-1, 1]){ const l = ellip(.042, .8, .6, 1.15, wearM.shades, 14); l.position.set(.668, -.1, s*.04); body.add(l); wear.shades.push(l); }   // (big enough to see, over the eyes)
+  { const bar = new THREE.Mesh(new THREE.BoxGeometry(.012, .012, .2), wearM.shades); bar.position.set(.676, -.094, 0); body.add(bar); wear.shades.push(bar); }
+  for (const id of ['ll', 'rl']){ const sh = sneaker(wearM.shoes); sh.position.set(-.43, -.004, 0); legs[id].kn.add(sh); wear.shoes.push(sh); legs[id].sh = sh; }   // (sneakers: the upper takes the shoes' color)
   { const hg = new THREE.Group(); hg.position.copy(head.position); hg.rotation.x = Math.PI/2; body.add(hg);   // headphones: a band over the top of your head and a cup on each ear
     const band = new THREE.Mesh(new THREE.TorusGeometry(.118, .013, 8, 24, Math.PI), wearM.phones); band.rotation.z = -Math.PI/2; hg.add(band); wear.phones.push(band);
     for (const sd of [-1, 1]){ const cup = new THREE.Mesh(new THREE.CylinderGeometry(.052, .052, .035, 18), wearM.phones); cup.position.set(-.005, sd*.112, 0); hg.add(cup); wear.phones.push(cup);

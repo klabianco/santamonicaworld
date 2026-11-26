@@ -3144,7 +3144,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   { const st = pierStairH(s, t); if (st != null) h = Math.max(h, st); }
   if (t > 4250 && t < 4420 && s < 160 && VPIER.poly && vpierAt(s, t)){ const dk = vpierDeck(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the Venice Fishing Pier)
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
-  if (s > 20){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }
+  if (s > 20 && !inFairLobby(s, t)){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }   /* (the Fairmont's lobby is open inside) */
   if (t > SOUTH.t0 - 5 && s > SOUTH.s0 - 5){ const b = southBld(s, t); if (b && b.base != null) h = Math.max(h, b.base + b.h); }   // (Ocean Park and Venice's stand-in buildings)
   for (const b of LAND_BOXES) if (s > b[0] && s < b[2] && t > b[1] && t < b[3] && !(b[5] != null && walkRef < b[5])) h = Math.max(h, b[4]);   // (b[5]: a box only up on the pier deck, not down on the sand under it)
   if (s > -222 && s < -190 && t > -26 && t < 2){ const m = mariH(s, t); if (m != null) h = m; }   // (Mariasol's floors and walls)
@@ -5352,12 +5352,42 @@ function visitStep(o){ const V = VISIT; if (!V?.marks.length || !o) return; { co
       banner(`📍 ${M.i + 1}. ${M.title}`, left ? `A stop on your trip. ${left} more to go: follow the gold arrow` : 'The last stop on your trip!'); visitNext(); } } }
 // The Fairmont Miramar Hotel & Bungalows (101 Wilshire, at Ocean Ave): the hotel's sign on a low wall at the corner, its flags, and the huge
 // Moreton Bay fig in front (planted in 1889; one of the biggest trees in Santa Monica). The buildings themselves come from OpenStreetMap.
+/* The Fairmont Miramar's lobby (research: fairmont_wilshire.json): you walk in off the motor court, past the big fig. A long front desk
+   with an art wall behind it, an Art Deco lounge by the staircase (sofas and armchairs you can sit in), the Lobby Lounge's bar, Dogtown
+   Coffee and the way into FIG restaurant; cream stone floors, a big rug and chandeliers. (The lobby's exact floor, ceiling and layout
+   aren't documented: they're a guess in the hotel's style.) */
+const FAIR = { lobby: [449, 481, -959, -933.5], door: [462, 468], spots: [] };
+const inFairLobby = (s, t) => s > FAIR.lobby[0] && s < FAIR.lobby[1] && t > FAIR.lobby[2] && t < FAIR.lobby[3];
+function buildFairLobby(g, P3){ const [s0, s1, t0, t1] = FAIR.lobby, grp = new THREE.Group(), H = 5.2, base = landH((s0 + s1)/2, (t0 + t1)/2), cream = std(0xcdbd9f, .75), stone = std(0xb9a688, .35, .05), gold = std(0xc9a227, .3, .7), dark = std(0x2a2422, .5), wal = std(0x6b4a32, .6);
+  const bx = (a, b, c, d, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(b - a), y1 - y0, Math.abs(d - c)), m); me.position.set(...P3((a + b)/2, (c + d)/2, base + (y0 + y1)/2)); me.castShadow = me.receiveShadow = true; grp.add(me); return me; };
+  const wall = (a, b, c, d) => { bx(a, b, c, d, 0, H, cream); LAND_BOXES.push([Math.min(a, b), Math.min(c, d), Math.max(a, b), Math.max(c, d), base + H]); };
+  bx(s0, s1, t0, t1, -.02, .02, stone); bx(s0, s1, t0, t1, H, H + .15, std(0xd9cdb5, .8));
+  wall(s0, s1, t0, t0 + .3); wall(s0, s0 + .3, t0, t1); wall(s1 - .3, s1, t0, t1); wall(s0, FAIR.door[0], t1 - .3, t1); wall(FAIR.door[1], s1, t1 - .3, t1); bx(FAIR.door[0], FAIR.door[1], t1 - .3, t1, 3.2, H, cream);
+  for (const ds of [0, 1]){ const gl = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3, .06), new THREE.MeshStandardMaterial({ color: 0x9fc7d8, roughness: .05, metalness: .3, transparent: true, opacity: .25, depthWrite: false })); gl.position.set(...P3(FAIR.door[0] + 1.6 + ds*2.8, t1 + .4, base + 1.5)); grp.add(gl); }
+  { const rug = new THREE.Mesh(new THREE.PlaneGeometry(10, 7), std(0x2f4d43, .95)); rug.rotation.x = -Math.PI/2; rug.position.set(...P3(465, -949, base + .03)); grp.add(rug); }
+  bx(470, 479, t0 + 2.2, t0 + 3, 0, 1.1, wal); bx(470, 479, t0 + 2.15, t0 + 3.05, 1.1, 1.16, stone);
+  { const art = new THREE.Mesh(new THREE.PlaneGeometry(9, 3), new THREE.MeshBasicMaterial({ map: canvasTex(512, 170, (x, w, h) => { x.fillStyle = '#e9e1d2'; x.fillRect(0, 0, w, h); const R = mulberry(4); for (let k = 0; k < 26; k++){ x.fillStyle = ['#c9a227', '#2f4d43', '#7a8f9c', '#b8553a', '#f4f1ea'][k % 5]; x.globalAlpha = .75; x.beginPath(); x.arc(R()*w, R()*h, 10 + R()*34, 0, TAU); x.fill(); } x.globalAlpha = 1; }) })); art.position.set(...P3(474.5, t0 + .35, base + 2.6)); const a = new THREE.Vector3(...P3(470, t0, 0)), b = new THREE.Vector3(...P3(479, t0, 0)); art.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); grp.add(art); }
+  FAIR.spots.push({ s: 474.5, t: t0 + 4, r: 2.2, label: '🛎️ Front desk', go: () => banner('🛎️ Welcome to the Fairmont Miramar', 'Since 1921, at the top of Wilshire. Stay a while: try the lounge, the bar, FIG or a coffee') });
+  for (let k = 0; k < 12; k++){ const a = k/12*Math.PI; bx(452 + Math.cos(a)*2.4, 452 + Math.cos(a)*2.4 + 1.2, -946 + Math.sin(a)*2.4, -946 + Math.sin(a)*2.4 + .5, 0, .2 + k*.33, std(0xd8cdb8, .6)); }   // (the curved staircase)
+  for (const [ss, tt, rot] of [[458, -951, 0], [458, -945, Math.PI], [462.5, -948, Math.PI/2]]){ const sofa = new THREE.Group(), velv = std(0x2f6b6b, .8); const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, .42, .85), velv); seat.position.y = .3; sofa.add(seat); const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, .5, .2), velv); back.position.set(0, .7, -.35); sofa.add(back);
+    sofa.position.set(...P3(ss, tt, base)); sofa.rotation.y = rot; grp.add(sofa); const fwd = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot), alg = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rot), [x, z] = landXY(ss, tt); addSeat(x*U, z*U, { y: base + .5, f: [fwd.x, fwd.z], a: [alg.x, alg.z], len: 2.2 }); }
+  bx(457.5, 459, -948.6, -947.4, 0, .42, gold);
+  bx(452, 460, t0 + .6, t0 + 1.4, 0, 1.1, dark); bx(452, 460, t0 + .55, t0 + 1.45, 1.1, 1.16, gold); bx(452.2, 459.8, t0 + .32, t0 + .45, 1.5, 2.8, std(0x8a6a48, .6));
+  for (let k = 0; k < 6; k++){ const ss = 452.8 + k*1.3; bx(ss - .2, ss + .2, t0 + 1.9, t0 + 2.3, 0, .75, std(0x2f6b6b, .6)); addSeatST(ss, t0 + 2.1, base + .77, 0, -1, 0, 0, 0, () => openPlaceMenu('Lobby Lounge', 'food')); }
+  FAIR.spots.push({ s: 456, t: t0 + 2.8, r: 2, label: '🍹 Lobby Lounge', go: () => openPlaceMenu('Lobby Lounge', 'food') });
+  bx(s1 - 4.5, s1 - .6, t1 - 3.2, t1 - 2.4, 0, 1.05, std(0x1d1d1f, .5)); FAIR.spots.push({ s: s1 - 2.5, t: t1 - 4, r: 1.8, label: '☕ Dogtown Coffee', go: () => openPlaceMenu('Dogtown Coffee', 'food') });
+  bx(s1 - .35, s1 - .3, t0 + 6, t0 + 9, 0, 3.2, std(0x3e2a1a, .6)); { const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, .6), new THREE.MeshBasicMaterial({ map: labelTex('FIG', '#2f3b2c', '#e7d7b1', 512, 128, 90) })); sg.position.set(...P3(s1 - .4, t0 + 7.5, base + 3.6)); const a = new THREE.Vector3(...P3(s1, t0, 0)), b = new THREE.Vector3(...P3(s1, t0 + 1, 0)); sg.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x) + Math.PI/2; grp.add(sg); }
+  FAIR.spots.push({ s: s1 - 2, t: t0 + 7.5, r: 2, label: '🍽️ Eat at FIG', go: () => openPlaceMenu('FIG', 'food') });
+  for (const [ss, tt] of [[458, -948], [470, -948], [474, -942]]){ const ch = new THREE.Mesh(new THREE.SphereGeometry(.55, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff1cf })); ch.position.set(...P3(ss, tt, base + H - 1)); grp.add(ch); const rod = new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, .9, 4), gold); rod.position.set(...P3(ss, tt, base + H - .45)); grp.add(rod); }
+  g.add(grp); }
+function fairAct(o){ if (!o?.onLand || o.workout) return null; const [s, t] = landST(o.x, o.y); if (!inFairLobby(s, t)) return null; let best = null, bd = 9; for (const P of FAIR.spots){ const d = Math.hypot(P.s - s, P.t - t); if (d < P.r && d < bd){ bd = d; best = P; } } return best ? { label: best.label, go: best.go } : null; }
 function buildFairmont(g, P3){ const grp = new THREE.Group(), at = (sv, t, y) => P3(sv, t, landH(sv, t) + y);
+  buildFairLobby(g, P3);
   { const wall = new THREE.Mesh(new THREE.BoxGeometry(1, 1.1, 9), std(0xf1e6cf, .9)); wall.position.set(...at(419, -860, .55)); grp.add(wall);
     for (const ry of [-Math.PI/2, Math.PI/2]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(8.4, .8), new THREE.MeshBasicMaterial({ map: labelTex('FAIRMONT MIRAMAR', '#1f3b2c', '#d4b46a', 1024, 98, 70) })); sg.position.set(...at(419, -860, .6)); sg.rotation.y = ry; sg.translateZ(.52); grp.add(sg); } }
   for (const k of [0, 1, 2]){ const pole = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 9, 6), std(0xdddddd, .4, .6)); pole.position.set(...at(424 + k*3, -872, 4.5)); grp.add(pole);
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshBasicMaterial({ color: [0x1f3b2c, 0xffffff, 0x1f3b2c][k], side: THREE.DoubleSide })); fl.position.set(...at(424 + k*3 + .8, -872, 8.4)); grp.add(fl); }
-  { const R = mulberry(1889), c = [440, -863], bark = std(0x8a7f74, .9);   // the fig: a fat trunk with roots spreading out, big branches, a wide dark-green canopy
+  { const R = mulberry(1889), c = [462, -908], bark = std(0x8a7f74, .9);   // (in the middle of the oval motor court off Wilshire, where the map has the open loop: research says about 56 m in from Ocean and 70 m back from Wilshire, a guess)   // the fig: a fat trunk with roots spreading out, big branches, a wide dark-green canopy
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, 7, 10), bark); trunk.position.set(...at(c[0], c[1], 3.5)); grp.add(trunk);
     for (let k = 0; k < 8; k++){ const a = k/8*TAU + R()*.4, root = new THREE.Mesh(new THREE.CylinderGeometry(.25, .7, 5, 6), bark); const [x, y, z] = at(c[0] + Math.cos(a)*2.8, c[1] + Math.sin(a)*2.8, .35); root.position.set(x, y, z); root.rotation.set(Math.sin(a)*1.35, 0, -Math.cos(a)*1.35); grp.add(root); }
     for (let k = 0; k < 6; k++){ const a = k/6*TAU + .3, br = new THREE.Mesh(new THREE.CylinderGeometry(.35, .8, 9, 7), bark), [x, y, z] = at(c[0] + Math.cos(a)*4, c[1] + Math.sin(a)*4, 9); br.position.set(x, y, z); br.rotation.set(Math.sin(a)*.9, 0, -Math.cos(a)*.9); grp.add(br); }
@@ -6275,6 +6305,9 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Bait & Tackle': [M('🎣', 'Fishing rod', 20, 'fish'), M('🪱', 'Bait', 2, 'play', { say: 'Wiggly! Fish love it' })],
   'Soda Jerks': [M('🍨', 'Hot fudge sundae', 9), M('🥤', 'Chocolate malt', 8, 'drink'), M('🍺', 'Root beer float', 7, 'drink'), M('🍦', 'Ice cream cone', 5, 'lick', { scoops: [0xf8bbd0] }), M('🍒', 'Cherry phosphate soda', 5, 'drink')],   // (the soda fountain in the Hippodrome)
   'Pier Shop': [M('🧢', 'Santa Monica Pier cap', 25, 'wear', { slot: 'hat', col: '#1e6fd9' }), M('👕', 'Pier T-shirt', 30, 'wear', { slot: 'shirt', col: '#f4f4f0' }), M('🔑', 'Route 66 keychain', 8, 'play', { say: 'End of the Trail!' }), M('🦭', 'Plush sea lion', 20, 'hug'), M('🖼️', 'Pier postcard', 3, 'play', { say: 'Wish you were here!' })],
+  'Lobby Lounge': [M('🍹', 'Sparkling lemonade mocktail', 9, 'drink'), M('🍓', 'Strawberry basil spritzer', 9, 'drink'), M('🍟', 'Truffle fries', 12), M('🫒', 'Olives and flatbread', 10)],   // (the hotel bar: mocktails for the family)
+  'Dogtown Coffee': [M('☕', 'Latte', 6, 'drink'), M('🍫', 'Hot chocolate', 5, 'drink'), M('🥐', 'Croissant', 5), M('🍪', 'Cookie', 4)],
+  'FIG': [M('🥗', 'Market salad', 18), M('🐟', 'Grilled local fish', 34), M('🍕', 'Flatbread', 20), M('🍰', 'Fig tart', 12)],
   'Bacon-wrapped hot dogs': [M('🌭', 'Bacon-wrapped hot dog with grilled onions and peppers', 8), M('🥤', 'Agua fresca', 4, 'drink')], 'Elote': [M('🌽', 'Elote with mayo, cheese and chili', 6), M('🌽', 'Esquites in a cup', 6)],
   'Mango and fruit cups': [M('🥭', 'Mango on a stick with chili and lime', 7), M('🍉', 'Fruit cup: watermelon, pineapple, cucumber', 7)], 'Churros': [M('🥖', 'Churro', 4), M('🥖', 'Churro filled with caramel', 5)],
   'Hats, sunglasses and bracelets': [...CAPS.slice(0, 4), M('🕶️', 'Beach sunglasses', 15, 'wear', { slot: 'shades', col: '#111111' }), M('📿', 'Friendship bracelet', 5, 'play', { say: 'Woven right there on the beach!' })], 'Bubbles': [M('🫧', 'Giant bubble wand', 5, 'play', { say: 'Whoosh! A bubble as big as you!' })],
@@ -8632,7 +8665,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout }; if (o.workout?.k === 'slide') return null; if (o.workout?.k === 'spin') return { label: '🛑 Get off the spinner', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
-  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o); if (P2) return P2; }
+  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o) || fairAct(o); if (P2) return P2; }
   { const V = vendorNear(o); if (V) return { label: `${V.e} ${V.name}`, go: () => openPlaceMenu(V.name, 'food') }; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
@@ -11331,6 +11364,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
     const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
     const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
     if (rr){ const cy = downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + 3.25; if (_tp.y > cy) _tp.y = cy; }
+    if (kind === 'ocean' && ocean?.onLand && inFairLobby(...landST(ocean.x, ocean.y))){ const cy = (ocean.gh ?? 0) + 4.4; if (_tp.y > cy) _tp.y = cy; }   // (in the Fairmont's lobby: under its ceiling)
     if (ocean?.onLand && !ocean.car && !inAqua(ocean)){ const [ps, pt] = landST(ocean.x, ocean.y); if (onPierDeck(ps, pt) && ocean.gh < pierDeckH(ps) - 2.2) _tp.y = Math.min(_tp.y, pierDeckH(ps) - .45); }   // (down on the sand under the pier: the camera stays under the deck)
     if (ocean?.onLand && inAqua(ocean)){ const A = AQUA, [cs, ct] = landST(_tp.x/U, _tp.z/U), [nx, nz] = landXY(clamp(cs, A.s0 + .5, A.s1 - .5), clamp(ct, A.t0 + .5, A.t1 - .5)); _tp.x = nx*U; _tp.z = nz*U; _tp.y = Math.min(_tp.y, A.base + 3.5); }   // (in the aquarium under the pier: the camera stays inside, under its ceiling)
     if (ocean?.onLand){ const [cs, ct] = landST(_tp.x/U, _tp.z/U), cA = 390 - cs, cO = -ct; if (cA > MARI.A0 && cA < MARI.A1 && cO > MARI.o0 && cO < MARI.oPatio){ const dk = pierDeckH(cs); _tp.y = Math.min(_tp.y, dk + (walkRef - dk > 2.5 ? MARI.up + 3.2 : MARI.up - .35)); } if (cA > 158 && cA < 185 && cO > -40 && cO < -15 && walkRef > PIER_L.h1 - 2){ const dk = pierDeckH(cs), dc = Math.hypot(cA - CAROUSEL.A, cO - CAROUSEL.off); _tp.y = Math.min(_tp.y, dk + (dc < CAROUSEL.R + .6 ? 3.7 : 8.5)); } } }   // (in the Hippodrome: under its ceiling, and under the carousel's canopy)

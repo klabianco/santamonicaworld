@@ -4257,9 +4257,9 @@ function smoothSeams(g){ const pa = g.attributes.position, na = g.attributes.nor
 function sculpt(P, m, seg = 18, rings = 6){ const pts = [], n = P.length; const at = (i, f) => { const a = P[Math.max(0, i - 1)], b = P[i], c = P[Math.min(n - 1, i + 1)], d = P[Math.min(n - 1, i + 2)];   // (Catmull-Rom between the stations)
     return b.map((v, k) => { const p0 = a[k], p1 = v, p2 = c[k], p3 = d[k]; return .5*((2*p1) + (-p0 + p2)*f + (2*p0 - 5*p1 + 4*p2 - p3)*f*f + (-p0 + 3*p1 - 3*p2 + p3)*f*f*f); }); };
   for (let i = 0; i < n - 1; i++) for (let k = 0; k < rings; k++) pts.push(at(i, k/rings)); pts.push(P[n - 1]);
-  const pos = [], idx = [], R = pts.length; for (const [x, ry, rz, yo] of pts) for (let j = 0; j <= seg; j++){ const a = j/seg*TAU; pos.push(x, (yo || 0) + Math.cos(a)*Math.max(ry, .0005), Math.sin(a)*Math.max(rz, .0005)); }
+  const pos = [], uv = [], idx = [], R = pts.length; pts.forEach(([x, ry, rz, yo], i) => { for (let j = 0; j <= seg; j++){ const a = j/seg*TAU; pos.push(x, (yo || 0) + Math.cos(a)*Math.max(ry, .0005), Math.sin(a)*Math.max(rz, .0005)); uv.push(j/seg, i/(R - 1)); } });   // (u round the part: 0 at the back, .5 at the front, the sides at .25 and .75; v along it)
   for (let i = 0; i < R - 1; i++) for (let j = 0; j < seg; j++){ const a = i*(seg + 1) + j, b = a + seg + 1; if (P[n - 1][0] > P[0][0]) idx.push(a, a + 1, b, a + 1, b + 1, b); else idx.push(a, b, a + 1, a + 1, b, b + 1); }   // (faces outward whichever way the part runs)
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); const me = new THREE.Mesh(g, m); me.castShadow = true; return me; }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); const me = new THREE.Mesh(g, m); me.castShadow = true; return me; }
 // the person's shape (x up the body, -y the front, z the sides), in the swimmer rig's units
 const BODY_SHAPE = {
   chest: [[-.2, .1, .15, .006], [-.12, .098, .148], [0, .097, .142, -.004], [.12, .108, .158, -.01], [.24, .118, .172, -.014], [.34, .112, .185, -.008], [.42, .085, .165, 0], [.47, .055, .09, .005], [.5, .045, .05, .01]],
@@ -4269,6 +4269,22 @@ const BODY_SHAPE = {
   thigh: [[.03, .08, .08, .004], [-.05, .086, .084, -.004], [-.18, .077, .072], [-.32, .062, .058], [-.42, .05, .048], [-.46, .045, .044]],
   calf: [[.02, .046, .046], [-.06, .054, .05, .012], [-.14, .056, .05, .016], [-.26, .042, .04, .008], [-.38, .03, .03], [-.43, .028, .028]] };
 // a hand (in the forearm's frame: x along the arm, the palm flat in x-z): a palm, four slightly curled fingers of different lengths, a thumb
+/* Fabric for the clothes, drawn in light greys so the outfit's color tints it: the T-shirt's cotton jersey (a fine knit, side seams, soft folds at
+   the sides and the small of the back, a hem at the bottom and a ribbed collar), and the shorts' cotton twill (a diagonal weave, side seams, a
+   waistband at the top and hems at the legs). The same picture is used as a bump map so the fabric has a little relief. */
+const FABRIC = (() => { const mk = (draw) => { const t = canvasTex(256, 256, draw); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; return t; }, R = mulberry(44);
+  const jersey = mk((x, w, h) => { x.fillStyle = '#f4f4f4'; x.fillRect(0, 0, w, h); for (let k = 0; k < 6000; k++){ const v = 225 + R()*30|0; x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(R()*w, R()*h, 1.5, 1); }
+    for (const u of [.25, .75]){ x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(u*w - 1.5, 0, 3, h); }   // (side seams)
+    for (const [u, sp] of [[.25, .07], [.75, .07], [0, .06], [1, .06]]){ const g = x.createLinearGradient((u - sp)*w, 0, (u + sp)*w, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.5, 'rgba(0,0,0,.12)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect((u - sp)*w, 0, sp*2*w, h); }   // (folds at the sides and back)
+    for (let k = 0; k < 7; k++){ const y0 = h*(.66 + R()*.22), xx = w*(.4 + R()*.2); x.strokeStyle = `rgba(0,0,0,${.05 + R()*.06})`; x.lineWidth = 3; x.beginPath(); x.moveTo(xx - 22, y0); x.quadraticCurveTo(xx, y0 + 6, xx + 22, y0 - 3); x.stroke(); }   // (soft creases at the waist)
+    x.fillStyle = 'rgba(0,0,0,.16)'; x.fillRect(0, h - 5, w, 3); x.fillRect(0, h*.955, w, 2);   // (the hem, at the bottom)
+    for (let i = 0; i < w; i += 3){ x.fillStyle = 'rgba(0,0,0,.12)'; x.fillRect(i, 0, 1.5, 10); } x.fillStyle = 'rgba(0,0,0,.2)'; x.fillRect(0, 10, w, 1.5); });   // (the ribbed collar, at the top)
+  const twill = mk((x, w, h) => { x.fillStyle = '#eeeeee'; x.fillRect(0, 0, w, h); x.strokeStyle = 'rgba(0,0,0,.09)'; x.lineWidth = 1; for (let i = -h; i < w; i += 4){ x.beginPath(); x.moveTo(i, h); x.lineTo(i + h, 0); x.stroke(); }
+    for (const u of [.25, .75]){ x.fillStyle = 'rgba(0,0,0,.22)'; x.fillRect(u*w - 1.5, 0, 3, h); x.fillStyle = 'rgba(255,255,255,.25)'; x.fillRect(u*w + 2, 0, 1, h); }   // (side seams with their topstitching)
+    x.fillStyle = 'rgba(0,0,0,.14)'; x.fillRect(0, 20, w, 2); x.fillRect(0, 0, w, 4); for (let i = 0; i < w; i += 7){ x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(i, 12, 3, 1); }   // (the waistband, at the top)
+    x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(0, h - 3, w, 3); x.fillRect(0, h - 9, w, 1.5); });   // (the hems, at the bottom)
+  return { jersey, twill }; })();
+const flipV = me => { const uv = me.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - uv.getY(i)); uv.needsUpdate = true; return me; };   // (for parts that run downward: their hem at the bottom of the fabric)
 function handGeo(s){ const parts = [], add = (P, z, rotY = 0, tx = 0, ty = 0) => { const g = sculpt(P, null, 8, 3).geometry; if (rotY) g.rotateY(rotY); g.translate(tx, ty, z); parts.push(g); };
   add([[.285, .014, .024], [.31, .0165, .033], [.35, .0155, .037, .001], [.383, .0125, .035, .002]], 0);   // (the palm)
   [.058, .066, .062, .05].forEach((L, k) => { const x0 = .378; add([[x0, .0085, .0088, .002], [x0 + L*.35, .0078, .0082, .004], [x0 + L*.7, .0072, .0076, .008], [x0 + L, .0058, .0064, .014]], (k - 1.5)*.0182); });
@@ -4337,11 +4353,12 @@ function buildSwimmer(){
   const tk = caps(.085, .42, yellow); tank.add(tk); const valve = ellip(.035, 1, 1, 1, dark); valve.position.x = .32; tank.add(valve);
   const goggles = body.children.filter(c => c.material === gog);
   // street clothes for walking around on land (a T-shirt, shorts and hair instead of the swim cap and goggles); hidden in the water
-  const shirt = std(0x3f9fd2, .8), shortsM = std(0x2d3d58, .8), hairM = std(0x3a2a1f, .9), street = [];
+  const shirt = new THREE.MeshStandardMaterial({ color: 0x3f9fd2, roughness: .85, map: FABRIC.jersey, bumpMap: FABRIC.jersey, bumpScale: .6 }), shortsM = new THREE.MeshStandardMaterial({ color: 0x2d3d58, roughness: .8, map: FABRIC.twill, bumpMap: FABRIC.twill, bumpScale: .8 }), hairM = std(0x3a2a1f, .9), street = [];   // (cotton jersey and twill, tinted by the outfit's colors)
   const tee = sculpt(shapeScale(BODY_SHAPE.chest.slice(0, 8), 1.08, 1.07).concat([[.495, .056, .063, .01], [.505, .052, .058, .01]]), shirt, 22, 5); body.add(tee); street.push(tee);   // (the T-shirt: the chest shape, a little bigger, open at the neck)
   const shorts = sculpt(shapeScale(BODY_SHAPE.hips.slice(1), 1.07, 1.06).concat([[.02, .1, .15]]), shortsM, 22, 5); body.add(shorts); street.push(shorts);
-  for (const id of ['la', 'ra']){ const sl = sculpt([[-.03, .062, .064], [.04, .066, .068], [.12, .06, .061], [.15, .058, .059]], shirt, 14, 3); arms[id].sh.add(sl); street.push(sl); }   // (short sleeves)
-  for (const id of ['ll', 'rl']){ const leg = sculpt(shapeScale(BODY_SHAPE.thigh.slice(0, 4), 1.12).concat([[-.3, .07, .066]]), shortsM, 16, 3); legs[id].hp.add(leg); street.push(leg); }   // (shorts legs to just above the knee)
+  for (const id of ['la', 'ra']){ const sl = sculpt([[-.03, .062, .064], [.04, .066, .068], [.12, .06, .061], [.15, .058, .059]], shirt, 14, 3); flipV(sl); arms[id].sh.add(sl); street.push(sl); }   // (short sleeves)
+  { const cord = std(0xf2f0ea, .7); for (const sd of [-1, 1]){ const c = new THREE.Mesh(new THREE.CylinderGeometry(.0035, .0035, .07, 6), cord); c.position.set(-.025, -.112, sd*.012); c.rotation.z = .1; body.add(c); street.push(c); } }   // (the drawstring)
+  for (const id of ['ll', 'rl']){ const leg = sculpt(shapeScale(BODY_SHAPE.thigh.slice(0, 4), 1.12).concat([[-.3, .07, .066]]), shortsM, 16, 3); flipV(leg); legs[id].hp.add(leg); street.push(leg); }   // (shorts legs to just above the knee)
   // hair: a shell that follows the head, with a real hairline (a fringe line over the forehead that curves back at the temples, sideburns in front
   // of the ears, the nape low at the back), more volume on top, an uneven edge, strands drawn into it and a soft sheen, and a few clumps on top
   const hairTex = canvasTex(128, 256, (x, w, h) => { x.fillStyle = '#3a2a1f'; x.fillRect(0, 0, w, h); const R = mulberry(31); for (let k = 0; k < 900; k++){ const px = R()*w, py = R()*h, L = 10 + R()*30, v = R(); x.strokeStyle = v < .5 ? `rgba(20,12,8,${.25 + R()*.3})` : `rgba(120,88,62,${.12 + R()*.2})`; x.lineWidth = .6 + R()*.8; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + (R() - .5)*6, py + L/2, px + (R() - .5)*8, py + L); x.stroke(); } });
@@ -4367,7 +4384,7 @@ function buildSwimmer(){
     for (const sd of [-1, 1]){ const cup = new THREE.Mesh(new THREE.CylinderGeometry(.052, .052, .035, 18), wearM.phones); cup.position.set(-.005, sd*.112, 0); hg.add(cup); wear.phones.push(cup);
       const pad = new THREE.Mesh(new THREE.CylinderGeometry(.04, .04, .012, 16), std(0x111111, .9)); pad.position.set(-.005, sd*.094, 0); hg.add(pad); wear.phones.push(pad); } }
   for (const k in wear) for (const o of wear[k]) o.visible = false;
-  root.userData = { kind:'swimmer', body, arms, legs, torso, tee, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM } };
+  root.userData = { kind:'swimmer', body, arms, legs, torso, tee, float:-.09, gear:{ goggles, capM, cap, street, shirtM: shirt, wear, wearM, suit: [torso, hips] } };
   addKit(root, { head:[.64, .01, 0, .11], chin:[.5, -.1], ring:[.26, -.2, .2, .17, .13, 3], back:[.08, .17, .7], lamp:true }, { fins, snorkel:[mask, snork], scuba:[tank] });
   return root;
 }
@@ -4498,7 +4515,7 @@ function showGear(m, has, dry = false, wear = null){   // (dry: walking around o
   const kit = m.userData.kit; if (kit) for (const id in kit) for (const o of kit[id]) o.visible = has(id) && !(dry && WET_GEAR.has(id));
   const g = m.userData.gear; if (!g) return;
   for (const q of g.goggles) q.visible = !has('snorkel') && !dry;
-  if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry;
+  if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry; if (g.suit) for (const o of g.suit) o.visible = !dry;   // (the swimsuit hides under the street clothes)
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
   if (g.wear){ const w = (dry && wear) || {}; if (g.shirtM.userData.c !== (w.shirt || '#3f9fd2')){ g.shirtM.userData.c = w.shirt || '#3f9fd2'; g.shirtM.color.set(g.shirtM.userData.c); }   // what you bought on the Promenade (on land only)
     for (const k in g.wear){ const on = !!w[k] || (k === 'shoes' && dry); for (const o of g.wear[k]) o.visible = on; if (on){ g.wearM[k].color.set(w[k] || '#f4f4f0'); if (k === 'shades') g.wearM[k].emissive.set(w[k] || '#111111'); } } }   // (shades glow a little in their own color, so gold looks gold)   // (on land you always have sneakers on: white ones, till you buy some)

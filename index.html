@@ -4248,7 +4248,7 @@ function caps(r, len, m, off = 0){ const g = new THREE.CapsuleGeometry(r, len, 6
   const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; return mesh; }
 function ellip(r, sx, sy, sz, m, seg = 20){ const g = new THREE.SphereGeometry(r, seg, Math.max(8, seg*.7|0)); g.scale(sx, sy, sz);
   const mesh = new THREE.Mesh(g, m); mesh.castShadow = true; return mesh; }
-const SKIN = std(0xd49b78, .5);
+const SKIN = new THREE.MeshPhysicalMaterial({ color: 0xd49b78, roughness: .58, sheen: .35, sheenColor: new THREE.Color(0xc0604a), sheenRoughness: .6, emissive: new THREE.Color(0x2a0e06), emissiveIntensity: .35 });   // (skin: soft, a warm glow where light would pass through it)
 /* A smooth body part along the x axis: P is a list of [x, half-depth (y), half-width (z), y-shift], one oval cross-section each, joined by a
    spline so it swells and tapers like a real torso or limb; the ends close up. */
 function sculpt(P, m, seg = 18, rings = 6){ const pts = [], n = P.length; const at = (i, f) => { const a = P[Math.max(0, i - 1)], b = P[i], c = P[Math.min(n - 1, i + 1)], d = P[Math.min(n - 1, i + 2)];   // (Catmull-Rom between the stations)
@@ -4271,8 +4271,23 @@ function buildSwimmer(){
   const suit = std(0xe0402f, .42), capM = std(0x1f5fe0, .22), gog = std(0x0b1522, .08, .6);
   const torso = sculpt(BODY_SHAPE.chest, suit, 22, 5); body.add(torso);   // (a real chest and waist, not a capsule)
   const hips = sculpt(BODY_SHAPE.hips, suit, 22, 5); body.add(hips);
-  const neck = sculpt([[.44, .052, .055, .005], [.5, .048, .05, .006], [.56, .046, .047, .004], [.6, .04, .042]], SKIN, 14, 3); body.add(neck);
-  const head = ellip(.108, 1.12, .95, .92, SKIN); head.position.set(.64, .01, 0); body.add(head);
+  const neck = sculpt([[.44, .06, .064, .005], [.5, .056, .058, .008], [.56, .054, .054, .006], [.61, .05, .05]], SKIN, 14, 3); body.add(neck);
+  const head = new THREE.Mesh((() => { const g = new THREE.SphereGeometry(.108, 36, 26); g.rotateZ(-Math.PI/2); g.scale(1.12, .95, .92); return g; })(), SKIN); head.castShadow = true; head.position.set(.64, .01, 0); body.add(head);   // (its poles at the crown and chin, its seam at the back: a smooth face)
+  { const pa = head.geometry.attributes.position, R = .108; for (let i = 0; i < pa.count; i++){ let x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i); const u = x/(R*1.12), fr = y < 0;   // (a real head: a narrower jaw and a chin, a flatter face, the round back of the skull)
+      if (u < 0){ z *= 1 - .3*u*u; if (fr) y *= 1 + .06*u*u; else y *= 1 - .12*u*u; } if (!fr && u > -.2) y *= 1.06; if (fr && Math.abs(u) < .5) y *= .96; pa.setXYZ(i, x, y, z); } head.geometry.computeVertexNormals(); }
+  const FACE = new THREE.Group(); body.add(FACE); const face = (geo, m, x, y, z) => { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); FACE.add(me); return me; };
+  { const white = std(0xe9e3da, .3), iris = std(0x4a2e1a, .25), dark = std(0x0b0806, .2), brow = std(0x2e2018, .9), lip = Object.assign(SKIN.clone(), { color: new THREE.Color(0xb27466) });
+    for (const sd of [-1, 1]){ const z = sd*.036;
+      const sc = face(new THREE.SphereGeometry(.014, 14, 10), white, .668, -.084, z); sc.scale.set(1, .9, 1.2);   // (the eye, set into the face)
+      face(new THREE.CircleGeometry(.0068, 16), iris, .668, -.0967, z).rotation.x = Math.PI/2; face(new THREE.CircleGeometry(.0033, 12), dark, .668, -.097, z).rotation.x = Math.PI/2; face(new THREE.CircleGeometry(.0014, 8), std(0xffffff, .1), .6705, -.0972, z + .0025).rotation.x = Math.PI/2;
+      const lid = face(new THREE.SphereGeometry(.0158, 14, 8, 0, TAU, 0, Math.PI*.4), SKIN, .669, -.084, z); lid.scale.set(1, .95, 1.25); lid.rotation.z = -1.22;   // (the upper eyelid, over the top of the eye)
+      const low = face(new THREE.SphereGeometry(.0156, 14, 8, 0, TAU, 0, Math.PI*.3), SKIN, .667, -.084, z); low.scale.set(1, .95, 1.25); low.rotation.z = 1.75;   // (and the lower lid: an almond-shaped opening)
+      const br = face(new THREE.BoxGeometry(.006, .007, .034), brow, .69, -.1, z); br.rotation.x = sd*.15; br.rotation.y = sd*.12;   // (eyebrows)
+      const ear = face(new THREE.SphereGeometry(.026, 12, 8), SKIN, .645, -.002, sd*.1); ear.scale.set(1.3, .8, .32); }
+    const bridge = face(new THREE.CylinderGeometry(.008, .014, .045, 8), SKIN, .64, -.105, 0); bridge.rotation.x = -.12;   // (the nose: bridge, tip and nostril wings)
+    face(new THREE.SphereGeometry(.0125, 12, 8), SKIN, .618, -.112, 0); for (const sd of [-1, 1]){ const w = face(new THREE.SphereGeometry(.0075, 10, 8), SKIN, .617, -.1, sd*.0105); w.scale.set(.9, .8, .8); }
+    const ul = face(new THREE.SphereGeometry(.018, 14, 8), lip, .593, -.096, 0); ul.scale.set(.24, .4, 1.15); const ll = face(new THREE.SphereGeometry(.018, 14, 8), lip, .585, -.095, 0); ll.scale.set(.32, .45, 1.02);   // (lips)
+    face(new THREE.BoxGeometry(.0025, .004, .042), std(0x5a2a22, .6), .589, -.1045, 0); }
   const cap = new THREE.Mesh(new THREE.SphereGeometry(.116, 24, 16, 0, TAU, 0, Math.PI*.6), capM);
   cap.scale.set(1.12, .97, .94); cap.rotation.z = .95; cap.position.copy(head.position); cap.castShadow = true; body.add(cap);
   for (const s of [-1,1]){ const g = ellip(.03, 1, .7, 1.1, gog); g.position.set(.735, -.03, s*.043); body.add(g); }

@@ -2534,7 +2534,7 @@ function startOcean(){
   if (save.whaleQuest?.reward && !krakenBeaten()) ocean.held = 'sunstone';
   boardFix(ocean); for (const q of save.board) if (q.kind === 'calf' && q.state === 'lead'){ q.x = ocean.x; q.y = ocean.y + 4*METERS; }   // (the baby whale you were leading is right behind you)
   parts = []; setMode('ocean'); $('airChip').hidden = true;
-  banner('3rd Street Promenade', 'At Wilshire Boulevard, by the triceratops fountain');
+  banner('3rd Street Promenade', 'At Santa Monica Boulevard, looking up the 1300 block to the ivy dinosaurs');
   ocean.tripT = 0; camHead = ocean.ang; camInit = false;
   { const today = new Date().toDateString(); let got = 0, why = ''; if (!save.giftNov26){ save.giftNov26 = true; got += 250; why = 'A gift to spend on the Promenade'; } if (save.allowDay !== today){ save.allowDay = today; got += 50; why = why || 'Your daily allowance'; }   // (coins to spend: a one-time gift, and 50 every day you play)
     if (got){ save.coins = (save.coins || 0) + got; persist(); flushCloud(); setTimeout(() => banner(`💰 +${got} coins!`, why), 2500); } }
@@ -5839,8 +5839,8 @@ function buildCoast(){
     const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.colorSpace = THREE.SRGBColorSpace; STRIPMAT.paver = new THREE.MeshStandardMaterial({ map: tx, roughness: .9 }); }
   { const mkTex = draw => { const cv = document.createElement('canvas'); cv.width = cv.height = 128; draw(cv.getContext('2d')); const tx = new THREE.CanvasTexture(cv); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.colorSpace = THREE.SRGBColorSpace; return new THREE.MeshStandardMaterial({ map: tx, roughness: .9 }); };
     STRIPMAT.conc = mkTex(x => { x.fillStyle = '#aeaaa2'; x.fillRect(0, 0, 128, 128); x.fillStyle = 'rgba(0,0,0,.08)'; for (let i = 0; i < 4000; i++) x.fillRect(Math.random()*128, Math.random()*128, 1, 1); x.fillStyle = '#9a968e'; x.fillRect(0, 0, 128, 2); x.fillRect(0, 0, 2, 128); });
-    STRIPMAT.hex = mkTex(x => { x.fillStyle = '#6a6763'; x.fillRect(0, 0, 128, 128); x.strokeStyle = '#8d8984'; x.lineWidth = 3; const r = 128/9, h = r*Math.sqrt(3);   // hexagon pavers
-      for (let j = -1; j < 12; j++) for (let i = -1; i < 5; i++){ const cx = i*r*3 + (Math.abs(j) % 2 ? r*1.5 : 0), cy = j*h/2; x.beginPath(); for (let k = 0; k < 6; k++){ const a = k*Math.PI/3; x[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a)*r, cy + Math.sin(a)*r); } x.closePath(); x.stroke(); } }); }
+    STRIPMAT.hex = mkTex(x => { const R = mulberry(12), C = ['#8f8a84', '#9a948d', '#7f7a74', '#94705f', '#8e8882', '#b0aaa2', '#a39d96', '#86817b'];   // the Promenade's street: rectangular pavers laid like bricks, grey with some terracotta (Street View, Aug 2024)
+      x.fillStyle = '#6f6a65'; x.fillRect(0, 0, 128, 128); for (let j = 0; j < 8; j++) for (let i = -1; i < 5; i++){ const w = 32, h = 16, ox = (j % 2)*16; x.fillStyle = C[(R()*C.length)|0]; x.fillRect(i*w + ox + 1, j*h + 1, w - 2, h - 2); } }); }
   { const jog = [], bl = [];   // Palisades Park: the dirt jogging path a few meters in from the curb, all the way up; and from Colorado to Broadway a second concrete path right along the bluff
     for (let t = -14; t > -2410; t -= 6){ if (Math.abs(t - XST.california) < 9 || inclineAt(parkCurb(t) - 5, t)){ if (jog.length > 1) strip(jog.splice(0), 2.4, 'dg', .05); jog.length = 0; continue; } jog.push([parkCurb(t) - 5.2, t]); }
     if (jog.length > 1) strip(jog, 2.4, 'dg', .05);
@@ -9392,7 +9392,9 @@ function buildPromenade(g, P3, at, instanceOf){
   // benches, old-fashioned lamps and planters with trees down the middle, and bollards where the cross streets are
   { const bench = new THREE.Group(), wood = std(0x8a6a48, .85), iron = std(0x2d3a35, .5); const seat = new THREE.Mesh(new THREE.BoxGeometry(.5, .08, 1.8), wood); seat.position.y = .45; bench.add(seat);
     const back = new THREE.Mesh(new THREE.BoxGeometry(.06, .45, 1.8), wood); back.position.set(-.24, .72, 0); bench.add(back); for (const z of [-.8, .8]){ const l = new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .06), iron); l.position.set(0, .22, z); bench.add(l); }
-    const lamp = new THREE.Group(), teal = std(0x2f6b5f, .5); { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .1, 4.2, 8), teal); p.position.y = 2.1; lamp.add(p); const b = new THREE.Mesh(new THREE.SphereGeometry(.26, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff1c8 })); b.position.y = 4.35; lamp.add(b); }
+    const lamp = new THREE.Group(), blk = std(0x17191b, .45, .3); { const base = new THREE.Mesh(new THREE.CylinderGeometry(.2, .28, .9, 10), blk); base.position.y = .45; lamp.add(base); const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, 3.9, 8), blk); p.position.y = 2.8; lamp.add(p);   // black double-globe lamps with a cross arm and a banner (Street View)
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, 1.1), blk); arm.position.y = 4.55; lamp.add(arm); for (const z of [-.5, .5]){ const cap = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, .14, 8), blk); cap.position.set(0, 4.9, z); lamp.add(cap); const b = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff4d6 })); b.position.set(0, 4.7, z); lamp.add(b); }
+      const ban = new THREE.Mesh(new THREE.BoxGeometry(.03, .9, .4), std(0xc9a227, .6)); ban.position.set(0, 3.2, .26); lamp.add(ban); }
     const bol = new THREE.Group(); { const b = new THREE.Mesh(new THREE.CylinderGeometry(.13, .15, .9, 8), std(0x5d6468, .5)); b.position.y = .45; bol.add(b); }
     const bs = [], ls = [], bo = [];
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]){
@@ -9402,7 +9404,9 @@ function buildPromenade(g, P3, at, instanceOf){
     instanceOf(bench, bs); instanceOf(lamp, ls); instanceOf(bol, bo); for (const [s, t, , r] of bs){ const [x, z] = landXY(s, t); addSeat(x*U, z*U, { y: landH(s, t) + .49, f: [Math.cos(r), -Math.sin(r)], a: [Math.sin(r), Math.cos(r)], len: 1.8 }); } }
   // jacarandas (purple in late spring) and tall palms along the curbs, and art banners strung high across the Promenade
   { const jac = new THREE.Group(), tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .2, 3.2, 6), std(0x6b5440, .9)); tr.position.y = 1.6; jac.add(tr);
-    for (const [x, y, z, r, c] of [[0, 4.1, 0, 1.9, 0x9b7fd1], [.9, 3.7, .5, 1.3, 0x8a6fc4], [-.8, 3.8, -.6, 1.4, 0x5f8a45]]){ const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), std(c, .85)); b.position.set(x, y, z); b.scale.y = .7; jac.add(b); }
+    { const mo = new Date().getMonth(), bloom = mo >= 3 && mo <= 5 ? 1 : mo === 6 ? .4 : 0, P = 0x9b7fd1, G = 0x4f7a3a, G2 = 0x5f8a45;   // (jacarandas bloom purple from late April into June, on the real calendar; the rest of the year they're leafy green)
+      for (const [x, y, z, r, k] of [[0, 4.3, 0, 1.5, 0], [.95, 3.9, .45, 1.05, 1], [-.85, 4.0, -.55, 1.1, 2], [.3, 4.9, -.6, .9, 3], [-.4, 3.6, .8, .95, 4], [.6, 4.6, .9, .8, 5]]){ const purple = bloom && (k % 2 === 0 || bloom === 1); const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), std(purple ? P : k % 2 ? G : G2, .9)); b.position.set(x, y, z); b.scale.y = .62; jac.add(b); }
+      for (const [a, l] of [[.6, 1.4], [2.4, 1.2], [4.2, 1.3]]){ const br = new THREE.Mesh(new THREE.CylinderGeometry(.05, .08, l, 5), std(0x6b5440, .9)); br.position.set(Math.cos(a)*.35, 3.4, Math.sin(a)*.35); br.rotation.set(Math.sin(a)*.6, 0, -Math.cos(a)*.6); jac.add(br); } }
     const js = [], ps = [], PR = mulberry(33);
     for (const [t0, t1] of [[PROM.t0, XST.arizona - 9], [XST.arizona + 9, XST.smblvd - 9], [XST.smblvd + 9, PROM.t1]]) for (let t = t0 + 13, k = 0; t < t1 - 4; t += 18, k++) for (const sv of [646.2, 659.8]) ((k + (sv > 653 ? 1 : 0)) % 2 ? ps : js).push([sv, t, .9 + PR()*.25, PR()*TAU]);
     instanceOf(jac, js); instanceOf(palm(11), ps);

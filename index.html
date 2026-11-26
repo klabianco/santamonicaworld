@@ -4482,6 +4482,109 @@ function poseLife(m, o, dt){ const u = m.userData, v = Math.hypot(o.vx || 0, o.v
    placed and turned to the rig's hips, each upper arm, forearm, hand, thigh, calf and foot bone turned to point the way the rig's limb points.
    The rig's own body meshes are hidden; hats, sunglasses, headphones and gear move over to the real head and back. Weight and muscle widen
    the real waist and chest. Slower devices keep the simple figure. */
+/* Garments: a shirt from a shop is a real garment, not just a color: its type (tee, polo, long sleeves, hoodie with a hood, jersey, tank), its
+   colors and stripes, and the prints on it (logos, words, numbers), drawn on the chest, the back or the left breast. These designs are a first
+   pass from what each brand is known for; matching each store's real current catalog comes later. */
+const GARMENTS = {};
+const garment = (id, type, col, opt = {}) => (GARMENTS[id] = { id, type, col, ...opt }, id);
+const wearKey = it => it.g ? 'g:' + it.g : it.col, shirtColor = v => v?.startsWith?.('g:') ? (GARMENTS[v.slice(2)]?.col || '#3f9fd2') : (v || '#3f9fd2');
+const printText = (txt, col, font = '900 120px Nunito, sans-serif', opts = {}) => (x, w, h) => { x.fillStyle = col; x.font = font; const tw = x.measureText(txt).width, fit = Math.min(1, w*.92/tw, h*.9/(parseInt(font.match(/(\d+)px/)[1]) || 100)); if (fit < 1) x.font = font.replace(/(\d+)px/, (m0, n) => Math.floor(n*fit) + 'px'); x.textAlign = 'center'; x.textBaseline = 'middle'; if (opts.stroke){ x.strokeStyle = opts.stroke; x.lineWidth = opts.lw || 8; x.strokeText(txt, w/2, h/2); } x.fillText(txt, w/2, h/2); };
+const GP = { };
+{ // the designs
+  const moose = col => (x, w, h) => { x.fillStyle = col; x.save(); x.translate(w/2, h/2); x.beginPath(); x.ellipse(0, 18, 60, 40, 0, 0, TAU); x.fill(); x.fillRect(-48, 40, 14, 60); x.fillRect(34, 40, 14, 60); x.beginPath(); x.ellipse(70, -10, 24, 32, .4, 0, TAU); x.fill(); for (const sd of [-1, 1]){ x.beginPath(); x.ellipse(70 + sd*34, -60, 30, 14, sd*.5, 0, TAU); x.fill(); } x.restore(); };
+  const trefoil = col => (x, w, h) => { x.fillStyle = col; for (const [dx, a] of [[-70, -.5], [0, 0], [70, .5]]){ x.save(); x.translate(w/2 + dx, h/2 + 10); x.rotate(a); x.beginPath(); x.ellipse(0, -30, 42, 70, 0, 0, TAU); x.fill(); x.restore(); } x.fillStyle = 'rgba(0,0,0,0)'; };
+  const mountain = (x, w, h) => { const g = x.createLinearGradient(0, h*.2, 0, h*.8); for (const [st, c] of [[0, '#e94e1b'], [.3, '#f39c34'], [.55, '#8e44ad'], [.75, '#2c3e8f'], [1, '#1b2a5c']]) g.addColorStop(st, c); x.fillStyle = g; x.fillRect(w*.15, h*.25, w*.7, h*.45); x.fillStyle = '#1d1d1f'; x.beginPath(); x.moveTo(w*.15, h*.7); x.lineTo(w*.35, h*.38); x.lineTo(w*.47, h*.52); x.lineTo(w*.62, h*.3); x.lineTo(w*.85, h*.7); x.fill(); x.fillStyle = '#1d1d1f'; x.font = '900 70px Georgia, serif'; x.textAlign = 'center'; x.fillText('patagonia', w/2, h*.88); };
+  const swoosh = col => (x, w, h) => { x.fillStyle = col; x.beginPath(); x.moveTo(w*.12, h*.6); x.quadraticCurveTo(w*.2, h*.85, w*.5, h*.6); x.lineTo(w*.92, h*.3); x.quadraticCurveTo(w*.4, h*.62, w*.25, h*.6); x.quadraticCurveTo(w*.16, h*.58, w*.22, h*.42); x.closePath(); x.fill(); };
+  const dodgers = (x, w, h) => { x.fillStyle = '#005a9c'; x.font = 'italic 900 110px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.save(); x.translate(w/2, h/2); x.rotate(-.12); x.fillText('Dodgers', 0, 0); x.restore(); x.fillStyle = '#ef3e42'; x.font = '900 60px Nunito, sans-serif'; x.fillText('35', w*.82, h*.86); };
+  const pierSign = (x, w, h) => { x.strokeStyle = '#1565c0'; x.lineWidth = 22; x.beginPath(); x.arc(w/2, h*.95, w*.42, Math.PI, 0); x.stroke(); x.fillStyle = '#1565c0'; x.font = '900 52px Nunito, sans-serif'; x.textAlign = 'center'; x.fillText('SANTA MONICA', w/2, h*.6); x.font = '700 30px Nunito, sans-serif'; x.fillText('YACHT HARBOR · SPORT FISHING', w/2, h*.75); x.fillText('BOATS · CAFE', w/2, h*.86); };
+  const palms = col => (x, w, h) => { x.strokeStyle = col; x.fillStyle = col; x.lineWidth = 10; for (const dx of [-.2, .05, .25]){ x.beginPath(); x.moveTo(w*(.5 + dx), h*.95); x.quadraticCurveTo(w*(.48 + dx), h*.5, w*(.52 + dx), h*.25); x.stroke(); for (let k = 0; k < 7; k++){ const a = k/7*Math.PI + Math.PI; x.beginPath(); x.ellipse(w*(.52 + dx) + Math.cos(a)*40, h*.25 + Math.sin(a)*18, 44, 10, a, 0, TAU); x.fill(); } } };
+  GP.moose = moose; GP.trefoil = trefoil; GP.mountain = mountain; GP.swoosh = swoosh; GP.dodgers = dodgers; GP.pierSign = pierSign; GP.palms = palms; }
+// Abercrombie & Fitch
+garment('af_moose_tee', 'tee', '#f4f4f0', { prints: [{ at: 'left', w: .09, h: .08, draw: GP.moose('#1b2a4a') }] });
+garment('af_logo_hoodie', 'hoodie', '#9a9a9a', { prints: [{ at: 'chest', w: .36, h: .12, draw: printText('ABERCROMBIE', '#1b2a4a', '900 150px Georgia, serif') }] });
+garment('af_henley', 'long', '#e9e1cf', { prints: [{ at: 'left', w: .08, h: .07, draw: GP.moose('#7a6a52') }] });
+// Zara
+garment('zara_tee', 'tee', '#f4f4f2'); garment('zara_stripe', 'tee', '#1f2a44', { stripes: ['#1f2a44', '#f2efe8'], stripeW: .025 }); garment('zara_polo', 'polo', '#1d1d1f'); garment('zara_hoodie', 'hoodie', '#c9c3b6');
+// Urban Outfitters
+garment('uo_band', 'tee', '#2a2a2a', { prints: [{ at: 'chest', w: .3, h: .3, draw: (x, w, h) => { x.fillStyle = '#e8e2d0'; x.beginPath(); x.arc(w/2, h*.45, w*.35, 0, TAU); x.fill(); x.fillStyle = '#2a2a2a'; x.font = '900 70px Georgia, serif'; x.textAlign = 'center'; x.fillText('SUMMER', w/2, h*.45); x.fillText('TOUR 1987', w/2, h*.62); } }] });
+garment('uo_ringer', 'tee', '#f4f1e8', { trim: '#c62828', prints: [{ at: 'chest', w: .26, h: .08, draw: printText('MALIBU', '#c62828', 'italic 900 130px Georgia, serif') }] });
+garment('uo_flannel', 'long', '#8e2b2b', { plaid: ['#8e2b2b', '#1f1f1f', '#c9a06a'] });
+// PacSun
+garment('ps_la_tee', 'tee', '#efe6d2', { prints: [{ at: 'chest', w: .3, h: .1, draw: printText('LOS ANGELES', '#3a3a3a', '900 110px Nunito, sans-serif') }] });
+garment('ps_palm_hoodie', 'hoodie', '#d8c7a6', { prints: [{ at: 'chest', w: .26, h: .22, draw: GP.palms('#5a4a32') }] });
+// Adidas
+garment('ad_trefoil', 'tee', '#1d1d1f', { prints: [{ at: 'chest', w: .2, h: .16, draw: GP.trefoil('#f4f4f4') }] });
+garment('ad_track', 'long', '#1b2a5c', { sleeveStripes: '#f4f4f4', prints: [{ at: 'left', w: .07, h: .06, draw: GP.trefoil('#f4f4f4') }] });
+garment('ad_hoodie', 'hoodie', '#f4f4f2', { prints: [{ at: 'chest', w: .2, h: .16, draw: GP.trefoil('#1d1d1f') }] });
+// Patagonia
+garment('pt_p6', 'tee', '#f2efe6', { prints: [{ at: 'back', w: .3, h: .24, draw: GP.mountain }, { at: 'left', w: .08, h: .06, draw: GP.mountain }] });
+garment('pt_better_sweater', 'long', '#7d7f80', { fleece: true, prints: [{ at: 'left', w: .07, h: .03, draw: printText('patagonia', '#1d1d1f', '700 90px Georgia, serif') }] });
+// Uniqlo
+garment('uq_crew', 'tee', '#1f4e8a'); garment('uq_ut', 'tee', '#f4f4f2', { prints: [{ at: 'chest', w: .26, h: .26, draw: (x, w, h) => { x.fillStyle = '#e53935'; x.fillRect(w*.15, h*.15, w*.7, h*.7); x.fillStyle = '#fff'; x.font = '900 120px Nunito, sans-serif'; x.textAlign = 'center'; x.fillText('UT', w/2, h*.62); } }] }); garment('uq_airism_polo', 'polo', '#2e5c46');
+// Lululemon, Alo, Beyond Yoga
+garment('lu_metal_vent', 'tee', '#3a4a5a', { heather: true, prints: [{ at: 'left', w: .045, h: .045, draw: (x, w, h) => { x.fillStyle = '#c8102e'; x.beginPath(); x.ellipse(w/2, h/2, w*.45, h*.45, 0, 0, TAU); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 16; x.beginPath(); x.arc(w*.38, h*.62, w*.2, Math.PI*.9, Math.PI*1.9); x.stroke(); } }] });
+garment('lu_define', 'long', '#1d1d1f', { zip: true });
+garment('alo_accolade', 'hoodie', '#ede6d6', { prints: [{ at: 'chest', w: .1, h: .05, draw: printText('alo', '#1d1d1f', '700 140px Georgia, serif') }] }); garment('alo_tank', 'tank', '#1d1d1f');
+garment('by_spacedye', 'hoodie', '#8f949a', { heather: true }); garment('by_featherweight', 'tee', '#c9b8d8', { heather: true });
+// Wilson, Dodgers, Victoria's Secret, the pier and souvenir shops
+garment('wilson_tee', 'tee', '#c8102e', { prints: [{ at: 'chest', w: .28, h: .1, draw: printText('Wilson', '#fff', 'italic 900 140px Georgia, serif') }] });
+garment('dodgers_jersey', 'jersey', '#f4f4f0', { trim: '#005a9c', prints: [{ at: 'chest', w: .32, h: .16, draw: GP.dodgers }, { at: 'back', w: .2, h: .2, draw: printText('35', '#005a9c', '900 220px Nunito, sans-serif', { stroke: '#ef3e42', lw: 10 }) }] });
+garment('dodgers_tee', 'tee', '#005a9c', { prints: [{ at: 'chest', w: .2, h: .2, draw: printText('LA', '#fff', '900 220px Georgia, serif') }] });
+garment('pink_hoodie', 'hoodie', '#ff7ab8', { prints: [{ at: 'chest', w: .26, h: .1, draw: printText('PINK', '#fff', '900 170px Nunito, sans-serif') }] });
+garment('pajama_top', 'long', '#f7c6dc', { dots: '#ffffff' });
+garment('pier_tee_white', 'tee', '#f4f4f0', { prints: [{ at: 'chest', w: .3, h: .22, draw: GP.pierSign }] });
+garment('pier_tee_teal', 'tee', '#26a69a', { prints: [{ at: 'chest', w: .26, h: .1, draw: printText('SANTA MONICA PIER', '#fff', '900 80px Nunito, sans-serif') }] });
+garment('pier_tee_blue', 'tee', '#1565c0', { prints: [{ at: 'chest', w: .3, h: .22, draw: GP.pierSign }] });
+garment('sm_tee', 'tee', '#f4f4f0', { prints: [{ at: 'chest', w: .3, h: .12, draw: printText('SANTA MONICA', '#1f6b8a', '900 100px Nunito, sans-serif') }, { at: 'back', w: .26, h: .22, draw: GP.palms('#1f6b8a') }] });
+/* Painting a garment onto the real person: each pixel of the body texture is traced back to where it sits on the body (torso, upper arm or
+   forearm; its height, its side, front or back, measured in metres from the chest), the shirt fabric is told apart from skin and the khaki shorts
+   by its color, and the new garment is painted in, keeping the original fabric's folds and shading. */
+const RTEX = { prep: null };
+function prepRealTex(gl){ let body = null; gl.scene.traverse(o => { if (o.isSkinnedMesh && !body) body = o; }); if (!body) return null; const mats = [].concat(body.material), bi = mats.findIndex(m => /body/i.test(m.name)), bm = mats[bi], img = bm?.map?.image; if (!img) return null;
+  const W = img.width, H = img.height, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0); const orig = cx.getImageData(0, 0, W, H);
+  gl.scene.updateMatrixWorld(true); body.skeleton.update(); const bp = n => { const b = gl.scene.getObjectByName(n) || gl.scene.getObjectByName(n.replace(/ /g, '_')); return b ? b.getWorldPosition(new THREE.Vector3()) : null; };   // (everything in world metres: the file's vertices are in centimetres)
+  const pel = bp('Bip01 Pelvis'), nk = bp('Bip01 Neck'), lc = bp('Bip01 L Clavicle'), rc = bp('Bip01 R Clavicle'), A = { lua: bp('Bip01 L UpperArm'), lfa: bp('Bip01 L Forearm'), lh: bp('Bip01 L Hand'), rua: bp('Bip01 R UpperArm'), rfa: bp('Bip01 R Forearm'), rh: bp('Bip01 R Hand'), lth: bp('Bip01 L Thigh'), rth: bp('Bip01 R Thigh'), lca: bp('Bip01 L Calf'), rca: bp('Bip01 R Calf') };
+  const up = nk.clone().sub(pel).normalize(), left = lc.clone().sub(rc).normalize(), fwd = new THREE.Vector3().crossVectors(left, up).normalize(); left.crossVectors(up, fwd).normalize(); const chest = nk.clone().addScaledVector(up, -.17);
+  const segs = [[1, pel, nk], [2, A.lua, A.lfa], [2, A.rua, A.rfa], [3, A.lfa, A.lh], [3, A.rfa, A.rh], [4, A.lth, A.lca], [4, A.rth, A.rca]], tmp = new THREE.Vector3(), seg = (p, a, b) => { const ab = tmp.copy(b).sub(a), t = clamp(p.clone().sub(a).dot(ab)/ab.lengthSq(), 0, 1); return p.distanceTo(a.clone().addScaledVector(ab, t)); };
+  const g = body.geometry, pos = g.attributes.position, uv = g.attributes.uv, idx = g.index.array, grp = g.groups.find(q => q.materialIndex === bi) || { start: 0, count: idx.length };
+  const lab = new Uint8Array(pos.count), lx = new Float32Array(pos.count), ly = new Float32Array(pos.count), lz = new Float32Array(pos.count), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++){ body.getVertexPosition(i, v); body.localToWorld(v); let best = 0, bd = 1e9; for (const [k, a, b] of segs){ const d = seg(v, a, b); if (d < bd){ bd = d; best = k; } } lab[i] = best; const d = v.clone().sub(chest); lx[i] = d.dot(left); ly[i] = d.dot(up); lz[i] = d.dot(fwd); }
+  const REG = new Uint8Array(W*H), PX = new Float32Array(W*H), PY = new Float32Array(W*H), PZ = new Float32Array(W*H);
+  for (let t = grp.start; t < grp.start + grp.count; t += 3){ const a = idx[t], b = idx[t + 1], c = idx[t + 2], L = lab[a] === lab[b] ? lab[a] : lab[b] === lab[c] ? lab[b] : lab[a] === lab[c] ? lab[a] : Math.min(lab[a], lab[b], lab[c]);
+    const ax = uv.getX(a)*W, ay = uv.getY(a)*H, bx = uv.getX(b)*W, by = uv.getY(b)*H, cx2 = uv.getX(c)*W, cy = uv.getY(c)*H, x0 = Math.max(0, Math.floor(Math.min(ax, bx, cx2))), x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cx2))), y0 = Math.max(0, Math.floor(Math.min(ay, by, cy))), y1 = Math.min(H - 1, Math.ceil(Math.max(ay, by, cy)));
+    const den = (by - cy)*(ax - cx2) + (cx2 - bx)*(ay - cy); if (Math.abs(den) < 1e-9) continue;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++){ const px = x + .5, py = y + .5, w0 = ((by - cy)*(px - cx2) + (cx2 - bx)*(py - cy))/den, w1 = ((cy - ay)*(px - cx2) + (ax - cx2)*(py - cy))/den, w2 = 1 - w0 - w1; if (w0 < -.02 || w1 < -.02 || w2 < -.02) continue;
+      const k = y*W + x; REG[k] = L; PX[k] = lx[a]*w0 + lx[b]*w1 + lx[c]*w2; PY[k] = ly[a]*w0 + ly[b]*w1 + ly[c]*w2; PZ[k] = lz[a]*w0 + lz[b]*w1 + lz[c]*w2; } }
+  // soft shading from the original (blurred so the polo's stripes don't print through), and the average skin color
+  const lum = new Float32Array(W*H); for (let k = 0, j = 0; k < W*H; k++, j += 4) lum[k] = (orig.data[j]*.3 + orig.data[j + 1]*.59 + orig.data[j + 2]*.11)/255;
+  const box = (src, dst, R, horiz) => { for (let a = 0; a < (horiz ? H : W); a++){ let acc = 0; const at = i => horiz ? src[a*W + Math.min(W - 1, Math.max(0, i))] : src[Math.min(H - 1, Math.max(0, i))*W + a]; for (let i = -R; i <= R; i++) acc += at(i); for (let i = 0; i < (horiz ? W : H); i++){ dst[horiz ? a*W + i : i*W + a] = acc/(2*R + 1); acc += at(i + R + 1) - at(i - R); } } };
+  const blur = new Float32Array(W*H), tmpB = new Float32Array(W*H); box(lum, tmpB, 28, true); box(tmpB, blur, 28, false); box(blur, tmpB, 28, true); box(tmpB, blur, 28, false);   // (a soft 2D blur: the folds stay, the polo's stripes go)
+  const sat = j => { const r = orig.data[j], g2 = orig.data[j + 1], b = orig.data[j + 2], mx = Math.max(r, g2, b), mn = Math.min(r, g2, b); return mx ? (mx - mn)/mx : 0; };
+  let sl = 0, sn = 0, kr = 0, kg = 0, kb = 0, kn = 0; for (let k = 0; k < W*H; k++){ const j = k*4; if ((REG[k] === 1 || REG[k] === 2) && (sat(j) < .22 || Math.max(orig.data[j], orig.data[j + 1], orig.data[j + 2]) < 95)){ sl += blur[k]; sn++; } if (REG[k] === 3 && sat(j) > .25){ kr += orig.data[j]; kg += orig.data[j + 1]; kb += orig.data[j + 2]; kn++; } }
+  return RTEX.prep = { W, H, orig, REG, PX, PY, PZ, blur, sat, shirtLum: sl/Math.max(1, sn), skin: [kr/Math.max(1, kn), kg/Math.max(1, kn), kb/Math.max(1, kn)], bodyIndex: bi }; }
+const _gtex = new Map();
+function garmentTexture(id){ if (_gtex.has(id)) return _gtex.get(id); const G = GARMENTS[id], T = RTEX.prep; if (!G || !T) return null; const { W, H, orig, REG, PX, PY, PZ, blur, sat } = T;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'), out = cx.createImageData(W, H); out.data.set(orig.data);
+  const hex = c => { const n = parseInt(c.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }, base = hex(G.col), c2 = G.stripes ? hex(G.stripes[1]) : null, trim = G.trim ? hex(G.trim) : null, pl = G.plaid?.map(hex), dot = G.dots ? hex(G.dots) : null, ss = G.sleeveStripes ? hex(G.sleeveStripes) : null;
+  const prints = (G.prints || []).map(p0 => { const cap = p0.at === 'chest' ? .22 : p0.at === 'back' ? .26 : p0.w, k2 = Math.min(1, cap/p0.w), p = { ...p0, w: p0.w*k2, h: p0.h*k2 };   /* (no wider than the chest or the back) */ const pc = document.createElement('canvas'); pc.width = 512; pc.height = Math.round(512*p.h/p.w); const x = pc.getContext('2d'); p.draw(x, pc.width, pc.height); return { ...p, img: x.getImageData(0, 0, pc.width, pc.height), pw: pc.width, ph: pc.height }; });
+  const long = G.type === 'long' || G.type === 'hoodie', tank = G.type === 'tank';
+  const isF = new Uint8Array(W*H); for (let k = 0; k < W*H; k++){ const r = REG[k], j = k*4; if ((r === 1 || r === 2) && (sat(j) < .22 || Math.max(orig.data[j], orig.data[j + 1], orig.data[j + 2]) < 95)) isF[k] = 1; }
+  for (let pass = 0; pass < 2; pass++){ const nx = isF.slice(); for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++){ const k = y*W + x; if (isF[k] || (REG[k] !== 1 && REG[k] !== 2)) continue; let n = 0; for (const d of [-2, 2, -2*W, 2*W, -1, 1, -W, W]) n += isF[k + d]; if (n >= 5) nx[k] = 1; } isF.set(nx); }   // (fill the specks left at the old stripes' edges)
+  for (let k = 0; k < W*H; k++){ const r = REG[k]; if (!r || r === 4) continue; const j = k*4, shirtPx = isF[k] === 1;   /* (the polo's light and dark stripes and its collar; not skin, not the khaki shorts) */ let paint = false, skinPx = false;
+    if (r === 1 && shirtPx) paint = true; else if (r === 2 && (shirtPx || long)) { if (tank) skinPx = true; else paint = true; } else if (r === 3 && long && PY[k] > -.62) paint = true;   // (long sleeves to the wrist)
+    if (skinPx){ out.data[j] = T.skin[0]*blur[k]/T.shirtLum*.9; out.data[j + 1] = T.skin[1]*blur[k]/T.shirtLum*.9; out.data[j + 2] = T.skin[2]*blur[k]/T.shirtLum*.9; continue; }
+    if (!paint) continue; const x = PX[k], y = PY[k], z = PZ[k], front = z > 0; let c = base;
+    if (c2) c = Math.floor((y + 2)/G.stripeW) % 2 ? c2 : base;
+    if (pl){ const a = Math.floor((y + 2)/.03) % 3, b = Math.floor((x + 2)/.03) % 3; c = a === 0 && b === 0 ? pl[1] : a === 0 || b === 0 ? pl[2].map((v2, i) => (v2 + pl[0][i])/2) : pl[0]; }
+    if (dot && (Math.floor((y + 2)/.02) + Math.floor((x + 2)/.02)) % 5 === 0) c = dot;
+    if (ss && r !== 1 && Math.abs(Math.abs(z) - .0) < .5 && Math.floor((Math.atan2(z, x) + 4)*9) % 4 === 0) c = ss;   // (three stripes down the sleeves)
+    if (trim && ((r === 2 && !long && y < -.12) || (r === 1 && y > .14 && Math.abs(x) < .09))) c = trim;   // (ringer cuffs and collar)
+    let sh = clamp(blur[k]/T.shirtLum, .55, 1.25); if (G.heather) sh *= .92 + ((k*2654435761) >>> 24)/255*.16; if (G.fleece) sh *= .9 + ((k*40503) >>> 26)/63*.2;
+    let R2 = c[0]*sh, G2 = c[1]*sh, B2 = c[2]*sh;
+    for (const p of prints){ const onBack = p.at === 'back'; if (r !== 1 || onBack === front) continue; const cxp = p.at === 'left' ? .09 : 0, cyp = p.at === 'left' ? .03 : p.at === 'back' ? -.04 : -.02; const u = .5 + (onBack ? -(x - cxp) : (x - cxp))/p.w, vv = .5 - (y - cyp)/p.h; if (u < 0 || u >= 1 || vv < 0 || vv >= 1) continue;
+      const pi = (Math.floor(vv*p.ph)*p.pw + Math.floor(u*p.pw))*4, al = p.img.data[pi + 3]/255; if (al > 0){ R2 = R2*(1 - al) + p.img.data[pi]*sh*al; G2 = G2*(1 - al) + p.img.data[pi + 1]*sh*al; B2 = B2*(1 - al) + p.img.data[pi + 2]*sh*al; } }
+    out.data[j] = Math.min(255, R2); out.data[j + 1] = Math.min(255, G2); out.data[j + 2] = Math.min(255, B2); }
+  cx.putImageData(out, 0, 0); const tex = new THREE.CanvasTexture(cv); tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; _gtex.set(id, tex); return tex; }
 const REAL = { glb: null, loading: false, on: () => !!REAL.glb && gfx >= 2 && !REAL.off };
 function loadReal(){ if (REAL.loading) return; REAL.loading = true; new GLTFLoader().load('models/person_m01.glb.wasm', g => { g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; for (const mt of [].concat(o.material)) if (/opacity/i.test(mt.name)){ mt.alphaTest = .5; mt.transparent = false; mt.side = THREE.DoubleSide; } } }); REAL.glb = g; }, undefined, () => { REAL.off = true; }); }
 const _rv = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], _rq = new THREE.Quaternion(), _rq2 = new THREE.Quaternion(), _rm = new THREE.Matrix4();
@@ -4495,7 +4598,11 @@ function attachReal(root){ const u = root.userData, s = SkeletonUtils.clone(REAL
   root.traverse(o => { if (o.isMesh && o !== root) hide.push(o); }); const follow = [];   // (the rig's meshes; gear the player can see moves to the real head)
   u.body.children.forEach(c => { if (keep.has(c) || c.userData.gear || (c.isGroup && c !== u.body && !Object.values(u.arms).some(a => a.sh === c) && !Object.values(u.legs).some(l => l.hp === c) && c.children.some(cc => keep.has(cc)))) follow.push({ o: c, base: c.position.clone() }); });
   for (const f of follow) f.o.traverse(o => { const i = hide.indexOf(o); if (i >= 0) hide.splice(i, 1); });
-  return u.real = { s, B, bindQ, hipH, rest, hide, follow, muK: '' }; }
+  if (!RTEX.prep) prepRealTex(REAL.glb); let bodyMesh = null; s.traverse(o => { if (o.isSkinnedMesh && !bodyMesh) bodyMesh = o; }); if (bodyMesh){ bodyMesh.material = Array.isArray(bodyMesh.material) ? bodyMesh.material.map(mt => mt.clone()) : bodyMesh.material.clone(); }   /* (a single material stays single: a list without geometry groups draws nothing) */   // (its own materials, so its shirt is its own)
+  const bodyMat = bodyMesh && [].concat(bodyMesh.material)[RTEX.prep?.bodyIndex ?? 0], origMap = bodyMat?.map;
+  const hood = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10, 0, TAU, 0, Math.PI*.55), new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: .9, side: THREE.DoubleSide })); hood.scale.set(.13, .1, .1); hood.castShadow = true; hood.visible = false;   // (a hood resting on the shoulders, for hoodies)
+  { const nw = W(B.neck), hp = nw.clone().addScaledVector(fwd, -.085).addScaledVector(up, -.01); hood.position.copy(hp); hood.lookAt(hp.clone().addScaledVector(fwd, -1).addScaledVector(up, .6)); s.add(hood); B.spine2.attach(hood); }
+  return u.real = { s, B, bindQ, hipH, rest, hide, follow, muK: '', bodyMat, origMap, hood, shirt: undefined }; }
 function humanSync(m){ const u = m.userData; if (u.kind !== 'swimmer') return; if (!REAL.glb && !REAL.off) loadReal(); if (!REAL.on()){ if (u.real && u.real.s.visible){ u.real.s.visible = false; u.real.layered = false; for (const o of u.real.hide) o.layers.set(0); } return; }   // (the simple figure comes back)
   const R = u.real || attachReal(m); if (!R){ REAL.off = true; return; } const { s, B } = R; if (s.parent !== m.parent && m.parent) m.parent.add(s); s.visible = m.visible; if (!m.visible) return;
   if (!R.layered){ R.layered = true; for (const o of R.hide) o.layers.set(31); }   // (the simple figure's meshes go to a layer no camera draws, whatever the clothes code does with them)
@@ -4512,6 +4619,9 @@ function humanSync(m){ const u = m.userData; if (u.kind !== 'swimmer') return; i
   const v = () => new THREE.Vector3();
   for (const [id, ua, fa, h, f2] of [['la', B.lua, B.lfa, B.lh, B.lf2], ['ra', B.rua, B.rfa, B.rh, B.rf2]]){ const A = u.arms[id], sh = P(A.sh, 0, 0, 0, v()), el = P(A.el, 0, 0, 0, v()), wr = P(A.el, .3, 0, 0, v()), tip = P(A.el, .42, 0, 0, v()); aim(ua, fa, sh, el); aim(fa, h, el, wr); aim(h, f2, wr, tip); }
   for (const [id, th, ca, ft, to] of [['ll', B.lth, B.lca, B.lft, B.lto], ['rl', B.rth, B.rca, B.rft, B.rto]]){ const L = u.legs[id], hp = P(L.hp, 0, 0, 0, v()), kn = P(L.kn, 0, 0, 0, v()), an = P(L.kn, -.43, -.02, 0, v()), toe = P(L.sh || L.ft, -.1, 0, 0, v()); aim(th, ca, hp, kn); aim(ca, ft, kn, an); aim(ft, to, an, toe); }
+  // the shirt they're wearing: a shop garment painted onto the body (or a plain tee in a color), a hood for hoodies
+  { const want = m === player ? (save.wear?.shirt ?? null) : null; if (R.shirt !== want && R.bodyMat && RTEX.prep){ R.shirt = want; let id = null; if (want?.startsWith?.('g:')) id = want.slice(2); else if (want){ id = 'plain:' + want; if (!GARMENTS[id]) garment(id, 'tee', want); }
+      R.bodyMat.map = id ? garmentTexture(id) || R.origMap : R.origMap; R.bodyMat.needsUpdate = true; const G = id && GARMENTS[id]; R.hood.visible = G?.type === 'hoodie'; if (R.hood.visible) R.hood.material.color.set(G.col); } }
   // gear the player wears moves to the real head (and back)
   const headW = B.head.getWorldPosition(new THREE.Vector3()).addScaledVector(upv, .1), rigHead = P(u.body, .64, 0, 0, v()), dl = u.body.worldToLocal(headW.clone()).sub(u.body.worldToLocal(rigHead.clone()));
   for (const f of R.follow) f.o.position.copy(f.base).add(dl); }
@@ -4575,7 +4685,7 @@ function showGear(m, has, dry = false, wear = null){   // (dry: walking around o
   for (const q of g.goggles) q.visible = !has('snorkel') && !dry;
   if (g.cap) g.cap.visible = !dry; if (g.street) for (const o of g.street) o.visible = dry; if (g.suit) for (const o of g.suit) o.visible = !dry;   // (the swimsuit hides under the street clothes)
   g.capM.color.set(has('goldcap') ? 0xf5c030 : 0x1f5fe0); g.capM.metalness = has('goldcap') ? .7 : 0;
-  if (g.wear){ const w = (dry && wear) || {}; if (g.shirtM.userData.c !== (w.shirt || '#3f9fd2')){ g.shirtM.userData.c = w.shirt || '#3f9fd2'; g.shirtM.color.set(g.shirtM.userData.c); }   // what you bought on the Promenade (on land only)
+  if (g.wear){ const w = (dry && wear) || {}, sc = shirtColor(w.shirt); if (g.shirtM.userData.c !== sc){ g.shirtM.userData.c = sc; g.shirtM.color.set(sc); }   // what you bought on the Promenade (on land only)
     for (const k in g.wear){ const on = !!w[k] || (k === 'shoes' && dry); for (const o of g.wear[k]) o.visible = on; if (on){ g.wearM[k].color.set(w[k] || '#f4f4f0'); if (k === 'shades') g.wearM[k].emissive.set(w[k] || '#111111'); } } }   // (shades glow a little in their own color, so gold looks gold)   // (on land you always have sneakers on: white ones, till you buy some)
 }
 function updateGearLook(m, dry){ showGear(m, hasGear, dry, save.wear); }
@@ -6918,6 +7028,17 @@ const STORE_MENU = {
   movies: [M('🎟️', 'Ticket: Ocean Wonders', 10, 'movie'), M('🍿', 'Popcorn', 8), M('🥤', 'Soda', 5, 'drink'), M('🍫', 'Movie candy', 5)],
   theatre: [M('🎟️', 'Ticket to the show', 10, 'movie'), M('🍪', 'Cookie', 5)] };
 const BRAND_MENU = {   // what the real places sell (a few favorites each)
+  // the clothing stores: each brand's own garments (a first pass from what each is known for; matching their real current catalogs comes later)
+  'Abercrombie & Fitch': [M('👕', 'Moose logo tee', 45, 'wear', { slot: 'shirt', col: '#f4f4f0', g: 'af_moose_tee' }), M('🧥', 'ABERCROMBIE logo hoodie', 80, 'wear', { slot: 'shirt', col: '#9a9a9a', g: 'af_logo_hoodie' }), M('👕', 'Waffle henley', 55, 'wear', { slot: 'shirt', col: '#e9e1cf', g: 'af_henley' })],
+  'Zara': [M('👕', 'Basic white tee', 25, 'wear', { slot: 'shirt', col: '#f4f4f2', g: 'zara_tee' }), M('👕', 'Striped knit tee', 35, 'wear', { slot: 'shirt', col: '#1f2a44', g: 'zara_stripe' }), M('👕', 'Black textured polo', 40, 'wear', { slot: 'shirt', col: '#1d1d1f', g: 'zara_polo' }), M('🧥', 'Oversized hoodie', 50, 'wear', { slot: 'shirt', col: '#c9c3b6', g: 'zara_hoodie' })],
+  'Urban Outfitters': [M('👕', 'Vintage band tee', 40, 'wear', { slot: 'shirt', col: '#2a2a2a', g: 'uo_band' }), M('👕', 'Malibu ringer tee', 35, 'wear', { slot: 'shirt', col: '#f4f1e8', g: 'uo_ringer' }), M('👔', 'Flannel shirt', 55, 'wear', { slot: 'shirt', col: '#8e2b2b', g: 'uo_flannel' })],
+  'PacSun': [M('👕', 'Los Angeles tee', 30, 'wear', { slot: 'shirt', col: '#efe6d2', g: 'ps_la_tee' }), M('🧥', 'Palm tree hoodie', 55, 'wear', { slot: 'shirt', col: '#d8c7a6', g: 'ps_palm_hoodie' })],
+  'Adidas': [M('👕', 'Trefoil tee', 30, 'wear', { slot: 'shirt', col: '#1d1d1f', g: 'ad_trefoil' }), M('🧥', 'Three-stripes track jacket', 80, 'wear', { slot: 'shirt', col: '#1b2a5c', g: 'ad_track' }), M('🧥', 'Adicolor hoodie', 65, 'wear', { slot: 'shirt', col: '#f4f4f2', g: 'ad_hoodie' })],
+  'Patagonia': [M('👕', 'P-6 logo tee', 40, 'wear', { slot: 'shirt', col: '#f2efe6', g: 'pt_p6' }), M('🧥', 'Better Sweater fleece', 140, 'wear', { slot: 'shirt', col: '#7d7f80', g: 'pt_better_sweater' })],
+  'Uniqlo': [M('👕', 'U crew neck tee', 15, 'wear', { slot: 'shirt', col: '#1f4e8a', g: 'uq_crew' }), M('👕', 'UT graphic tee', 20, 'wear', { slot: 'shirt', col: '#f4f4f2', g: 'uq_ut' }), M('👕', 'AIRism polo', 30, 'wear', { slot: 'shirt', col: '#2e5c46', g: 'uq_airism_polo' })],
+  'Lululemon': [M('👕', 'Metal Vent Tech tee', 78, 'wear', { slot: 'shirt', col: '#3a4a5a', g: 'lu_metal_vent' }), M('🧥', 'Define jacket', 118, 'wear', { slot: 'shirt', col: '#1d1d1f', g: 'lu_define' })],
+  'Alo': [M('🧥', 'Accolade hoodie', 108, 'wear', { slot: 'shirt', col: '#ede6d6', g: 'alo_accolade' }), M('👕', 'Conquer muscle tank', 58, 'wear', { slot: 'shirt', col: '#1d1d1f', g: 'alo_tank' })],
+  'Beyond Yoga': [M('🧥', 'Spacedye hoodie', 98, 'wear', { slot: 'shirt', col: '#8f949a', g: 'by_spacedye' }), M('👕', 'Featherweight tee', 66, 'wear', { slot: 'shirt', col: '#c9b8d8', g: 'by_featherweight' })],
   'CAVA': [M('🥗', 'Greens and grains bowl', 14), M('🧆', 'Falafel pita', 12), M('🍗', 'Harissa honey chicken bowl', 15)],   // (2nd Street, research)
   'HiHo Cheeseburger': [M('🍔', 'HiHo Cheeseburger (double wagyu, onion jam)', 16), M('🍟', 'Twice-fried fries', 6), M('🥤', 'Vanilla shake', 9, 'drink'), M('🥧', 'Banana cream pie', 8)],
   'Uovo': [M('🍝', 'Cacio e pepe', 19), M('🥣', 'Tortellini in brodo', 21), M('🍝', 'Tagliatelle al ragù', 22), M('🍰', 'Tiramisu', 11)],
@@ -6941,12 +7062,12 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'PierBurger': [M('🍔', 'Pier burger', 10), M('🧀', 'Cheeseburger', 11), M('🌭', 'Hot dog', 7), M('🍟', 'Fries', 5), M('🥤', 'Chocolate shake', 7, 'drink')],
   "Marlene's Beachcomber": [M('🧢', 'Bucket hat', 15, 'wear', { slot: 'hat', col: '#f4e1b0' }), M('🕶️', 'Beach sunglasses', 12, 'wear', { slot: 'shades', col: '#111111' }), M('🧴', 'Sunscreen', 6, 'play', { say: 'No sunburn today!' }), M('🏖️', 'Beach towel', 12, 'play', { say: 'Perfect for the sand' })],
   'Soda Jerks': [M('🥤', 'Ice cream soda', 7, 'drink'), M('🍺', 'Root beer float', 7, 'drink'), M('🍨', 'Hot fudge sundae', 9), M('🍪', 'Cookie', 3)],
-  'Pier Shop': [M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' }), M('🔑', 'Pier keychain', 6, 'play', { say: 'Jingle jingle!' }), M('👕', 'Santa Monica Pier T-shirt', 25, 'wear', { slot: 'shirt', col: '#1565c0' })],
+  'Pier Shop': [M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' }), M('🔑', 'Pier keychain', 6, 'play', { say: 'Jingle jingle!' }), M('👕', 'Santa Monica Pier T-shirt', 25, 'wear', { slot: 'shirt', col: '#1565c0', g: 'pier_tee_blue' })],
   'Seaside on the Pier': [M('🌮', 'Fish tacos', 12), M('🥣', 'Clam chowder', 9), M('🍋', 'Lemonade', 5, 'drink')],
   'The Albright': [M('🦞', 'Lobster roll', 18), M('🐟', 'Fish and chips', 14), M('🥣', 'Clam chowder', 9)],
   'Bubba Gump': [M('🍤', 'Popcorn shrimp', 12), M('🐟', 'Fish and chips', 14), M('🦐', 'Shrimp basket', 15), M('🍋', 'Strawberry lemonade', 6, 'drink')],
   'Oatman Rock Shop': [M('💎', 'Geode', 12, 'play', { say: 'Crack it open: crystals inside!' }), M('🔮', 'Crystal', 10, 'play', { say: 'It sparkles in the sun!' }), M('🦈', 'Shark tooth', 8, 'play', { say: 'A real fossil shark tooth!' }), M('🪨', 'Polished stones', 5, 'play', { say: 'So smooth!' })],
-  'Pier Gear': [M('🧢', 'Pier cap', 15, 'wear', { slot: 'hat', col: '#1565c0' }), M('👕', 'Pier T-shirt', 25, 'wear', { slot: 'shirt', col: '#26a69a' })],
+  'Pier Gear': [M('🧢', 'Pier cap', 15, 'wear', { slot: 'hat', col: '#1565c0' }), M('👕', 'Pier T-shirt', 25, 'wear', { slot: 'shirt', col: '#26a69a', g: 'pier_tee_teal' })],
   'Cosmic Funnel Cakes': [M('🎂', 'Funnel cake', 9), M('🍓', 'Strawberry funnel cake', 11)],
   'Japadog': [M('🌭', 'Terimayo dog (teriyaki, mayo, seaweed)', 9), M('🌭', 'Oroshi dog (grated radish, soy)', 9), M('🥤', 'Ramune soda', 4, 'drink')],
   'Pier Photo': [M('📸', 'Souvenir photo on the pier', 10, 'selfie')],
@@ -6963,7 +7084,7 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'The Coffee Bean': [M('🍫', 'Hot chocolate', 5, 'drink'), M('🧋', 'Ice blended', 6, 'drink'), M('🥐', 'Croissant', 4)],
   'Bait & Tackle': [M('🎣', 'Fishing rod', 20, 'fish'), M('🪱', 'Bait', 2, 'play', { say: 'Wiggly! Fish love it' })],
   'Soda Jerks': [M('🍨', 'Hot fudge sundae', 9), M('🥤', 'Chocolate malt', 8, 'drink'), M('🍺', 'Root beer float', 7, 'drink'), M('🍦', 'Ice cream cone', 5, 'lick', { scoops: [0xf8bbd0] }), M('🍒', 'Cherry phosphate soda', 5, 'drink')],   // (the soda fountain in the Hippodrome)
-  'Pier Shop': [M('🧢', 'Santa Monica Pier cap', 25, 'wear', { slot: 'hat', col: '#1e6fd9' }), M('👕', 'Pier T-shirt', 30, 'wear', { slot: 'shirt', col: '#f4f4f0' }), M('🔑', 'Route 66 keychain', 8, 'play', { say: 'End of the Trail!' }), M('🦭', 'Plush sea lion', 20, 'hug'), M('🖼️', 'Pier postcard', 3, 'play', { say: 'Wish you were here!' })],
+  'Pier Shop': [M('🧢', 'Santa Monica Pier cap', 25, 'wear', { slot: 'hat', col: '#1e6fd9' }), M('👕', 'Pier T-shirt', 30, 'wear', { slot: 'shirt', col: '#f4f4f0', g: 'pier_tee_white' }), M('🔑', 'Route 66 keychain', 8, 'play', { say: 'End of the Trail!' }), M('🦭', 'Plush sea lion', 20, 'hug'), M('🖼️', 'Pier postcard', 3, 'play', { say: 'Wish you were here!' })],
   'Pacific Catch': [M('🐟', 'Hawaiian poke bowl', 18), M('🌮', 'Sushi tacos', 15), M('🦞', 'Lobster roll', 28), M('🍟', 'Sweet potato fries', 8)],   // (the West Coast fish house on the corner of 2nd and Wilshire, opened Dec 2024)
   "Wally's": [M('🧀', 'Charcuterie and cheese board', 24), M('🍫', 'Fancy chocolates', 8), M('🥖', 'Baguette sandwich', 14), M('🍇', 'Sparkling grape juice', 6, 'drink')],
   'Mikomi Sushi': [M('🫛', 'Edamame', 6), M('🥟', 'Gyoza', 9), M('🍣', 'Crispy rice with spicy tuna', 14), M('🍱', 'Sushi rolls', 16)],
@@ -6981,11 +7102,11 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Dining Deck': [M('🥟', 'Din Tai Fung soup dumplings', 14), M('🍜', 'Din Tai Fung noodles', 12), M('🍕', 'Sbarro pizza slice', 6), M('🍰', 'Cheesecake Factory cheesecake', 10), M('🍝', 'Cheesecake Factory pasta', 18), M('🥤', 'Lemonade', 5, 'drink')],
   'Demitasse': [M('☕', 'Latte', 6, 'drink'), M('🍫', 'Hot chocolate', 5, 'drink'), M('🥐', 'Croissant', 5)],
   'Puzzle Zoo': [M('🧩', 'Jigsaw puzzle', 20, 'puzzle'), M('🎲', 'Snakes & Ladders', 25, 'game'), M('🧱', 'Lego set', 40, 'play', { say: 'Click, click... you built a spaceship!' }), M('🤖', 'Star Wars action figure', 25, 'play', { say: 'Pew pew!' }), M('🐼', 'Panda plush', 30, 'hug'), M('🪀', 'Yo-yo', 10, 'play', { say: 'Walk the dog!' })],
-  "Victoria's Secret": [M('👕', 'PINK hoodie', 40, 'wear', { slot: 'shirt', col: '#ff7ab8' }), M('🩷', 'Pajama top', 30, 'wear', { slot: 'shirt', col: '#f7c6dc' }), M('🌸', 'Bare Vanilla body mist', 15, 'spritz'), M('🌺', 'Velvet Petals body mist', 15, 'spritz'),
+  "Victoria's Secret": [M('👕', 'PINK hoodie', 40, 'wear', { slot: 'shirt', col: '#ff7ab8', g: 'pink_hoodie' }), M('🩷', 'Pajama top', 30, 'wear', { slot: 'shirt', col: '#f7c6dc', g: 'pajama_top' }), M('🌸', 'Bare Vanilla body mist', 15, 'spritz'), M('🌺', 'Velvet Petals body mist', 15, 'spritz'),
     M('🧴', 'Hand lotion', 10, 'play', { say: 'Mmm, so soft!' }), M('💄', 'Lip gloss', 12, 'play', { say: 'So shiny!' }), M('👜', 'PINK tote bag', 20, 'play', { say: 'Room for everything!' })],   // (the kid-friendly side of the store: PINK, the body mists)
   'Ugo Trattoria': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12), M('🍨', 'Gelato', 6)],
   'Wonders of the World': [M('🦴', 'Dinosaur fossil', 25, 'play', { say: 'A real fossil, millions of years old!' }), M('☄️', 'Space rock', 20, 'play', { say: 'It fell from outer space!' }), M('💎', 'Geode', 15, 'play', { say: 'Crack it open: crystals inside!' })],
-  'Santa Monica Souvenirs': [M('🧢', 'Santa Monica cap', 20, 'wear', { slot: 'hat', col: '#1f6b8a' }), M('👕', 'Santa Monica T-shirt', 25, 'wear', { slot: 'shirt', col: '#f4f4f0' }), M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
+  'Santa Monica Souvenirs': [M('🧢', 'Santa Monica cap', 20, 'wear', { slot: 'hat', col: '#1f6b8a' }), M('👕', 'Santa Monica T-shirt', 25, 'wear', { slot: 'shirt', col: '#f4f4f0', g: 'sm_tee' }), M('🔮', 'Pier snow globe', 15, 'play', { say: "Shake, shake... it's snowing on the pier!" }), M('💌', 'Postcard', 3, 'play', { say: 'Greetings from Santa Monica!' })],
   'Surrender Tattoo': [M('🐉', 'Temporary dragon tattoo', 5, 'tattoo'), M('🦈', 'Temporary shark tattoo', 5, 'tattoo'), M('🌺', 'Temporary flower tattoo', 5, 'tattoo'), M('⭐', 'Temporary star tattoo', 5, 'tattoo'), M('🦋', 'Temporary butterfly tattoo', 5, 'tattoo')],
   'Outlandish': [M('💡', 'Ring light', 20, 'selfie'), M('🎙️', 'Microphone', 15, 'play', { say: "You're live! Say hi to your viewers" })],
   'The Cube VR': [M('🥽', 'VR session', 10, 'movie')],
@@ -6994,12 +7115,12 @@ const BRAND_MENU = {   // what the real places sell (a few favorites each)
   'Bruxie': [M('🧇', 'Waffle sandwich', 10), M('🍦', 'Frozen custard', 5)], 'Trastevere': [M('🍝', 'Spaghetti', 14), M('🍕', 'Pizza', 12)],
   "IT'SUGAR": [M('🐻', 'Giant gummy bear', 15), M('🍭', 'Giant lollipop', 10), M('🍫', 'Chocolate bar', 6), M('🌈', 'Sour belts', 6)],
   'MINISO': [M('🧸', 'Plush toy', 15, 'hug'), M('🎧', 'Pink headphones', 25, 'wear', { slot: 'phones', col: '#f48fb1' }), M('🎧', 'White headphones', 25, 'wear', { slot: 'phones', col: '#f4f4f0' }), M('🖊️', 'Cute pen', 3, 'play', { say: 'So cute!' })],
-  'Wilson': [M('🏀', 'Basketball', 20, 'ball', { ball: 'bball' }), M('🎾', 'Tennis racket and ball', 30, 'ball', { ball: 'tennis' }), M('🏈', 'Football', 20, 'ball', { ball: 'football' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e' })],
+  'Wilson': [M('🏀', 'Basketball', 20, 'ball', { ball: 'bball' }), M('🎾', 'Tennis racket and ball', 30, 'ball', { ball: 'tennis' }), M('🏈', 'Football', 20, 'ball', { ball: 'football' }), M('👕', 'Wilson T-shirt', 30, 'wear', { slot: 'shirt', col: '#c8102e', g: 'wilson_tee' })],
   'Gacha & Catch': [M('🥚', 'Capsule toy', 5, 'gacha'), M('🥚', 'Capsule toy (5 pack)', 20, 'gacha', { left: 5 })],
   'Holey Moley': [M('🍔', 'Slider', 8), M('🍕', 'Pizza', 10), M('🥨', 'Churros', 6), M('🍦', 'Ice cream', 6), M('🍋', 'Lemonade', 4, 'drink')],
   'TMNT Pizzeria': [M('🍕', 'Cheese slice', 6), M('🍕', 'Pepperoni slice', 7), M('🍕', 'Whole pie to share', 22, 'eat', { bites: 8 }), M('🧄', 'Garlic knots', 5), M('🥤', 'Soda', 4, 'drink')],   // (New York–style pies)
   'Ugo': [M('🍨', 'Gelato', 6), M('🍰', 'Tiramisu', 7), M('☕', 'Hot chocolate', 5, 'drink')],
-  'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0' })],
+  'Lids': CAPS, 'Dodgers Clubhouse': [M('🧢', 'Dodgers cap', 35, 'wear', { slot: 'hat', col: '#005a9c' }), M('👕', 'Dodgers jersey', 60, 'wear', { slot: 'shirt', col: '#f4f4f0', g: 'dodgers_jersey' }), M('👕', 'Dodgers LA tee', 35, 'wear', { slot: 'shirt', col: '#005a9c', g: 'dodgers_tee' })],
   'Apple Store': [M('📱', 'iPhone', 300, 'selfie'), M('🎧', 'AirPods', 120, 'tune'), M('⌚', 'Apple Watch', 200, 'time')],
   'Google Store': [M('📱', 'Pixel phone', 250, 'selfie'), M('🎧', 'Pixel Buds', 100, 'tune')], 'T-Mobile': [M('📱', 'Phone', 150, 'selfie')] };
 const PLAY_VERB = [[/lip gloss/i, 'Put it on'], [/nail polish/i, 'Paint your nails'], [/lotion/i, 'Rub it on'], [/yo-yo/i, 'Yo-yo it'], [/duck/i, 'Squeeze it'], [/snow globe/i, 'Shake it'], [/necklace/i, 'Put it on'], [/keychain/i, 'Jingle it'], [/postcard/i, 'Read it'], [/lego/i, 'Build it'],
@@ -9757,10 +9878,10 @@ function renderStore(){
         b.onclick = () => { if (!payFor(15, 'that book')) return; treat = { e: B.e, n: B.title, act: 'read', book: id, page: 0 }; closeStore(); banner(`${B.title} is yours!`, 'Tap Read to read it anywhere'); }; d.appendChild(b); } }
     if (!storeDown) return; const h = document.createElement('h3'); h.className = 'sect'; h.textContent = 'Toys, games & records'; box.appendChild(h); }
   const worn = save.wear || {}, list = menu === 'books' ? DOWN_MENU : menu;
-  for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === it.col;
+  for (const it of list){ const on = it.act === 'wear' && worn[it.slot] === wearKey(it);
     card(`<div class="em">${it.slot === 'shades' && it.col ? `<svg viewBox="0 0 64 32" width="52" height="26"><path d="M2 8h60M30 10q2-3 4 0" stroke="#333" stroke-width="3" fill="none"/><ellipse cx="16" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><ellipse cx="48" cy="16" rx="13" ry="10" fill="${it.col}" stroke="#333" stroke-width="2"/><path d="M8 12q5-4 10-1M40 12q5-4 10-1" stroke="rgba(255,255,255,.7)" stroke-width="2" fill="none"/></svg>` : it.e}</div><h3>${htmlText(it.n)}</h3><p>${it.act === 'wear' ? 'Wear it around town' : it.act === 'movie' ? 'Watch the movie, Ocean Wonders' : ACT_SAY[it.act] ? 'Carry it around' : ''}</p>`, on ? "You're wearing it" : `Buy · ${it.p} coins`, () => {
       if (!payFor(it.p, `the ${it.n.toLowerCase()}`)) return;
-      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: it.col }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, it.slot === 'shades' ? 'Tap View for your eyes: everything looks tinted' : 'Looking good'); return; }
+      if (it.act === 'wear'){ save.wear = { ...(save.wear || {}), [it.slot]: wearKey(it) }; persist(); flushCloud(); closeStore(); if (it.slot === 'phones'){ const i = (Math.random()*SONGS.length)|0; playSong(i, 'hand'); banner('🎧 Headphones on!', `Now playing: ${SONGS[i].title}. Change songs in the 📱 music app`); } else banner(`You're wearing the ${it.n.toLowerCase()}!`, it.slot === 'shades' ? 'Tap View for your eyes: everything looks tinted' : 'Looking good'); return; }
       if (it.act === 'movie' && r.name === 'The Cube VR'){ closeStore(); startVR(ocean); return; }   // (a real VR swim, not a film)
       if (it.act === 'movie'){ closeStore(); playMovie(`now showing at ${r.name}`); return; }
       if (it.act === 'tattoo'){ save.tattoo = it.e; persist(); flushCloud(); closeStore(); heartsAt = time; banner(`${it.e} New tattoo!`, 'Look at your arm! (It\'s only temporary)'); return; }

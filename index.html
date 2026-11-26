@@ -9338,7 +9338,26 @@ function buildRooms(g, P3){
     const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; g.add(m); }
   if (glow.pos.length){ const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(glow.pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(glow.col, 3)); g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }))); }   // (lights that glow in color)
 }
+// Barnes & Noble's front at 1318 (Google photos, Aug 2024 and Nov 2026): a two-story building of buff brick, five black-framed windows
+// across the upper floor with small black lanterns between them and a darker brick cornice; at street level a black steel and glass
+// storefront with a recessed door and a black band across the top carrying the white BARNES & NOBLE letters; a narrow dark louvered bay at one end.
+function buildBNFront(g, P3){ const sF = PROM.s0 + .06, t0 = -563.9, t1 = -548.3, W = t1 - t0, base = landH(sF, (t0 + t1)/2), grp = new THREE.Group(), out = d => sF - d;   // (the face looks out at +s, onto the Promenade)
+  const brick = canvasTex(256, 256, (x, w, h) => { x.fillStyle = '#b39a78'; x.fillRect(0, 0, w, h); const R = mulberry(9); for (let j = 0; j < 16; j++) for (let i = -1; i < 9; i++){ const v = 160 + R()*40; x.fillStyle = `rgb(${v + 20},${v + 2},${v - 30})`; x.fillRect(i*32 + (j % 2)*16 + 1, j*16 + 1, 30, 14); } });
+  brick.wrapS = brick.wrapT = THREE.RepeatWrapping; brick.repeat.set(W/2.2, 6.4/2.2);
+  const box = (d0, d1, ta, tb, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(d1 - d0), y1 - y0, tb - ta), m); me.position.set(...P3(out((d0 + d1)/2), (ta + tb)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const blk = std(0x141618, .4, .3), glass = new THREE.MeshStandardMaterial({ color: 0x31475a, roughness: .05, metalness: .6, envMapIntensity: 1.4 });
+  box(-.02, .1, t0, t1, 4.7, 10.6, new THREE.MeshStandardMaterial({ map: brick, roughness: .9 }));   // the brick upper floor
+  box(-.02, .25, t0, t1, 10.6, 11.0, std(0x8a6a4c, .85)); box(-.02, .18, t0, t1, 4.6, 4.8, std(0x9a8064, .85));   // cornice and sill band
+  for (let k = 0; k < 5; k++){ const c = t0 + 1.9 + k*(W - 3.8)/4; box(.08, .14, c - .9, c + .9, 5.6, 9.4, blk); box(.12, .16, c - .78, c + .78, 5.72, 9.28, glass); box(.12, .17, c - .03, c + .03, 5.72, 9.28, blk); box(.12, .17, c - .78, c + .78, 7.45, 7.52, blk);
+    if (k < 4){ const lc = c + (W - 3.8)/8; box(.1, .35, lc - .1, lc + .1, 9.6, 9.95, blk); } }   // (windows, and little black lanterns between)
+  box(-.02, .35, t0, t1, 3.55, 4.55, blk);   // the black sign band
+  for (let k = 0; k <= 6; k++){ const c = t0 + 2.2 + k*(W - 2.4)/6; box(.05, .25, c - .07, c + .07, 0, 3.55, blk); }   // black mullions across the glass
+  box(.05, .3, t0, t0 + 2.2, 0, 3.55, std(0x24272b, .6)); for (let y = .3; y < 3.4; y += .22) box(.25, .32, t0 + .1, t0 + 2.1, y, y + .06, blk);   // the narrow louvered bay
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(8.5, .62), new THREE.MeshBasicMaterial({ map: canvasTex(1024, 76, (x, w, h) => { x.fillStyle = '#141618'; x.fillRect(0, 0, w, h); x.fillStyle = '#ffffff'; x.font = '500 58px Georgia, "Times New Roman", serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('BARNES & NOBLE', w/2, h/2 + 3); }) }));
+  sg.position.set(...P3(out(.37), (t0 + t1)/2 + 2, base + 4.05)); { const a = new THREE.Vector3(...P3(sF, t0, 0)), b2 = new THREE.Vector3(...P3(sF, t1, 0)); sg.rotation.y = -Math.atan2(b2.z - a.z, b2.x - a.x) + Math.PI; } grp.add(sg);
+  g.add(grp); }
 function buildPromenade(g, P3, at, instanceOf){
+  buildBNFront(g, P3);
   // the real shops and restaurants (OpenStreetMap), each with its sign where it really is: glass shopfronts all along, awnings where they serve food, marquees at the two movie theaters
   const BRAND = { 'Apple Store': ['#1d1d1f', '#f5f5f7', ' '], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'], 'For Lease': ['#e8e4dc', '#6a6a6a', 'FOR LEASE'], 'MINISO': ['#e60012', '#ffffff'], 'Wilson': ['#c8102e', '#ffffff'], 'Beyond Yoga': ['#f4efe6', '#3a3a3a'], 'Culto': ['#111111', '#ffffff'], 'Gacha & Catch': ['#ff3e8a', '#ffffff'], 'Holey Moley': ['#111111', '#ff4fa3', 'HOLEY MOLEY'], 'Vans': ['#111111', '#ffffff', 'VANS'], 'Uniqlo': ['#e60012', '#ffffff', 'UNIQLO'], 'JD Sports': ['#111111', '#ffffff', 'JD'], 'Oakley': ['#111111', '#ffffff', 'OAKLEY'], 'The Cube VR': ['#1a1036', '#7cf7ff', 'THE CUBE VR'], 'Santa Monica Art Museum': ['#f4efe6', '#111111'], 'Outlandish': ['#111111', '#ff5aa5', 'OUTLANDISH'], 'Wonders of the World': ['#2a1a4a', '#ffd23f'], 'Odd One Out': ['#ffcf3f', '#3a2a12', 'ODD ONE OUT'], 'Ugo Trattoria': ['#2e5d3a', '#f4efe2'], 'Museum of Illusions': ['#111111', '#ffffff', 'MUSEUM OF ILLUSIONS'], 'PicklePop': ['#ff5aa5', '#ffffff', 'PICKLEPOP'], 'Yogurtland': ['#e4007c', '#ffffff', 'yogurtland'], 'TMNT Pizzeria': ['#1f8a3b', '#ffffff', 'TMNT PIZZERIA'], 'El Husuba': ['#7a3e1d', '#f4efe2'], 'Ugo': ['#2e5d3a', '#f4efe2'],
     'Starbucks': ['#00704a', '#ffffff'], 'Lululemon': ['#d22030', '#ffffff', 'lululemon'], "Levi's": ['#ffffff', '#c41230'], 'Johnny Rockets': ['#d0021b', '#ffffff'], 'Puzzle Zoo': ['#f4efe4', '#c4561f', 'PUZZLE ZOO'],

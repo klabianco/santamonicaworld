@@ -3767,7 +3767,7 @@ function updOcean(dt){
   updCannons(o, dt); if (mode === 'dead') return;
   questStep(o, dt);
   leagueStep(o, dt);
-  mpTick(dt); seatChatTick(dt); if (mode === 'ocean' && AIR.list.length) airStep(dt); if (mode === 'ocean') tplayStep(dt);
+  mpTick(dt); seatChatTick(dt); if (mode === 'ocean' && AIR.list.length) airStep(dt); if (mode === 'ocean') tplayStep(dt); skyClock(dt); if (SKYCLOCK.stars) SKYCLOCK.stars.position.copy(camera.position);
   o.tripT = (o.tripT || 0) + dt;
   if (!o.wentFar && Math.hypot(o.x - HOUSE.x, o.y - HOUSE.y) > 300*METERS){ o.wentFar = true; o.homeDone = false; }   // a real trip: coming back home counts
   { const hx = HOUSE.x - o.x, hy = HOUSE.y - o.y, hd = Math.hypot(hx, hy);
@@ -3967,7 +3967,7 @@ function draw(scene){
   if (!done) renderer.render(scene, camera);
   if (fresh || shadowWipe){ shadowWipe = false; wipeShadows(); } }
 applyGfx(true); window.__r3d = true; resize3D();
-const EXPO = .52;
+let EXPO = .52;   // (the sky clock below raises it at dusk and at night)
 const SUN = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(52), THREE.MathUtils.degToRad(150));
 const SKY_TOP = new THREE.Color(0x2f74cc), SKY_HOR = new THREE.Color(0x9ccbe8);
 
@@ -11103,6 +11103,38 @@ function loadAssets(){
   for (const [k, u] of Object.entries(models)) gl.load(u, g => { MODELS[k] = g.scene; g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); done(); }, undefined, done);
   const wait = () => { if (!loadGone) return setTimeout(wait, 1000); loadFar(); for (const [k, u] of Object.entries(texs)) tl.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = MAXANI; if (k.endsWith('Map')) t.colorSpace = THREE.SRGBColorSpace; TEX[k] = t; applyAssetsToOcean(); }); for (const [k, u] of Object.entries(later)) gl.load(u, g => { MODELS[k] = g.scene; g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } }); applyAssetsToOcean(); }); }; setTimeout(wait, 1000);   // (after the loading screen)
 }
+/* The sky on the real clock: the sun is where the real sun is over Santa Monica right now (from the date and time), so mornings, golden
+   sunsets over the bay and nights all happen when they really do. By day the photo sky with its clouds; around sunrise and sunset a
+   physical sky that gives the real dawn and dusk colors, low warm light and an orange haze; at night a dark sky with stars and moonlight
+   (still bright enough to play), the lamps and the pier lights glowing. Add ?hour=19.5 to the address to see another time of day. */
+const SKYCLOCK = { next: 0, mode: '', photo: null, photoEnv: null, photoHor: null, N: null, E: null, stars: null, envAt: -1e9, sunCol: new THREE.Color(), hemiCol: new THREE.Color() };
+function sunNow(){ const q = new URLSearchParams(location.search).get('hour'), now = new Date(); let t = now.getTime();
+  if (q != null && !isNaN(+q)){ const la = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })), off = now.getTime() - la.getTime(); la.setHours(0, 0, 0, 0); t = la.getTime() + off + (+q)*3600e3; }   // (?hour= : that hour, Santa Monica time, today)
+  const rad = Math.PI/180, d = t/86400000 + 2440587.5 - 2451545.0, g = (357.529 + .98560028*d)*rad, q2 = 280.459 + .98564736*d, L = (q2 + 1.915*Math.sin(g) + .020*Math.sin(2*g))*rad, e = (23.439 - .00000036*d)*rad;
+  const RA = Math.atan2(Math.cos(e)*Math.sin(L), Math.cos(L)), dec = Math.asin(Math.sin(e)*Math.sin(L)), gmst = ((18.697374558 + 24.06570982441908*d) % 24 + 24) % 24, H = (gmst*15 - 118.4912)*rad - RA, lat = 34.0195*rad;
+  const alt = Math.asin(Math.sin(lat)*Math.sin(dec) + Math.cos(lat)*Math.cos(dec)*Math.cos(H)), az = Math.atan2(-Math.sin(H), Math.tan(dec)*Math.cos(lat) - Math.sin(lat)*Math.cos(H));   // (azimuth from north, turning east)
+  return { alt, az }; }
+function skyAxes(){ if (SKYCLOCK.N) return; const a = geoToGame(34.0095, -118.4973), b = geoToGame(34.0105, -118.4973), c = geoToGame(34.0095, -118.4961); if (!a || !b || !c) return;
+  const n = new THREE.Vector3(b.x - a.x, 0, b.y - a.y).normalize(), ee = new THREE.Vector3(c.x - a.x, 0, c.y - a.y).normalize(); SKYCLOCK.N = n; SKYCLOCK.E = ee; }   // (which way is north and east in the game world)
+function skyClock(dt){ const K = SKYCLOCK; if ((K.next -= dt) > 0) return; K.next = 10; skyAxes(); if (!K.N) return;
+  const { alt, az } = sunNow(), deg = alt*180/Math.PI, dir = (al, a2) => K.N.clone().multiplyScalar(Math.cos(a2)*Math.cos(al)).addScaledVector(K.E, Math.sin(a2)*Math.cos(al)).add(new THREE.Vector3(0, Math.sin(al), 0)).normalize();
+  const day = clamp((deg + 4)/16, 0, 1), night = clamp(-(deg + 2)/8, 0, 1), golden = clamp(1 - Math.abs(deg - 3)/10, 0, 1);   // (day: the sun well up; night: well below; golden: the low sun)
+  const sunDir = dir(Math.max(alt, -.05), az), moonDir = dir(.75, az + Math.PI);   // (the moon: high on the other side of the sky; its real phase and place are left out)
+  SUN.copy(night > .5 ? moonDir : sunDir.y < .06 ? sunDir.clone().setY(.06).normalize() : sunDir);
+  const mode = deg > 14 && K.photo ? 'photo' : 'phys';
+  for (const sc of [poolScene, oceanScene]){ const sk = sc.userData.sky; if (sk) sk.material.uniforms.sunPosition.value.copy(sunDir); }
+  for (const o of envScene.children) if (o.material?.uniforms?.sunPosition) o.material.uniforms.sunPosition.value.copy(sunDir);
+  if (mode === 'photo'){ for (const sc of [poolScene, oceanScene]){ sc.userData.bg = K.photo; sc.environment = K.photoEnv; } if (K.photoHor) HORIZON.copy(K.photoHor); }
+  else { for (const sc of [poolScene, oceanScene]){ sc.userData.bg = null; } if (time - K.envAt > 120 || K.mode !== mode){ K.envAt = time; const env = pmrem.fromScene(envScene, 0, .1, 4000).texture; for (const sc of [poolScene, oceanScene]) sc.environment = env; }
+    HORIZON.setRGB(lerp(.66, .95, golden)*day + .05*night, lerp(.81, .62, golden)*day + .07*night, lerp(.9, .45, golden)*day + .13*night); }   // (the haze: pale blue by day, orange at sunset, dark blue at night)
+  K.mode = mode;
+  K.sunCol.setRGB(1, lerp(.94, .62, golden), lerp(.86, .38, golden)); const sunI = 2.4*day*lerp(1, .85, golden), moonI = .5*night;
+  for (const sun of SUNS){ if (night > .5){ sun.color.setRGB(.62, .72, 1); sun.intensity = moonI; } else { sun.color.copy(K.sunCol); sun.intensity = Math.max(sunI, .25); } }
+  for (const sc of [poolScene, oceanScene]) sc.traverse(o => { if (o.isHemisphereLight){ o.intensity = mode === 'photo' ? .12 : lerp(.5, .32, night); o.color.setRGB(lerp(.87, .45, night), lerp(.95, .55, night), lerp(1, .85, night)); } });
+  EXPO = .52*(1 + .25*golden + .35*night);
+  if (!K.stars){ const P = [], R = mulberry(5); for (let k = 0; k < 900; k++){ const u = R()*TAU, v = Math.acos(1 - R()*.95); P.push(Math.cos(u)*Math.sin(v)*3000, Math.cos(v)*3000, Math.sin(u)*Math.sin(v)*3000); } const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    K.stars = new THREE.Points(g2, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false })); K.stars.frustumCulled = false; oceanScene.add(K.stars); }
+  K.stars.material.opacity = night*.9; K.stars.visible = night > .05; }
 function applySky(tex){
   tex.mapping = THREE.EquirectangularReflectionMapping;
   const env = pmrem.fromEquirectangular(tex).texture;
@@ -11114,10 +11146,10 @@ function applySky(tex){
   for (let y = 0; y < height/2; y += 2) for (let x = 0; x < width; x += 2){ const i = (y*width + x)*4, L = rd(i) + rd(i+1) + rd(i+2); if (L > best){ best = L; bi = y*width + x; } }
   const px = bi % width, py = Math.floor(bi/width), u = (px + .5)/width, v = 1 - (py + .5)/height;
   const phi = (u - .5)*TAU, lat = (v - .5)*Math.PI;
-  SUN.set(Math.cos(phi)*Math.cos(lat), Math.max(.25, Math.sin(lat)), Math.sin(phi)*Math.cos(lat)).normalize();
+  SUN.set(Math.cos(phi)*Math.cos(lat), Math.max(.25, Math.sin(lat)), Math.sin(phi)*Math.cos(lat)).normalize(); SKYCLOCK.photo = tex; SKYCLOCK.photoEnv = env; SKYCLOCK.next = 0;   // (the sky clock puts the sun where the real one is)
   let r = 0, g = 0, b = 0, n = 0; const hy = Math.floor(height*.47);
   for (let x = 0; x < width; x += 4){ const i = (hy*width + x)*4; r += rd(i); g += rd(i+1); b += rd(i+2); n++; }
-  HORIZON.setRGB(r/n*.85, g/n*.85, b/n*.85);
+  HORIZON.setRGB(r/n*.85, g/n*.85, b/n*.85); SKYCLOCK.photoHor = HORIZON.clone();
   poolScene.fog.color.copy(HORIZON); POOL_FOG.copy(HORIZON);
   for (const m of [poolWater, channelWater, seaWater]) m.uniforms.uFog.value.copy(HORIZON);
   for (const sc of [poolScene, oceanScene]) sc.traverse(o => { if (o.isHemisphereLight) o.intensity = .12; });

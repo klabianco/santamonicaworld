@@ -6669,7 +6669,7 @@ function buildCoast(){
     for (let i = 0; i < p.length; i++){ const a = p[i], b = p[(i + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
       if (skip && skip(a, b)){ along += L; continue; }   // (an inside wall, e.g. between the Fairmont's lobby and FIG: left open)
       const cut = promWallCut(a, b);
-      if (cut){ for (const [f0, f1, yb] of cut){ const pa = [lerp(a[0], b[0], f0), lerp(a[1], b[1], f0)], pb = [lerp(a[0], b[0], f1), lerp(a[1], b[1], f1)], y0 = yb ?? base, u0 = (along + f0*L)/3.2, u1 = (along + f1*L)/3.2, va = (y0 - base)/3, v1 = H/3;
+      if (cut){ for (const [f0, f1, yb] of cut){ const pa = [lerp(a[0], b[0], f0), lerp(a[1], b[1], f0)], pb = [lerp(a[0], b[0], f1), lerp(a[1], b[1], f1)], y0 = yb ?? base, u0 = (along + f0*L)/3.2, u1 = (along + f1*L)/3.2, va = yb == null ? 0 : Math.floor((y0 - base)/3) + .85, v1 = va + (top - y0)/3;   // (over a shop the wall starts just above a window row, so the next row clears the shop sign)
           arr.pos.push(...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], y0), ...P3(pb[0], pb[1], top), ...P3(pa[0], pa[1], top)); if (plain) arr.uv.push(.02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02, .02); else arr.uv.push(u0, va, u1, va, u1, v1, u0, va, u1, v1, u0, v1); for (let k = 0; k < 6; k++) arr.col.push(cc.r, cc.g, cc.b); }
         along += L; continue; }   // (over a shop, the wall starts above its ceiling: the shopfront below is glass you can see into)
       const A0 = P3(a[0], a[1], base), A1 = P3(a[0], a[1], top), B0 = P3(b[0], b[1], base), B1 = P3(b[0], b[1], top), u0 = along/3.2, u1 = (along + L)/3.2, v1 = H/3;

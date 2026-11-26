@@ -3145,6 +3145,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   { const P = placeAtX(x*U); if (P) return placeWalkH(P, x*U, y*U); }   // (Kyoto and the other faraway places)
   if (inSFu(x)) return sfWalkH(x*U, y*U);   // (San Francisco)
   const [s, t] = landST(x, y); let h = landH(s, t);
+  if (JRROOF.y && walkRef > JRROOF.y - 2 && s > JRROOF.box[0] && s < JRROOF.box[1] && t > JRROOF.box[2] && t < JRROOF.box[3]) return JRROOF.y + .06;   // (up on John Reed's roof deck)
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
   { const st = pierStairH(s, t); if (st != null) h = Math.max(h, st); }
   { const rh = rampH(s, t); if (rh != null && !(rh - h > 2.2 && walkRef < rh - 1.2)) h = Math.max(h, rh); }
@@ -5761,7 +5762,34 @@ function amphH(s, t){ if (s < 251.5 || s > 258.7 || t < 17 || t > 43) return nul
    Park's main gate, Pier Tamales further out, and Candy Carousel, 66 to Cali and Hats Amazing across from Bubba Gump. Most face the park from
    the north side of the walkway. (Each cart's exact spot is a guess from those descriptions.) */
 const PIER_CARTS = [['Japadog', 344, 7, '#d32f2f'], ['Pier Photo', 350, 7, '#263238'], ['Downtown Fruit', 420, 7, '#43a047'], ['Pier Tamales', 371, 7, '#ef6c00'], ['Candy Carousel', 262, -7, '#ec407a'], ['66 to Cali', 256, -7, '#1565c0'], ['Hats Amazing', 250, -7, '#6d4c41']];
+/* John Reed's rooftop (research: johnreed.json): the Outdoor Functional Training Deck, green artificial turf behind a glass railing with palms and
+   sky all round, for lunges, abs and stretching. Up here too (their real floor isn't published, so this is a guess): the Group Cycle studio for
+   Bike & Beats, and the dim Snooze Room with its grey recliners, wood slats and pampas grass. Take the lift from the back of the gym. */
+const JRROOF = { box: [615.5, 640.5, -812.5, -789.5], y: 0, spots: [] };
+function buildJRRoof(g, P3){ const r = { name: 'JOHN REED Fitness', fs: 641, inw: -1, D: 26 }, b = bldAt(628, -801); if (!b) return; const Y = JRROOF.y = r.floor = (b.base ?? landH(628, -801)) + b.h + .7; JRROOF.room = r;   // (just above the facade's roof slab)
+  const [s0, s1, t0, t1] = JRROOF.box, grp = new THREE.Group(), bx = (a, b2, c, d, y0, y1, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(b2 - a), y1 - y0, Math.abs(d - c)), m); me.position.set(...P3((a + b2)/2, (c + d)/2, Y + (y0 + y1)/2)); me.castShadow = me.receiveShadow = true; grp.add(me); return me; };
+  bx(s0, s1, t0, t1, 0, .06, addDetail(std(0x4caf50, .95), 'ground')); LAND_BOXES.push([s0, t0, s1, t1, Y + .06, Y - 2]);
+  const glass = new THREE.MeshStandardMaterial({ color: 0xbfe3ee, roughness: .05, metalness: .2, transparent: true, opacity: .3, depthWrite: false });
+  for (const [a, b2, c, d] of [[s0, s1, t0, t0 + .05], [s0, s1, t1 - .05, t1], [s0, s0 + .05, t0, t1], [s1 - .05, s1, t0, t1]]){ bx(a, b2, c, d, .06, 1.15, glass); LAND_BOXES.push([Math.min(a, b2), Math.min(c, d), Math.max(a, b2), Math.max(c, d), Y + 1.15, Y - 1]); }
+  for (const [ss, tt] of [[617, -811], [617, -791], [631, -790.8]]){ bx(ss - .5, ss + .5, tt - .5, tt + .5, .06, .7, std(0x8d6e63, .8)); const tr = new THREE.Mesh(new THREE.CylinderGeometry(.12, .18, 3.5, 8), std(0x8a7560, .9)); tr.position.set(...P3(ss, tt, Y + 2.4)); grp.add(tr); for (let k = 0; k < 7; k++){ const a = k/7*TAU, fr = new THREE.Mesh(new THREE.ConeGeometry(.25, 1.8, 4), std(0x3f7a3a, .8)); fr.position.set(...P3(ss + Math.cos(a)*.7, tt + Math.sin(a)*.7, Y + 4.1)); fr.rotation.set(Math.sin(a)*1.9, 0, -Math.cos(a)*1.9); grp.add(fr); } }   // (palms in planters)
+  // the cycle studio (neon-lit glass box) and the Snooze Room (a dim box), at the back of the roof
+  bx(616, 624, -812, -803, .06, 3.2, new THREE.MeshStandardMaterial({ color: 0x1a1030, roughness: .3, transparent: true, opacity: .85 })); bx(616, 624, -803.1, -803, 2.6, 2.9, new THREE.MeshBasicMaterial({ color: 0xff2bd6 }));
+  for (let k = 0; k < 4; k++) for (let j = 0; j < 2; j++) bx(617.5 + k*1.6, 618.1 + k*1.6, -810 + j*2.5, -809.6 + j*2.5, .06, 1, std(0x222222, .5));
+  bx(616, 622, -797, -790, .06, 3, std(0x5d5550, .8)); for (let k = 0; k < 3; k++) bx(617 + k*1.7, 618.3 + k*1.7, -792.5, -790.8, .06, .55, std(0x9e9e9e, .7));
+  const spot = (s2, t2, rr, label, go) => JRROOF.spots.push({ s: s2, t: t2, r: rr, label, go });
+  spot(638, -801, 1.6, '🛗 Back down into the gym', o => { const [x, y] = landXY(618, -801); o.x = x; o.y = y; walkRef = 1e9; walkRef = landH(618, -801) + 1.5; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner('JOHN REED Fitness', 'Back down in the gym'); });
+  spot(630, -800, 3, '🤸 Lunges and abs on the turf deck', () => startWorkout(r, { k: 'stretch', d: 11, t: -800, face: -1, ed: 9, et: -800 }));
+  spot(625.5, -807.5, 2.2, '🚴 Bike & Beats class', () => startWorkout(r, { k: 'bike', d: 22.5, t: -807.5, face: -1, ed: 15.5, et: -807.5 }));
+  spot(623.5, -794, 2, '😴 Rest in the Snooze Room', o => { const [x, y] = landXY(618.5, -791.6); o.workout = { k: 'sit', x, y, sy: Y + .55, t0: time, ex: o.x, ey: o.y, eg: o.gh }; o.x = x; o.y = y; banner('😴 The Snooze Room', 'Dim and quiet. A grey recliner, wood slats and dried pampas grass. Breathe... Move to get up'); });
+  g.add(grp); }
+function jrRoofAct(o){ if (!o?.onLand || o.workout || !JRROOF.y) return null; const [s, t] = landST(o.x, o.y), B = JRROOF.box; if (s < B[0] || s > B[1] || t < B[2] || t > B[3]) return null;
+  if ((o.gh ?? 0) > JRROOF.y - 1){ let best = null, bd = 9; for (const P of JRROOF.spots){ const d = Math.hypot(P.s - s, P.t - t); if (d < P.r && d < bd){ bd = d; best = P; } } return best ? { label: best.label, go: () => best.go(o) } : null; }
+  if (Math.hypot(s - 617.5, t - 801) > 0 && Math.hypot(s - 617.5, t + 801) < 2) return { label: '🛗 Up to the rooftop deck', go: () => { const [x, y] = landXY(636, -801); o.x = x; o.y = y; walkRef = JRROOF.y + .4; o.gh = groundAt(x, y); walkRef = o.gh + .3; banner('☀️ The rooftop deck', 'Turf, sun and palm trees up top: lunges, Bike & Beats and the Snooze Room'); } };
+  return null; }
 function buildPierCarts(g, P3){ const grp = new THREE.Group();
+  // the pier underpass (pier research, OpenStreetMap): a covered concrete walkway beneath the deck at beach level linking the north and south beaches
+  { const [ea, eb] = pierSides(139), conc = addDetail(std(0xbdb8ad, .9), 'wall'); for (const ss of [135.2, 142.8]){ const h0 = landH(ss, (ea + eb)/2), top = pierDeckH(ss) - .45, w = new THREE.Mesh(new THREE.BoxGeometry(.4, top - h0, eb - ea + 1), conc); w.position.set(...P3(ss, (ea + eb)/2, (top + h0)/2)); const a = new THREE.Vector3(...P3(ss, ea, 0)), b = new THREE.Vector3(...P3(ss, eb, 0)); w.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x) + Math.PI/2; w.receiveShadow = true; grp.add(w); LAND_BOXES.push([ss - .2, ea - .5, ss + .2, eb + .5, top, h0 - 1]); }
+    for (const tt of [ea - .6, eb + .6]){ const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .5), new THREE.MeshBasicMaterial({ map: labelTex('PIER UNDERPASS · NORTH ⇄ SOUTH BEACH', '#1f3b57', '#ffffff', 1024, 150, 56), side: THREE.DoubleSide })); sg.position.set(...P3(139, tt, pierDeckH(139) - .75)); const a = new THREE.Vector3(...P3(138, tt, 0)), b = new THREE.Vector3(...P3(140, tt, 0)); sg.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); grp.add(sg); } }
   for (const C of PIER_CARTS){ const [name, A, off0, col] = C, s = 390 - A, [ea, eb] = pierSides(s), t = off0 > 0 ? ea + 1.6 : Math.min(-off0, eb - 1.6), off = C[2] = -t, h = pierDeckH(s), c = new THREE.Group();   // (north-side carts sit just inside the deck's north rail) c.position.set(...P3(s, t, h)); grp.add(c);
     const body = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 1.1), std(0xf4f4f0, .5)); body.position.y = .85; c.add(body); const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.02, .25, 1.12), std(parseInt(col.slice(1), 16), .5)); stripe.position.y = 1.2; c.add(stripe);
     for (const x of [-.7, .7]) for (const z of [-.5, .5]){ const w = new THREE.Mesh(new THREE.CylinderGeometry(.18, .18, .08, 12), std(0x333333, .6)); w.rotation.x = Math.PI/2; w.position.set(x, .2, z); c.add(w); }
@@ -6346,7 +6374,7 @@ function buildCoast(){
         // the plank walkway across the sand: landward to the bike path, seaward toward the water
         for (const [s0, s1] of [[ls + w/2 + .8, 141], [ls - w/2 - .8, 18]]){ const n2 = Math.ceil(Math.abs(s1 - s0)/1.2), dir = Math.sign(s1 - s0);
           for (let k = 0; k < n2; k++){ const sa = s0 + dir*k*1.2, sb = sa + dir*1.2, sm = (sa + sb)/2, pl = new THREE.Mesh(new THREE.BoxGeometry(1.15, .06, 2.4), k % 2 ? wood : std(0x96775a, .85)); pl.position.set(...P3(sm, lt, sand(sm, lt) + .05)); br.add(pl); } } } }
-    buildBeachVendors(g, P3); buildBridgeWorks(g, P3); buildCarouselPark(g, P3); buildPierCarts(g, P3);
+    buildBeachVendors(g, P3); buildBridgeWorks(g, P3); buildCarouselPark(g, P3); buildPierCarts(g, P3); buildJRRoof(g, P3);
     g.add(br); mergeStatic(br); }
   // the Dive Shop: a stand on the sand just north of the pier (walk in to shop)
   { const [ds, dt] = DIVE_SHOP, gh = landH(ds, dt), hut = new THREE.Group(), blue = std(0x1f6b8a, .6), wh = std(0xf4f4f0, .6);
@@ -9036,7 +9064,7 @@ function placeAction(o){   // what you can do right where you're standing (or nu
   if (o.workout?.k === 'sit') return { label: '🧍 Stand up', go: stopWorkout }; if (o.workout?.k === 'slide') return null; if (o.workout?.k === 'spin') return { label: '🛑 Get off the spinner', go: stopWorkout };
   { const b = !o.workout && boothAt(o); if (b) return { label: '🌀 Use the teleport', go: () => openBooth(b) }; }
   { const K = kioskNear(o); if (K) return { label: '🕹️ Play on the touchscreen', go: openKiosk }; }
-  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o) || fairAct(o) || caytonAct(o) || cparkAct(o); if (P2) return P2; }
+  { const P2 = tplayAct(o) || playlandAct(o) || hippoAct(o) || fairAct(o) || caytonAct(o) || cparkAct(o) || jrRoofAct(o); if (P2) return P2; }
   { const V = vendorNear(o); if (V) return { label: `${V.e} ${V.name}`, go: () => openPlaceMenu(V.name, 'food') }; }
   { const st = seatNear(o); if (st) return { label: '🪑 Sit down', go: () => sitOn(o, st) }; }
   if (inSFu(o.x)){ const d = !o.workout && sfDo(o); if (d) return d; }
@@ -11736,7 +11764,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
       for (let k = 2; k <= 14; k++){ const q = k/14; if (walkH((px + ex*q)/U, (pz + ez*q)/U) > py + ey*q - .25){ f = Math.max(.12, (k - 1.5)/14); break; } }
       if (f < 1) _tp.set(px + ex*f, py + ey*f, pz + ez*f); }
     const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
-    const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
+    const rr = kind === 'ocean' && ocean?.onLand && !ocean.car && !(JRROOF.y && (ocean.gh ?? 0) > JRROOF.y - 1) ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down; not up on John Reed's roof)
     if (rr){ const cy = downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + 3.25; if (_tp.y > cy) _tp.y = cy; }
     if (kind === 'ocean' && ocean?.onLand && CAYTON.floor && (ocean.gh ?? 0) > CAYTON.floor - 1.5 && (() => { const [s2, t2] = landST(ocean.x, ocean.y), B = CAYTON.box; return s2 > B[0] && s2 < B[1] && t2 > B[2] && t2 < B[3]; })()){ const cy = CAYTON.floor + CAYTON.H - .6; if (_tp.y > cy) _tp.y = cy; }   // (in the Cayton: under its skylights)
     if (kind === 'ocean' && ocean?.onLand && inFairLobby(...landST(ocean.x, ocean.y))){ const cy = (ocean.gh ?? 0) + 4.4; if (_tp.y > cy) _tp.y = cy; }   // (in the Fairmont's lobby: under its ceiling)

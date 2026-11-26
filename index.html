@@ -812,6 +812,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 (() => {
 const $ = id => document.getElementById(id);
@@ -4476,6 +4477,44 @@ function poseLife(m, o, dt){ const u = m.userData, v = Math.hypot(o.vx || 0, o.v
     u.arms.la.sh.rotation.set(-.06, 0, Math.PI - .05 - br*.025); u.arms.ra.sh.rotation.set(.06, 0, Math.PI + .05 + br*.025); u.arms.la.el.rotation.set(0, 0, -.18); u.arms.ra.el.rotation.set(0, 0, -.18);
     u.legs.ll.hp.rotation.z = .02 + shift*.03; u.legs.rl.hp.rotation.z = -.02 + shift*.03; u.legs.ll.kn.rotation.z = -Math.max(0, shift)*.08; u.legs.rl.kn.rotation.z = -Math.max(0, -shift)*.08;
     for (const id of ['ll', 'rl']){ const L = u.legs[id]; for (const ft of [L.ft, L.sh]) if (ft) ft.rotation.set(0, 0, Math.PI/2); } } }
+/* The real person (Microsoft Rocketbox "Male_Adult_01", MIT license: a scanned-quality rigged human, converted to a 0.9 MB file): the game keeps
+   posing its simple rig exactly as before (walking, sitting, rides, workouts, swimming), and every frame the real model follows it: its pelvis
+   placed and turned to the rig's hips, each upper arm, forearm, hand, thigh, calf and foot bone turned to point the way the rig's limb points.
+   The rig's own body meshes are hidden; hats, sunglasses, headphones and gear move over to the real head and back. Weight and muscle widen
+   the real waist and chest. Slower devices keep the simple figure. */
+const REAL = { glb: null, loading: false, on: () => !!REAL.glb && gfx >= 2 && !REAL.off };
+function loadReal(){ if (REAL.loading) return; REAL.loading = true; new GLTFLoader().load('models/person_m01.glb.wasm', g => { g.scene.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false; for (const mt of [].concat(o.material)) if (/opacity/i.test(mt.name)){ mt.alphaTest = .5; mt.transparent = false; mt.side = THREE.DoubleSide; } } }); REAL.glb = g; }, undefined, () => { REAL.off = true; }); }
+const _rv = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()], _rq = new THREE.Quaternion(), _rq2 = new THREE.Quaternion(), _rm = new THREE.Matrix4();
+function attachReal(root){ const u = root.userData, s = SkeletonUtils.clone(REAL.glb.scene), B = {}, bn = n => s.getObjectByName(n) || s.getObjectByName(n.replace(/ /g, '_')) || s.getObjectByName(n.replace(/ /g, ''));
+  for (const [k, n] of Object.entries({ pelvis: 'Bip01 Pelvis', spine: 'Bip01 Spine', spine2: 'Bip01 Spine2', neck: 'Bip01 Neck', head: 'Bip01 Head', lcl: 'Bip01 L Clavicle', rcl: 'Bip01 R Clavicle', lua: 'Bip01 L UpperArm', lfa: 'Bip01 L Forearm', lh: 'Bip01 L Hand', lf2: 'Bip01 L Finger2', rua: 'Bip01 R UpperArm', rfa: 'Bip01 R Forearm', rh: 'Bip01 R Hand', rf2: 'Bip01 R Finger2', lth: 'Bip01 L Thigh', lca: 'Bip01 L Calf', lft: 'Bip01 L Foot', lto: 'Bip01 L Toe0', rth: 'Bip01 R Thigh', rca: 'Bip01 R Calf', rft: 'Bip01 R Foot', rto: 'Bip01 R Toe0' })) B[k] = bn(n);
+  if (Object.values(B).some(b => !b)) return null;
+  s.updateMatrixWorld(true); const W = b => b.getWorldPosition(new THREE.Vector3()), up = W(B.neck).sub(W(B.pelvis)).normalize(), left = W(B.lcl).sub(W(B.rcl)).normalize(), fwd = new THREE.Vector3().crossVectors(left, up).normalize(); left.crossVectors(up, fwd).normalize();
+  const bind = new THREE.Matrix4().makeBasis(left, up, fwd), bindQ = new THREE.Quaternion().setFromRotationMatrix(bind).invert().multiply(s.quaternion.clone());   // (turns the rig's frame into the model's)
+  const box = new THREE.Box3().setFromObject(s), hipH = W(B.pelvis).y - box.min.y, headOff = W(B.head).sub(W(B.pelvis)), rest = new Map(); s.traverse(o => { if (o.isBone) rest.set(o, o.quaternion.clone()); });
+  const hide = []; const keep = new Set([...(u.gear?.wear ? Object.entries(u.gear.wear).filter(([k]) => k !== 'shoes').flatMap(([, v]) => v) : [])]);
+  root.traverse(o => { if (o.isMesh && o !== root) hide.push(o); }); const follow = [];   // (the rig's meshes; gear the player can see moves to the real head)
+  u.body.children.forEach(c => { if (keep.has(c) || c.userData.gear || (c.isGroup && c !== u.body && !Object.values(u.arms).some(a => a.sh === c) && !Object.values(u.legs).some(l => l.hp === c) && c.children.some(cc => keep.has(cc)))) follow.push({ o: c, base: c.position.clone() }); });
+  for (const f of follow) f.o.traverse(o => { const i = hide.indexOf(o); if (i >= 0) hide.splice(i, 1); });
+  return u.real = { s, B, bindQ, hipH, rest, hide, follow, muK: '' }; }
+function humanSync(m){ const u = m.userData; if (u.kind !== 'swimmer') return; if (!REAL.glb && !REAL.off) loadReal(); if (!REAL.on()){ if (u.real && u.real.s.visible){ u.real.s.visible = false; u.real.layered = false; for (const o of u.real.hide) o.layers.set(0); } return; }   // (the simple figure comes back)
+  const R = u.real || attachReal(m); if (!R){ REAL.off = true; return; } const { s, B } = R; if (s.parent !== m.parent && m.parent) m.parent.add(s); s.visible = m.visible; if (!m.visible) return;
+  if (!R.layered){ R.layered = true; for (const o of R.hide) o.layers.set(31); }   // (the simple figure's meshes go to a layer no camera draws, whatever the clothes code does with them)
+  m.updateMatrixWorld(true); const P = (o, x, y, z, v) => o.localToWorld(v.set(x, y, z));
+  // the whole body: the rig's hips, up and left, so the model stands, sits, lies or swims the same way
+  const hip = P(u.body, -.3, 0, 0, _rv[0]), neck = P(u.body, .48, 0, 0, _rv[1]), upv = _rv[2].copy(neck).sub(hip).normalize(), lf = P(u.body, 0, 0, -1, _rv[3]).sub(P(u.body, 0, 0, 0, new THREE.Vector3())).normalize(), fw = new THREE.Vector3().crossVectors(lf, upv).normalize(); lf.crossVectors(upv, fw).normalize();
+  _rm.makeBasis(lf, upv, fw); s.quaternion.setFromRotationMatrix(_rm).multiply(R.bindQ); s.position.set(0, 0, 0); s.updateMatrixWorld(true);
+  const pw = B.pelvis.getWorldPosition(new THREE.Vector3()), target = hip.clone().addScaledVector(upv, R.hipH - .9); s.position.copy(target.sub(pw)); s.updateMatrixWorld(true);
+  for (const [b, q] of R.rest) b.quaternion.copy(q);
+  // weight and muscle: a thicker waist and chest
+  { const ch = chubNow(), mu = muscleNow(); s.scale.set(1 + .1*ch + .06*mu, 1, 1 + .16*ch + .04*mu); s.updateMatrixWorld(true); }   // (a fuller figure, more in the belly; broader with muscle)
+  const aim = (bone, child, from, to) => { bone.updateMatrixWorld(true); const a = bone.getWorldPosition(new THREE.Vector3()), cur = child.getWorldPosition(new THREE.Vector3()).sub(a).normalize(), want = to.clone().sub(from).normalize(); if (want.lengthSq() < 1e-6) return;
+    _rq.setFromUnitVectors(cur, want); bone.getWorldQuaternion(_rq2); _rq2.premultiply(_rq); const pq = bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert(); bone.quaternion.copy(pq.multiply(_rq2)); bone.updateMatrixWorld(true); };
+  const v = () => new THREE.Vector3();
+  for (const [id, ua, fa, h, f2] of [['la', B.lua, B.lfa, B.lh, B.lf2], ['ra', B.rua, B.rfa, B.rh, B.rf2]]){ const A = u.arms[id], sh = P(A.sh, 0, 0, 0, v()), el = P(A.el, 0, 0, 0, v()), wr = P(A.el, .3, 0, 0, v()), tip = P(A.el, .42, 0, 0, v()); aim(ua, fa, sh, el); aim(fa, h, el, wr); aim(h, f2, wr, tip); }
+  for (const [id, th, ca, ft, to] of [['ll', B.lth, B.lca, B.lft, B.lto], ['rl', B.rth, B.rca, B.rft, B.rto]]){ const L = u.legs[id], hp = P(L.hp, 0, 0, 0, v()), kn = P(L.kn, 0, 0, 0, v()), an = P(L.kn, -.43, -.02, 0, v()), toe = P(L.sh || L.ft, -.1, 0, 0, v()); aim(th, ca, hp, kn); aim(ca, ft, kn, an); aim(ft, to, an, toe); }
+  // gear the player wears moves to the real head (and back)
+  const headW = B.head.getWorldPosition(new THREE.Vector3()).addScaledVector(upv, .1), rigHead = P(u.body, .64, 0, 0, v()), dl = u.body.worldToLocal(headW.clone()).sub(u.body.worldToLocal(rigHead.clone()));
+  for (const f of R.follow) f.o.position.copy(f.base).add(dl); }
 function poseJump(m, vUp){ const u = m.userData; footFlex(u, true); poseWalk(m, 0, false); const up = clamp(vUp/5, -1, 1), tuck = 1 - Math.abs(up);   // (arms swing up on the way up, come down for the landing; knees tuck at the top)
   u.body.rotation.set(0, 0, 0); const ar = Math.PI + 1.3 + up*1.1; u.arms.la.sh.rotation.set(-.25, 0, ar); u.arms.ra.sh.rotation.set(.25, 0, ar);   /* (forward and up: the bike pose shows forward is +z) */ u.arms.la.el.rotation.set(0, 0, -.35); u.arms.ra.el.rotation.set(0, 0, -.35);
   u.legs.ll.hp.rotation.z = .25 + tuck*.5; u.legs.rl.hp.rotation.z = .25 + tuck*.5; u.legs.ll.kn.rotation.z = -.4 - tuck*.7; u.legs.rl.kn.rotation.z = -.4 - tuck*.7; }
@@ -12275,7 +12314,7 @@ function render3D(dt){
       else { m.position.set(px, (wy + m.userData.float)*(1 - sub) - dep + air, pz);
       m.rotation.set((waveH(px + .5, pz, OC.amp, 1) - waveH(px - .5, pz, OC.amp, 1))*.6*(1 - sub), -ocean.ang, air > 0 ? airPitch : (ocean.pitch || 0)); poseModel(m, swimPose(ocean), ocean.swimPh || 0); } }
     if (dep > .45 && Math.random() < dt*2.5) sprayAt(px + Math.cos(ocean.ang)*.6, -dep + .05, pz + Math.sin(ocean.ang)*.6, 0, .3, 0, 1);
-    amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); setTattoo(m, save.tattoo); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
+    amesLook(m, ocean); drawVehicle(ocean, dt, wy); drawGadgets(ocean, px, m.position.y, pz); drawTreat(ocean, m); setMuscle(m, muscleNow()); humanSync(m); setTattoo(m, save.tattoo); if (!(ocean.hugT > time) && !((treat || ocean.workout) && time - heartsAt < 2.6)) hideHearts(); if (bells && !ocean.workout) bells.visible = false; if (golfVis && ocean.workout?.k !== 'golf') golfVis.ball.visible = golfVis.line.visible = golfVis.club.visible = false; followSun(oceanSun, px, pz); updSpray(dt, wy);
     fpPitch = ocean.onLand ? -.05 : (ocean.pitch || 0); fpEye = ocean.car ? .55 : ocean.onLand ? 1.05 : .1; m.visible = camMode !== 'first' && !VEH[ocean.vehicle]?.hide && !ocean.car; updateGearLook(m, (!!ocean.onLand || !!ocean.landJump) && !ocean.onShip && !ocean.onBoat);   /* (a jump on land keeps your clothes on) */ updDiveLight(ocean.wIn ? 1 : Math.max(OC.dark, 1 - Math.exp(-dep/7)));   // how dark it is around you, 0 to 1
     houseLook(ocean, dt); casinoLook(ocean, dt); houseItems(ocean, dt); camAir = ocean.onLand ? 0 : ocean.jumpY || 0;
     placeCamera(px, ocean.car ? ocean.car.h + .6 : ocean.onLand ? (ocean.workout?.pier || ocean.workout?.k === 'ride2' ? ocean.workout.py + .6 : landY(ocean) + .6 + (ocean.climb?.h || 0)) : wy*.5*(1 - sub) - dep + (ocean.jumpY || 0)*.85, pz,   /* the camera rises with a dolphin's leap */ ocean.ang, dt, mode === 'title' || mode === 'choose' ? 'title' : ocean.car ? 'car' : ocean.onShip || ocean.onBoat ? 'ship' : ocean.vehicle ? 'vehicle' : ocean.onLand && (ocean.inHouse || ocean.inCasino) ? 'house' : 'ocean', ocean.onLand ? 0 : sub, floorY(ocean.x, ocean.y) + .4); if (ocean.onLand) camOutOfBlocks(px, landY(ocean), pz); if (building) buildCamera();
@@ -12885,6 +12924,7 @@ function drawOthers(t){
     { const gear = (o.g || '').split(','); showGear(m, id => gear.includes(id), o.l === 1 || o.l === 4); }   // (their kit, and street clothes when they're walking around on land)
     if (o.l === 4 && u.kind === 'swimmer'){ poseWalk(m, 0, false); for (const l of ['ll', 'rl']){ u.legs[l].hp.rotation.z = 1.5; u.legs[l].kn.rotation.z = -1.5; } }   // (sitting on a bench or at a table)
     else if (o.l && u.kind === 'swimmer') poseWalk(m, moving ? t*8 : 0, moving); else poseModel(m, moving ? null : RIDE_POSE, t*1.2);
+    humanSync(m);   // (other players are real people too)
     o.tag.position.set(o.sx*U, o.sw + (o.l ? 1.2 : .9), o.sy*U); }
 }
 /* ---------- Sitting together: sit down next to another player and a little chat opens, just for the two of you ----------

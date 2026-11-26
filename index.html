@@ -6924,7 +6924,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildArizonaCorner(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8405,6 +8405,41 @@ function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   { const B = L('tower');   // a white front with two rows of windows (the stepped Art Deco tower once drawn here belongs to the old AMC Broadway 4 in the 1400 block: see buildBlock1400)
     for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25); }
   g.add(grp); mergeStatic(grp); }
+/* 3rd St and Arizona, the ocean-side corner of the 1200 block, from Wikimedia Commons photos (Sept 2022, the Market Pavilion photo) and county
+   records: 225 Arizona (1991, offices over shops): cream stone panels over a base of square beige tiles, tall two-floor bays of green glass on
+   the Arizona side with a round-topped one in the middle, teal glass box bays on the Promenade side and a strip of gray metal panels at the
+   corner, a set-back top floor behind white rails and planters, a dark glass penthouse and a curved glass barrel vault. Next door, 1254
+   (1937, Norstrom and Anderson, Streamline Moderne): a flat white front and its tall white pylon with a stepped top.
+   (Window counts, the vault's size and the exact spot of each bay are guesses from the photos.) */
+function buildArizonaCorner(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1200.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2);
+  const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(B.s + out, B.s + out + dep, t0, t1, y0, y1, hex, gl(B));   // (ocean side: the facade faces bigger s)
+  const fS = (B, s0, s1, y0, y1, hex, dep = .12, out = 0) => bx(s0, s1, B.t1 + out, B.t1 + out + dep, y0, y1, hex, gl(B));   // (the Arizona Ave face, toward bigger t)
+  const GG = 0x5b8a80, TEAL = 0x7fb3b0, MUL = 0xd9d4c6, TILE = 0xd8c8a8;
+  { const B = L('225 Arizona'), C = B.c, top = B.ht;
+    // the Promenade face: teal glass box bays sticking out, cream panels between, gray metal at the Arizona corner
+    for (let y = 5.6; y < top - .3; y += 1.5) f(B, B.t0, B.t1 - 2.2, y, y + .03, 0xd2cab8, .14);   // (panel joints)
+    for (const c of [B.t0 + 2.6, B.t0 + 7.2]){ f(B, c - 1.7, c + 1.7, 5.4, 12.6, TEAL, .7); f(B, c - 1.8, c + 1.8, 12.6, 12.85, MUL, .8); f(B, c - .03, c + .03, 5.4, 12.6, MUL, .74); f(B, c - 1.7, c + 1.7, 8.95, 9.05, MUL, .74); }
+    f(B, B.t1 - 2.2, B.t1, 4.7, top, 0x8d9296, .2); for (let y = 5.2; y < top; y += .9) f(B, B.t1 - 2.2, B.t1, y, y + .04, 0x6f7478, .22);
+    f(B, B.t0, B.t1 - 2.2, 0, 4.7, TILE, .06); for (let y = .6; y < 4.6; y += .6) f(B, B.t0, B.t1 - 2.2, y, y + .02, 0xbfae8e, .08);
+    // the Arizona face: tiled base, green glass bays two floors tall, the round-topped one in the middle
+    fS(B, B.s - 6, B.s, 0, 4.4, TILE, .08); for (let y = .6; y < 4.3; y += .6) fS(B, B.s - 6, B.s, y, y + .02, 0xbfae8e, .1);
+    fS(B, 596, B.s, 4.4, top, C, .06); for (let y = 5.6; y < top - .3; y += 1.5) fS(B, 596, B.s, y, y + .03, 0xd2cab8, .1);
+    for (const [a, b] of [[B.s - 8.5, B.s - 3], [601, 606.5]]){ fS(B, a, b, 5.2, 12.8, GG, .14); for (let u = a + 1.1; u < b - .2; u += 1.1) fS(B, u, u + .07, 5.2, 12.8, MUL, .18); for (const y of [7.6, 9, 11.4]) fS(B, a, b, y, y + .07, MUL, .18); fS(B, a - .2, b + .2, 4.9, 5.2, MUL, .22); }
+    { const a = 611, b = 619, c = (a + b)/2, r = (b - a)/2, y0 = gl(B) + 11.2; fS(B, a, b, 5.2, 11.2, GG, .14); for (let u = a + 1; u < b - .2; u += 1) fS(B, u, u + .07, 5.2, 11.2, MUL, .18); for (const y of [7.6, 9.4]) fS(B, a, b, y, y + .07, MUL, .18);
+      const arc = new THREE.Mesh(new THREE.CircleGeometry(r, 20, 0, Math.PI), mat(GG)); arc.position.set(...P3(c, B.t1 + .15, y0)); grp.add(arc);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(r + .1, .14, 6, 20, Math.PI), mat(MUL)); rim.position.set(...P3(c, B.t1 + .18, y0)); grp.add(rim); }
+    // the set-back top floor, white rails, planters, the dark glass penthouse and the curved glass vault
+    const base = gl(B), rail = (s0, s1, t0, t1) => { bx(s0, s1, t0, t1, top + 1.0, top + 1.06, 0xffffff, base); const L2 = Math.max(Math.abs(s1 - s0), Math.abs(t1 - t0)), n = Math.ceil(L2/1.5); for (let k = 0; k <= n; k++){ const s = s0 + (s1 - s0)*k/n, t = t0 + (t1 - t0)*k/n; bx(s - .03, s + .03, t - .03, t + .03, top, top + 1.0, 0xffffff, base); } };
+    rail(B.s - .2, B.s - .2, B.t0 + .2, B.t1 - .2); rail(596, B.s - .2, B.t1 - .2, B.t1 - .2);
+    bx(598, B.s - 3, B.t0 + 1, B.t1 - 3, top, top + 3.1, C, base); for (let t = B.t0 + 2; t < B.t1 - 3.5; t += 2.2) bx(B.s - 3.05, B.s - 2.95, t, t + 1.5, top + .6, top + 2.6, 0x34454c, base);
+    rail(598, B.s - 3, B.t1 - 3, B.t1 - 3); for (let t = B.t0 + 1.5; t < B.t1 - 1.5; t += 3) bx(B.s - 1.2, B.s - .5, t, t + .7, top, top + .5, 0x8a6a4a, base), bx(B.s - 1.3, B.s - .4, t - .1, t + .8, top + .5, top + 1.1, 0x4f7a45, base);
+    bx(600, 612, B.t0 + 2, B.t1 - 4, top + 3.1, top + 5.6, 0x2b3a42, base);
+    const v = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 12, 18, 1, false, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0x9fc4c8, roughness: .1, metalness: .4, transparent: true, opacity: .75 })); v.rotation.z = Math.PI/2; v.position.set(...P3(606, (B.t0 + B.t1)/2 - 1, base + top + 3.1)); grp.add(v); }
+  { const B = L('1254'), C = B.c;   // the Streamline front: flat white, a thin band, and the tall stepped pylon at its south end
+    f(B, B.t0, B.t1, 5.3, 5.45, 0xe2e1dc, .14); f(B, B.t0, B.t1, B.h - .25, B.h + .05, 0xffffff, .16);
+    const t = B.t1 - 1.2; bx(B.s - 3, B.s + .5, t - .3, t + .3, 0, 15.5, C, gl(B)); bx(B.s - 2.6, B.s + .3, t - .25, t + .25, 15.5, 16.6, C, gl(B)); bx(B.s - 2.1, B.s, t - .2, t + .2, 16.6, 17.4, C, gl(B)); }
+  g.add(grp); mergeStatic(grp); }
 /* 3rd St, the Santa Monica Blvd end of the 1300 block, from the Santa Monica Conservancy's walking tour and the city's historic inventory
    (no photos or Street View tonight, so colors and window counts are partly guesses). Inland: the Kress Building (1349-1353: three bays
    between pilasters with floral capitals, an arcade of arched windows, a classical frieze for a parapet) and the Junipher Building on the
@@ -8474,7 +8509,9 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
 const BLOCK1200 = [
   { side: 1, s: 664.6, t0: -817.6, t1: -772.6, h: 7.2, ht: 7.2, c: 0xe8e8e3, name: 'corner', round: [664.6, -817.6, 3.5] },
   { side: 1, s: 664.4, t0: -773.2, t1: -740.0, h: 7.9, c: 0x8e8f8a, name: 'museum' },
-  { side: -1, s: 640.8, t0: -816.6, t1: -785.4, h: 11.4, c: 0xf2f1ec, name: 'reed', round: [640.8, -816.6, 4] } ];
+  { side: -1, s: 640.8, t0: -816.6, t1: -785.4, h: 11.4, c: 0xf2f1ec, name: 'reed', round: [640.8, -816.6, 4] },
+  { side: -1, s: 641.2, t0: -650.2, t1: -634.0, h: 22.5, ht: 14.6, c: 0xe8e2d4, name: '225 Arizona' },
+  { side: -1, s: 641.2, t0: -664.8, t1: -649.8, h: 8.8, c: 0xf3f2ee, name: '1254' } ];
 const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
   const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
   for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }

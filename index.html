@@ -6924,7 +6924,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildArizonaCorner(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildArizonaCorner(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildKeller(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8406,6 +8406,47 @@ function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   { const B = L('tower');   // a white front with two rows of windows (the stepped Art Deco tower once drawn here belongs to the old AMC Broadway 4 in the 1400 block: see buildBlock1400)
     for (const y of [5.2, 8.6]) win(B, B.t0 + 1, B.t1 - 1, y, y + 2.2, 4, 0xf4f4f0, 0x2c3a44); f(B, B.t0, B.t1, B.h - .3, B.h + .1, 0xe6e4de, .25); }
   g.add(grp); mergeStatic(grp); }
+/* The 1400 block's Broadway end and middle, from the Santa Monica Conservancy (Keller Block page and photo) and Wikimedia Commons photos
+   (Sept 2022). The Keller Block (1460, 1893, Carroll H. Brown, Romanesque Revival; the Google Store downstairs since 2025): red-brown brick,
+   rough stone lintels and sills, tall paired windows on the 2nd floor and round-arched pairs on the 3rd, brick piers, a cornice of little
+   brick arches, a stepped parapet with quatrefoils, and the angled corner tower rising above the roof with battlements. Inland: IT'SUGAR's
+   charcoal front, the 1913 building hidden behind a white screen of interlocking circles, and the 1906 brick building (three floors, wide
+   windows under beige awnings, a cream cast-stone band). (Window counts on the Broadway side and the tower's size are guesses.) */
+function buildKeller(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1400.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2);
+  const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => { const a = B.side > 0 ? B.s - out - dep : B.s + out; return bx(a, a + dep, t0, t1, y0, y1, hex, gl(B)); };
+  const at = (geo, hex, s, t, y, ry, m) => { const me = new THREE.Mesh(geo, m || mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
+  const GL = 0x2c3a44, ST = 0xc9b28e, BR2 = 0x7a3f2e;
+  { const B = L('Keller'), base = gl(B), sW = 594.8, cs = B.s, ct = B.t1;
+    // one face: u runs along it; slab(u0, u1, y0, y1, hex, dep), arcAt(u, y, r): a round window head facing out
+    const face = (u0, u1, pairs, slab, arcAt) => { const bw = (u1 - u0)/pairs;
+      slab(u0, u1, 4.7, 5.3, ST, .16);   // (the stone band over the shops)
+      for (let i = 0; i <= pairs; i++){ const u = u0 + i*bw; slab(u - .35, u + .35, 5.3, 14.2, BR2, .18); slab(u - .45, u + .45, 13.9, 14.2, ST, .22); }   // brick piers on corbels
+      for (let i = 0; i < pairs; i++){ const c = u0 + (i + .5)*bw;
+        for (const d of [-.75, .75]){ const w0 = c + d - .55, w1 = c + d + .55;
+          slab(w0, w1, 6.0, 8.6, GL, .1); slab(w0 - .1, w1 + .1, 8.6, 8.95, ST, .16); slab(w0 - .1, w1 + .1, 5.8, 6.0, ST, .16);   // 2nd floor: tall pairs, rough stone lintel and sill
+          slab(w0, w1, 9.8, 11.7, GL, .1); arcAt(c + d, 11.7, .55); slab(w0 - .1, w1 + .1, 9.6, 9.8, ST, .16); } }   // 3rd floor: round-arched pairs
+      for (let u = u0 + .3; u < u1 - .3; u += .7) arcAt(u + .35, 14.55, .3, BR2);   // the cornice of little brick arches
+      slab(u0, u1, 14.2, 14.35, BR2, .2); slab(u0, u1, B.h - .15, B.h + .1, BR2, .2);
+      for (let i = 0; i < pairs; i += 2){ const c = u0 + (i + .5)*bw; slab(c - 1.2, c + 1.2, B.h, B.h + .7, B.c, .4, -.3); slab(c - .7, c + .7, B.h + .7, B.h + 1.2, B.c, .4, -.3); arcAt(c, B.h + .3, .25, ST, true); } };   // stepped parapet with a quatrefoil
+    const ring = (r, hex) => new THREE.TorusGeometry(r, .07, 5, 14, Math.PI);
+    face(B.t0, B.t1 - 2.4, 3, (a, b, y0, y1, hex, dep, back = 0) => bx(cs + back, cs + back + dep, a, b, y0, y1, hex, base), (u, y, r, hex = ST, full) => { at(full ? new THREE.TorusGeometry(r, .06, 5, 14) : ring(r, hex), hex, cs + .14, u, base + y, Math.PI/2); if (!full && hex === ST) at(new THREE.CircleGeometry(r, 12, 0, Math.PI), GL, cs + .11, u, base + y, Math.PI/2); });
+    face(sW + .5, cs - 2.4, 10, (a, b, y0, y1, hex, dep, back = 0) => bx(a, b, ct + back, ct + back + dep, y0, y1, hex, base), (u, y, r, hex = ST, full) => { at(full ? new THREE.TorusGeometry(r, .06, 5, 14) : ring(r, hex), hex, u, ct + .14, base + y, 0); if (!full && hex === ST) at(new THREE.CircleGeometry(r, 12, 0, Math.PI), GL, u, ct + .11, base + y, 0); });
+    // the angled corner tower: an octagon over the corner, above the roof, with battlements
+    const ts = cs - 1.5, tt = ct - 1.5, R = 2.6, top = B.h + 2.4; at(new THREE.CylinderGeometry(R, R, top - 4.7, 8), B.c, ts, tt, base + 4.7 + (top - 4.7)/2, Math.PI/8);
+    at(new THREE.CylinderGeometry(R + .25, R + .25, .35, 8), BR2, ts, tt, base + top - .2, Math.PI/8);
+    for (let k = 0; k < 8; k++){ const a = k*Math.PI/4 + Math.PI/8, ds = Math.cos(a)*(R + .05), dt = Math.sin(a)*(R + .05); bx(ts + ds - .35, ts + ds + .35, tt + dt - .35, tt + dt + .35, top, top + .8, B.c, base); }   // (merlons)
+    for (const y of [6.0, 9.8]) for (const a of [Math.PI/4]){ const ds = Math.cos(a)*(R + .02), dt = Math.sin(a)*(R + .02); const w = at(new THREE.BoxGeometry(.9, y > 9 ? 1.9 : 2.6, .9), GL, ts + ds, tt + dt, base + y + (y > 9 ? .95 : 1.3), 0); w.rotation.y = -Math.PI/4; } }
+  // ---- inland, the middle of the block ----
+  { const B = L("IT'SUGAR"); for (let k = 0; k < 3; k++){ const a = B.t0 + .6 + k*2.5; f(B, a, a + 1.8, 5.6, 7.6, 0x1f2326, .1); } f(B, B.t0, B.t1, B.h - .2, B.h + .05, 0x2c2f33, .16); }
+  { const B = L('lattice'), tex = canvasTex(256, 256, (x, w, h) => { x.fillStyle = '#f4f4f2'; x.fillRect(0, 0, w, h); x.strokeStyle = '#9aa0a4'; x.lineWidth = 7; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++){ x.beginPath(); x.arc(i*64 + (j % 2)*32, j*64, 30, 0, Math.PI*2); x.stroke(); } });
+    tex.repeat.set((B.t1 - B.t0)/1.3, (B.h - 4.6)/1.3); const sc = new THREE.Mesh(new THREE.PlaneGeometry(B.t1 - B.t0 - .2, B.h - 4.6), new THREE.MeshStandardMaterial({ map: tex, roughness: .5, metalness: .3 })); sc.position.set(...P3(B.s - .3, (B.t0 + B.t1)/2, gl(B) + 4.6 + (B.h - 4.6)/2)); sc.rotation.y = -Math.PI/2; grp.add(sc);
+    f(B, B.t0, B.t0 + .3, 0, B.h, 0xffffff, .35); f(B, B.t1 - .3, B.t1, 0, B.h, 0xffffff, .35); }
+  { const B = L('1906'); f(B, B.t0, B.t1, 4.7, 5.4, 0xe6dcc6, .2);
+    for (const y of [5.9, 9.0]) for (let k = 0; k < 3; k++){ const a = B.t0 + 1 + k*(B.t1 - B.t0 - 2)/3, b = a + (B.t1 - B.t0 - 2)/3 - .9;
+      f(B, a, b, y, y + 2, GL, .1); f(B, a - .1, b + .1, y - .2, y, 0xe6dcc6, .16); const aw = bx(B.s - 1.1, B.s, a - .15, b + .15, y + 2.05, y + 2.25, 0xd8ccae, gl(B)); aw.rotation.z = .5; }
+    f(B, B.t0, B.t1, B.h - .3, B.h + .05, 0xe6dcc6, .2); }
+  g.add(grp); mergeStatic(grp); }
 /* 3rd St and Arizona, the ocean-side corner of the 1200 block, from Wikimedia Commons photos (Sept 2022, the Market Pavilion photo) and county
    records: 225 Arizona (1991, offices over shops): cream stone panels over a base of square beige tiles, tall two-floor bays of green glass on
    the Arizona side with a round-topped one in the middle, teal glass box bays on the Promenade side and a strip of gray metal panels at the
@@ -8569,7 +8610,11 @@ function buildBlock1200(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
 const BLOCK1400 = [
   { side: -1, s: 641.0, t0: -402.8, t1: -387.4, h: 14, c: 0xd4b67a, name: 'arches' },
   { side: 1, s: 665.0, t0: -402.8, t1: -372.0, h: 9.9, c: 0x3b3f43, name: 'charcoal' },
-  { side: 1, s: 662.2, t0: -281.2, t1: -219.8, h: 12.5, ht: 12.5, c: 0xf4f3ee, name: 'broadway' } ];   // (the old AMC Broadway 4, 1441: 1989, closed Sept 2024 and for lease)
+  { side: 1, s: 662.2, t0: -281.2, t1: -219.8, h: 12.5, ht: 12.5, c: 0xf4f3ee, name: 'broadway' },
+  { side: -1, s: 640.8, t0: -235.0, t1: -219.4, h: 16, c: 0x8a4b38, name: 'Keller' },
+  { side: 1, s: 665.0, t0: -327.0, t1: -318.8, h: 8.6, c: 0x3a3c40, name: "IT'SUGAR" },
+  { side: 1, s: 665.0, t0: -318.8, t1: -311.0, h: 9, c: 0xf2f2f0, name: 'lattice' },
+  { side: 1, s: 665.0, t0: -311.2, t1: -295.8, h: 12.6, c: 0x8e5340, name: '1906' } ];   // (the old AMC Broadway 4, 1441: 1989, closed Sept 2024 and for lease)
 function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1400.find(b => b.name === n);
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const add = (geo, hex, s, t, y, ry, m) => { const me = new THREE.Mesh(geo, m || mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };

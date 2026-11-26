@@ -3023,12 +3023,17 @@ function inclineAt(s, t){   // { d: meters from its middle, h: the road's height
     if (d < bd){ bd = d; ba = INCLINE.at[i] + f*Math.sqrt(l2); } }
   return bd > INCLINE.w + 1.5 ? null : { d: bd, a: ba, h: lerp(INCLINE.h0, INCLINE.h1, ba/INCLINE.L) }; }
 // The pier (OpenStreetMap): the bridge down from Ocean and Colorado, then the deck, level on its pilings, across the sand and on out over the water (about 240 m past the waterline)
-const PIER_L = { s0: -243, s1: 262, s2: 366, h0: 8.5, h1: 8.5 }; PIER_L.h2 = smElev(PIER_L.s2, 0);
-const pierSides = s => s > 257 ? [-5.2, 5.2] : s > 227 ? [-5, lerp(7, 89, (257 - s)/30)] : s > -68 ? [s > 102 && s < 132 ? -23 : s > 135 && s < 157 ? -7 : -5, 89] : s > -188 ? (s > -161 && s < -140 ? [-12, 12] : [-5, 6.3]) : s > -210 ? [-26, 19] : [-35, 19];   // the deck's edges (t), from the survey: the bridge, the wide deck (Bubba Gump's patio bulging north, the parking deck and Pacific Park to the south), the long narrow pier with its fishing decks, and the wide end   // where the deck's edges are (t): the bridge, the deck, wide where Pacific Park is, the long narrow pier, and the wider end
+const PIER_L = { s0: -243, s1: 262, s2: 366, h0: 8.5, h1: 8.5 }; PIER_L.h2 = smElev(PIER_L.s2, 9.1);   // (where the temporary bridge meets Ocean Ave)
+const pierSides = s => s > 257 ? [6.9, 11.3] : s > 227 ? [-5, Math.max(11.4, lerp(7, 89, (257 - s)/30))] : s > -68 ? [s > 102 && s < 132 ? -23 : s > 135 && s < 157 ? -7 : -5, 89] : s > -188 ? (s > -161 && s < -140 ? [-12, 12] : [-5, 6.3]) : s > -210 ? [-26, 19] : [-35, 19];   // the deck's edges (t), from the survey: the bridge, the wide deck (Bubba Gump's patio bulging north, the parking deck and Pacific Park to the south), the long narrow pier with its fishing decks, and the wide end   // where the deck's edges are (t): the bridge, the deck, wide where Pacific Park is, the long narrow pier, and the wider end
 const DIVE_SHOP = [40, -36];   // the Dive Shop: a stand on the sand just north of the pier
 const PIER_STAIRS = [[97, 101, -5, -1], [70, 74, 89, 1]];   // stairs down to the sand on each side (s from, s to, the deck's edge, which way down): the real ones are by the beach path
 const pierHW = s => { const [a, b] = pierSides(s); return Math.max(-a, b); };
 const pierDeckH = s => s < PIER_L.s1 ? lerp(PIER_L.h0, PIER_L.h1, clamp((s - PIER_L.s0)/(PIER_L.s1 - PIER_L.s0), 0, 1)) : lerp(PIER_L.h1, PIER_L.h2, clamp((s - PIER_L.s1)/(PIER_L.s2 - PIER_L.s1), 0, 1));
+/* The Pier Bridge Replacement Project (the city, 2025-2027): the old bridge from Ocean and Colorado is being demolished (since Oct 2026), so you walk
+   onto the pier over the temporary pedestrian bridge about 9 m (30 ft) to its south (no cars, no bikes), and cars reach the pier deck parking up
+   a temporary ramp from the beach parking lot. (Where the ramp and the lot sit is a guess from the city's description.) */
+const BRIDGEWORK = { old: [262, 362, -5.2, 5.2], zone: 302, ramp: [214.5, 221.5, 86, 124], rampTop: 8.4 }, BEACHLOT = [190, 252, 118, 150];
+function rampH(s, t){ const [s0, s1, t0, t1] = BRIDGEWORK.ramp; if (s < s0 || s > s1 || t < t0 || t > t1) return null; const g = landH((s0 + s1)/2, t1), f = (t1 - t)/(t1 - t0); return lerp(g + .05, pierDeckH((s0 + s1)/2), f); }
 const onPierDeck = (s, t) => { if (!(s > PIER_L.s0 && s < PIER_L.s2)) return false; const [a, b] = pierSides(s); return t > a && t < b; };
 const pierStairH = (s, t) => { for (const [a, b, e, d] of PIER_STAIRS){ if (s < a || s > b) continue; const f = (t - e)*d; if (f < 0 || f > 9) continue; const g = landH(s, e + d*9.5); return lerp(pierDeckH(s), g, f/9); } return null; };   // (on the stairs: how high that step is)
 // Home: a courtyard apartment building (its address is deliberately not written anywhere in the game or here: the game is public).
@@ -3113,7 +3118,7 @@ function footLift(o){   // (streets, sidewalks and the Promenade's pavers are dr
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && roomAt(s, t, true)) return 0;   // (inside a shop)
   return (s > PROM.s0 - 1 && s < PROM.s1 + 1 && t > PROM.t0 && t < PROM.t1) || roadAt(s, t) ? .06 : 0; }
 function onRoadway(s, t){   // (for cars: on the road itself, curb to curb)
-  if (inclineAt(s, t) || onPierDeck(s, t)) return true; roadIndex(); const L = roadCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return false;
+  if (inclineAt(s, t) || onPierDeck(s, t) || rampH(s, t) != null || (s > BEACHLOT[0] && s < BEACHLOT[1] && t > BEACHLOT[2] && t < BEACHLOT[3])) return true; roadIndex(); const L = roadCells.get(bldKey(Math.floor(s/BLD_CELL), Math.floor(t/BLD_CELL))); if (!L) return false;
   for (const [n, q] of L){ const r = CITY.roads[n]; if (r.c === 6 || r.c === 7 || r.c >= 9) continue; const [ax, ay] = r.p[q], [bx, by] = r.p[q + 1], dx = bx - ax, dy = by - ay, l2 = dx*dx + dy*dy || 1, f = clamp(((s - ax)*dx + (t - ay)*dy)/l2, 0, 1);
     if (Math.hypot(s - ax - dx*f, t - ay - dy*f) < ROAD_W[r.c]/2 + .4) return true; }
   return false; }
@@ -3142,6 +3147,7 @@ function walkH(x, y){   // what you stand on: the ground, the pier, and roofs (t
   const [s, t] = landST(x, y); let h = landH(s, t);
   if (onPierDeck(s, t)){ const dk = pierDeckH(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the deck, unless you're down on the sand under it)
   { const st = pierStairH(s, t); if (st != null) h = Math.max(h, st); }
+  { const rh = rampH(s, t); if (rh != null && !(rh - h > 2.2 && walkRef < rh - 1.2)) h = Math.max(h, rh); }   // (the temporary vehicle ramp up to the deck parking)
   if (t > 4250 && t < 4420 && s < 160 && VPIER.poly && vpierAt(s, t)){ const dk = vpierDeck(s); if (!(dk - h > 2.2 && walkRef < dk - 1.2)) h = Math.max(h, dk); }   // (the Venice Fishing Pier)
   if (s > PROM.s0 - 25 && s < PROM.s1 + 25 && t > PROM.t0 && t < PROM.t1){ const r = roomAt(s, t); if (r) return (s - r.fs)*r.inw > 0 ? roomH(r, s, t) : landH(s, t); }   // in a shop on the Promenade (or its doorway)
   if (s > 20 && !inFairLobby(s, t)){ const b = bldAt(s, t); if (b && b.top > h) h = b.top; }   /* (the Fairmont's lobby is open inside) */
@@ -5640,6 +5646,31 @@ function buildStorefronts(g){ bldIndex(); const glass = new THREE.MeshStandardMa
 function townFront(o){ const [s, t] = landST(o.x, o.y); if (s < 380) return null; let best = null, bd = 2.2; for (const F of TOWN_FRONTS){ const d = Math.hypot(F.s - s, F.t - t); if (d < bd){ bd = d; best = F; } } return best; }
 // The pier deck parking lot (OpenStreetMap: on the deck, south of the Hippodrome and Seaside, from the carousel to Pacific Park): painted
 // stalls in rows, parked cars, a pay station and the sign. Real pier coordinates: A along, off north+ (s = 390 - A, t = -off).
+// The bridge works (see BRIDGEWORK): the old bridge's concrete bents standing with the deck gone from the middle, a dirt pad, green-screened
+// fencing with the project's banners, a yellow excavator and a crawler crane; the temporary pedestrian bridge's chain-link sides; the
+// temporary vehicle ramp up from the paved beach lot (with its stalls and parked cars) to the deck parking, and its signs.
+function buildBridgeWorks(g, P3){ const grp = new THREE.Group(), [o0, o1, ta, tb] = BRIDGEWORK.old, H = (s, t) => landH(s, t), concrete = std(0xbdb7ab, .9), yellow = std(0xf2b705, .5), dark = std(0x2a2a2a, .6);
+  const put = (geo, m, s, t, y) => { const me = new THREE.Mesh(geo, m); me.position.set(...P3(s, t, y)); me.castShadow = true; grp.add(me); return me; };
+  { const dirt = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), std(0x8a6f52, 1)); dirt.rotation.x = -Math.PI/2; const [x0, z0] = landXY(o0, ta - 2), [x1, z1] = landXY(BRIDGEWORK.zone, tb + 2); dirt.scale.set(Math.abs(x1 - x0)*U + 4, Math.abs(z1 - z0)*U + 4, 1); dirt.position.set((x0 + x1)/2*U, H((o0 + BRIDGEWORK.zone)/2, 0) + .05, (z0 + z1)/2*U); grp.add(dirt); }
+  for (let s = o0 + 4; s < o1 - 2; s += 11){ const top = pierDeckH(s) - .4, g0 = H(s, 0); for (const t of [-3.2, 3.2]) put(new THREE.BoxGeometry(.9, top - g0, .9), concrete, s, t, (top + g0)/2); put(new THREE.BoxGeometry(1.2, .8, 10.4), concrete, s, 0, top); }   // (the bents still standing)
+  for (const [s0b, s1b] of [[o0, o0 + 12], [o1 - 10, o1]]){ const sm = (s0b + s1b)/2, q = put(new THREE.BoxGeometry(s1b - s0b, .45, 10.4), concrete, sm, 0, pierDeckH(sm) - .2); }   // (the two ends of the old deck, not yet down)
+  const screen = std(0x2f5d3a, .9), fence = (sA, tA, sB, tB) => { const L = Math.hypot(sB - sA, tB - tA); for (let d = 0; d < L - .1; d += 3){ const f0 = d/L, f1 = Math.min(1, (d + 3)/L), sa = lerp(sA, sB, f0), ta2 = lerp(tA, tB, f0), sb = lerp(sA, sB, f1), tb2 = lerp(tA, tB, f1), sm = (sa + sb)/2, tm = (ta2 + tb2)/2, gy = H(sm, tm);
+      const pn = put(new THREE.BoxGeometry(Math.hypot(sb - sa, tb2 - ta2), 2, .05), screen, sm, tm, gy + 1); const a = new THREE.Vector3(...P3(sa, ta2, 0)), b = new THREE.Vector3(...P3(sb, tb2, 0)); pn.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); } };
+  fence(o0 - 2, ta - 1.2, BRIDGEWORK.zone, ta - 1.2); fence(o0 - 2, tb + 1.2, BRIDGEWORK.zone, tb + 1.2); fence(BRIDGEWORK.zone, ta - 1.2, BRIDGEWORK.zone, tb + 1.2);   // (green-screened fence along both sides)
+  for (const s of [o0 + 8, o0 + 26]){ const ban = put(new THREE.PlaneGeometry(5, .9), new THREE.MeshBasicMaterial({ map: labelTex('PIER BRIDGE REPLACEMENT · BACK IN 2027', '#1f3b57', '#ffffff', 1024, 184, 70), side: THREE.DoubleSide }), s, tb + 1.15, H(s, tb + 1.2) + 1.2); const a = new THREE.Vector3(...P3(s, tb, 0)), b = new THREE.Vector3(...P3(s + 1, tb, 0)); ban.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }
+  { const s = o0 + 30, t = -1.5, gy = H(s, t), ex = new THREE.Group(); const bd = new THREE.Mesh(new THREE.BoxGeometry(3, 1.4, 2.4), yellow); bd.position.y = 1.4; ex.add(bd); const cab = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.3, 1.2), yellow); cab.position.set(-.6, 2.7, .5); ex.add(cab); const tr = new THREE.Mesh(new THREE.BoxGeometry(3.6, .8, 2.8), dark); tr.position.y = .4; ex.add(tr);
+    const boom = new THREE.Mesh(new THREE.BoxGeometry(4.5, .4, .4), yellow); boom.position.set(2.3, 3.2, 0); boom.rotation.z = .5; ex.add(boom); const arm = new THREE.Mesh(new THREE.BoxGeometry(.35, 3, .35), yellow); arm.position.set(4.3, 2.4, 0); ex.add(arm); ex.position.set(...P3(s, t, gy)); grp.add(ex); }   // (the excavator)
+  { const s = o0 + 16, t = 2, gy = H(s, t), cr = new THREE.Group(); const base = new THREE.Mesh(new THREE.BoxGeometry(5, 1.6, 4), std(0xc62828, .5)); base.position.y = 1.2; cr.add(base); const boom = new THREE.Mesh(new THREE.BoxGeometry(.6, 26, .6), yellow); boom.position.set(5, 13, 0); boom.rotation.z = -.38; cr.add(boom); cr.position.set(...P3(s, t, gy)); grp.add(cr); }   // (the crawler crane)
+  // the temporary pedestrian bridge's chain-link sides
+  for (let s = 257; s < 362; s += 3){ for (const t of [6.95, 11.25]){ const p = put(new THREE.BoxGeometry(3, 1.3, .03), new THREE.MeshStandardMaterial({ color: 0xb8bec4, transparent: true, opacity: .35, metalness: .5, roughness: .4, depthWrite: false }), s + 1.5, t, pierDeckH(s + 1.5) + .7); const a = new THREE.Vector3(...P3(s, t, 0)), b = new THREE.Vector3(...P3(s + 3, t, 0)); p.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); } }
+  { const sg = put(new THREE.PlaneGeometry(4.2, .8), new THREE.MeshBasicMaterial({ map: labelTex('PIER ENTRANCE · PEDESTRIANS ONLY', '#ffffff', '#1f3b57', 1024, 195, 70), side: THREE.DoubleSide }), 362, 9.1, pierDeckH(362) + 3.4); const a = new THREE.Vector3(...P3(362, 6, 0)), b = new THREE.Vector3(...P3(362, 12, 0)); sg.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }
+  // the temporary vehicle ramp and the paved beach lot
+  { const [r0, r1, t0, t1] = BRIDGEWORK.ramp, n = 20; for (let k = 0; k < n; k++){ const f0 = k/n, f1 = (k + 1)/n, tA = lerp(t1, t0, f0), tB = lerp(t1, t0, f1), sm = (r0 + r1)/2, hA = rampH(sm, tA), hB = rampH(sm, tB), A = new THREE.Vector3(...P3(sm, tA, hA)), B = new THREE.Vector3(...P3(sm, tB, hB)), sl = new THREE.Mesh(new THREE.BoxGeometry(r1 - r0, .3, A.distanceTo(B) + .05), std(0x6f6c67, .9));
+      sl.position.copy(A).add(B).multiplyScalar(.5).add(new THREE.Vector3(0, -.15, 0)); sl.lookAt(B.clone().add(new THREE.Vector3(0, -.15, 0))); grp.add(sl); for (const s of [r0 - .1, r1 + .1]){ const jb = put(new THREE.BoxGeometry(.4, .8, A.distanceTo(B)), std(0xd9d4c8, .8), s, (tA + tB)/2, (hA + hB)/2 + .3); jb.lookAt(new THREE.Vector3(...P3(s, tB, hB + .3))); } } }   // (with concrete barriers each side)
+  { const [l0, l1, m0, m1] = BEACHLOT, pv = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), Object.assign(std(0x4a4a4c, .95), { polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })); pv.rotation.x = -Math.PI/2; const [x0, z0] = landXY(l0, m0), [x1, z1] = landXY(l1, m1); pv.scale.set(Math.abs(x1 - x0)*U, Math.abs(z1 - z0)*U, 1); pv.position.set((x0 + x1)/2*U, H((l0 + l1)/2, (m0 + m1)/2) + .06, (z0 + z1)/2*U); grp.add(pv);
+    const lines = []; for (let s = l0 + 2; s < l1 - 2; s += 2.7) for (const [mA, mB] of [[m0 + 6, m0 + 11.5], [m1 - 11.5, m1 - 6]]){ const q = new THREE.BoxGeometry(.12, .02, mB - mA); const [x, y] = [...P3(s, (mA + mB)/2, H(s, (mA + mB)/2) + .08)].slice(0, 2); q.translate(...P3(s, (mA + mB)/2, H(s, (mA + mB)/2) + .08)); lines.push(q); } grp.add(new THREE.Mesh(mergeGeometries(lines), new THREE.MeshBasicMaterial({ color: 0xf4f4f0 }))); }
+  { const sg = put(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({ map: labelTex('🅿️ PIER DECK PARKING ↑', '#0d47a1', '#ffffff', 1024, 256, 120), side: THREE.DoubleSide }), 223.5, 126, H(223.5, 126) + 2.6); const a = new THREE.Vector3(...P3(223.5, 125, 0)), b = new THREE.Vector3(...P3(224.5, 125, 0)); sg.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); put(new THREE.CylinderGeometry(.06, .06, 2.6, 6), std(0x9e9e9e, .5), 223.5, 126, H(223.5, 126) + 1.3); }
+  g.add(grp); }
 function buildPierLot(g, P3){ const grp = new THREE.Group(), S = A => 390 - A, dh = s => pierDeckH(s), A0 = 162, A1 = 328, lines = [], R = mulberry(66);
   const at = (A, off, y) => P3(S(A), -off, dh(S(A)) + y);
   { const q = new THREE.PlaneGeometry(1, 1); q.rotateX(-Math.PI/2); const [x0, , z0] = at(A0, -45, 0), [x1, , z1] = at(A1, -87, 0); const m = new THREE.Mesh(q, Object.assign(std(0x6b6660, .95), { polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 })); m.scale.set(Math.abs(x1 - x0), 1, Math.abs(z1 - z0)); m.position.set((x0 + x1)/2, dh(S((A0 + A1)/2)) + .02, (z0 + z1)/2); grp.add(m); }   // (sealed gray deck)
@@ -5661,8 +5692,6 @@ function buildPierLot(g, P3){ const grp = new THREE.Group(), S = A => 390 - A, d
   { const ps = new THREE.Mesh(new THREE.BoxGeometry(.5, 1.6, .4), std(0x37474f, .5)); ps.position.set(...at(165, -46.5, .8)); grp.add(ps);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(4, .9), new THREE.MeshBasicMaterial({ map: labelTex('🅿️ PIER DECK PARKING', '#0d47a1', '#ffffff', 1024, 230, 120), side: THREE.DoubleSide })); sg.position.set(...at(170, -45.5, 3.2)); grp.add(sg);
     const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3.2, 6), std(0x9e9e9e, .5)); post.position.set(...at(170, -45.5, 1.6)); grp.add(post); }
-  { const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .9), new THREE.MeshBasicMaterial({ map: labelTex('🅿️ PARKING ↓', '#0d47a1', '#ffffff', 1024, 270, 150), side: THREE.DoubleSide })), [x, , z] = at(141, -13, 0), [x2, , z2] = at(141, -14, 0); sg.position.set(...at(141, -13, 3.4)); sg.rotation.y = Math.atan2(x2 - x, z2 - z) + Math.PI/2; grp.add(sg);   // (at the foot of the bridge: the way down into the lot, past the end of Pacific Park's fence)
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3.4, 6), std(0x9e9e9e, .5)); post.position.set(...at(141, -13, 1.7)); grp.add(post); }
   g.add(grp); }
 /* Crosswalks and traffic lights at every downtown corner: white ladder crosswalks across each street (like Santa Monica's), and a signal
    pole on each corner with lights facing the traffic coming at it. Ocean, 2nd, 4th, 5th... get green while the cross streets get red, then
@@ -6160,7 +6189,7 @@ function buildCoast(){
         // the plank walkway across the sand: landward to the bike path, seaward toward the water
         for (const [s0, s1] of [[ls + w/2 + .8, 141], [ls - w/2 - .8, 18]]){ const n2 = Math.ceil(Math.abs(s1 - s0)/1.2), dir = Math.sign(s1 - s0);
           for (let k = 0; k < n2; k++){ const sa = s0 + dir*k*1.2, sb = sa + dir*1.2, sm = (sa + sb)/2, pl = new THREE.Mesh(new THREE.BoxGeometry(1.15, .06, 2.4), k % 2 ? wood : std(0x96775a, .85)); pl.position.set(...P3(sm, lt, sand(sm, lt) + .05)); br.add(pl); } } } }
-    buildBeachVendors(g, P3);
+    buildBeachVendors(g, P3); buildBridgeWorks(g, P3);
     g.add(br); mergeStatic(br); }
   // the Dive Shop: a stand on the sand just north of the pier (walk in to shop)
   { const [ds, dt] = DIVE_SHOP, gh = landH(ds, dt), hut = new THREE.Group(), blue = std(0x1f6b8a, .6), wh = std(0xf4f4f0, .6);
@@ -6229,6 +6258,7 @@ function buildCoast(){
   buildTraffic(g);
   // parked cars you can hop into: right outside home, round the corner, along Ocean Avenue and in the beach lot by the pier
   for (const [ps, pt, toT, col] of [[659.5, -1112, 1, 0xd33a2c], [659.5, -1072, 1, 0x2b5fa8], [648.5, -1150, -1, 0xf4f4f0], [659.5, -1180, 1, 0x8a8f96], [700, -1040, 0, 0x1d1d1f], [560, -1051, 2, 0xf2c230],
+    [205, 125, 1, 0x9aa0a6], [210.4, 125, 1, 0xc62828], [226.6, 125, 1, 0x1e3a8a], [237.4, 125, 1, 0xf4f4f4], [202.3, 143, -1, 0x111111], [229.3, 143, -1, 0x5d6d7e], [245.5, 143, -1, 0xe8e1d0],   // (the beach lot by the vehicle ramp)
     [AVES.ocean + 7.5, -1000, 1, 0x3f8a5a], [AVES.ocean + 7.5, -700, 1, 0xb8bcc2], [AVES.ocean - 7.5, -400, -1, 0xff7a2f], [AVES.second + 5.5, -900, 1, 0x2b5fa8], [AVES.fourth - 5.5, -560, -1, 0xd33a2c], [300, -150, 2, 0xf4f4f0], [300, -170, 2, 0x1d1d1f], [268, -1450, 2, 0xf2c230]]){
     const [x, y] = landXY(ps, pt), [x2, y2] = toT === 0 ? landXY(ps - 1, pt) : toT === 2 ? landXY(ps + 1, pt) : landXY(ps, pt + toT);
     parkCar({ x, y, ang: Math.atan2(y2 - y, x2 - x), h: walkH(x, y), color: col }); }
@@ -8296,11 +8326,7 @@ function buildPierTown(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex
     for (let A = A0 + 2; A < A1 - 2; A += 6){ const gab = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.6, 3), mat(0xf6f6f2)); const s = S(A + 2); gab.position.set(...P3(s, -(o1 + .3), dh(s) + 7)); gab.rotation.set(0, 0, 0); gab.scale.z = .15; grp.add(gab); bx(A + 1.95, A + 2.05, o1 + .1, o1 + .3, 7.8, 8.6, 0x1565c0); }
     for (let A = A0 + 1; A < A1 - 1; A += 3) bx(A, A + 2.2, o1 + .02, o1 + .1, .2, 3.4, 0x26323a); for (let A = A0; A <= A1; A += 3) bx(A, A + .2, o1 + .1, o1 + .3, 0, 4.4, 0x1565c0);
     sign(344, o1 + .35, 3.9, 9, .8, 'PLAYLAND ARCADE', '#f6f6f2', '#1565c0', 'n'); sign(337, o1 + .35, 3.95, 3.6, .4, 'Kiddie Rides', '#f6f6f2', '#c62828', 'n', 60); }
-  // ---- the trapeze school rig: tall galvanized posts, guy wires, a white net and little flags
-  { const gal = 0xb0b8bc, A0 = 360, A1 = 382, o = -26; for (const A of [A0, A1]) for (const off of [-20, -32]){ cyl(A, off, 0, .14, 8.8, gal, 8); }
-    bx(A0, A1, -20.2, -19.8, 8.6, 8.75, gal); bx(A0, A1, -32.2, -31.8, 8.6, 8.75, gal); bx(A0 + 1, A1 - 1, -31, -21, 2.4, 2.46, 0xfafafa, new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .55, roughness: .9 }));
-    bx(A0 + 2, A0 + 4, -27, -25, 6.4, 6.6, 0xd8d8d8); bx(A1 - 4, A1 - 2, -27, -25, 7.2, 7.4, 0xd8d8d8); cyl(A0 + 3, -26, 6.6, .02, 2, 0x444444, 4); cyl(A1 - 3, -26, 6.4, .02, 2, 0x444444, 4); bx(A0 + 1.8, A0 + 4.2, -27.2, -24.8, 3.9, 4, 0x8d6e63);
-    sign((A0 + A1)/2, -19.6, 6.5, 6.2, .55, 'TRAPEZE SCHOOL', '#1565c0', '#ffffff', 'n', 70); }
+  // (the trapeze school's rig stood here until March 2026, when the school moved to Santa Monica Airport)
   // ---- Snackville: orange, white roll-up shutters, the mural, and the stands (Pier Gear, Cosmic Funnel Cakes, Smashies, Coffee Bean)
   { const A0 = 386, A1 = 415, o0 = -45, o1 = -11; bx(A0, A1, o0, o1, 0, 5.2, 0xef6c00); bx(A0, A1, o0, o0 + 8, 5.2, 6.4, 0x5e35b1);
     for (const [k, [n, bg, fg]] of [['Pier Gear', '#26a69a', '#fff'], ['Cosmic Funnel Cakes', '#fdd835', '#4a148c'], ['Smashies Burger', '#c62828', '#fff'], ['The Coffee Bean', '#4e342e', '#fff']].entries()){ const a = A0 + 1 + k*7; bx(a, a + 5.6, o1 + .02, o1 + .12, .3, 2.8, 0xf4f4f4); sign(a + 2.8, o1 + .2, 3.4, 5.4, .55, n, bg, fg, 'n', 56); }
@@ -8451,7 +8477,7 @@ function fishStep(dt, o){ const it = treat; if (!it || it.act !== 'fish' || !it.
   if (it.bite && time - it.bite > 2.6){ it.bite = 0; it.cast = false; banner('It got away!', 'Cast again'); } }
 // what you can do where on the pier
 const PIER_DO = [
-  ['frog', 366, -77.8, 2, "🐸 Ride Inkie's Frog Hopper"], ['airlift', 376, -64.5, 2.4, "🎈 Ride Inkie's Air Lift"], ['frenzy', 388, -60.5, 2.2, '🦈 Ride Shark Frenzy'], ['dragon', 406, -61, 2.2, '🐉 Ride the Sea Dragon'], ['plunge', 443, -64, 2, '🗼 Ride the Pacific Plunge'], ['scrambler', 436, -47, 2.2, "🌀 Ride Inkie's Scrambler"], ['bumper', 356, -69, 2.4, '🚗 Bumper cars'], ['trapeze', 361, -18.5, 2, '🤸 Try the trapeze'],
+  ['frog', 366, -77.8, 2, "🐸 Ride Inkie's Frog Hopper"], ['airlift', 376, -64.5, 2.4, "🎈 Ride Inkie's Air Lift"], ['frenzy', 388, -60.5, 2.2, '🦈 Ride Shark Frenzy'], ['dragon', 406, -61, 2.2, '🐉 Ride the Sea Dragon'], ['plunge', 443, -64, 2, '🗼 Ride the Pacific Plunge'], ['scrambler', 436, -47, 2.2, "🌀 Ride Inkie's Scrambler"], ['bumper', 356, -69, 2.4, '🚗 Bumper cars'], 
   ['arcade', 344, -8.8, 2.6, '🕹️ Playland Arcade'], ['bikes', 288, -10, 2.4, '🚲 Rent a bike at Blazing Saddles'],
   ['menu:PierBurger', 318.5, -9.6, 2.4, '🍔 Pier Burger'], ["menu:Marlene's Beachcomber", 327.5, -9.6, 2.2, "🏖️ Marlene's Beachcomber"], ['menu:Soda Jerks', 157, -10.5, 2.4, '🥤 Soda Jerks'], ['menu:Pier Shop', 182, -11, 2.2, '🎁 Pier Shop'],
   ['menu:Seaside on the Pier', 196, -9, 2.4, '🦐 Seaside on the Pier'], ['menu:The Albright', 228, -9, 2.4, '🦞 The Albright'], ['menu:Bubba Gump', 268, 2, 2.6, '🍤 Bubba Gump Shrimp Co.'], ['menu:Oatman Rock Shop', 304, .8, 2, '💎 Oatman Rock Shop'],
@@ -8553,7 +8579,7 @@ function carouselNear(o){ const K = PARK_ANIM.carousel; if (!K) return null; K.s
 /* Every ride has a line: an ENTRANCE arch with the ride's name, rails to the loading spot, and an EXIT sign. Walk into the line (anywhere
    between the arch and the loading spot) and the ride button comes up. [key, A, off of the loading spot, which way the line runs (dA, dOff)] */
 const RIDE_GATES = [['wheel', 425.6, -68.6, -.707, .707, 'Pacific Wheel', '#c62828'], ['coaster', 415, -75.6, 0, 1, 'West Coaster', '#c62828'], ['dragon', 406.6, -63, 0, 1, 'Sea Dragon', '#2e7d32'],
-  ['plunge', 443, -64, -1, 0, 'Pacific Plunge', '#1565c0'], ['scrambler', 436, -47, -1, 0, "Inkie's Scrambler", '#6a1b9a'], ['bumper', 356, -69, 0, 1, 'Sig Alert Bumper Cars', '#0277bd'], ['trapeze', 361, -18.5, 0, 1, 'Trapeze School', '#ef6c00']];
+  ['plunge', 443, -64, -1, 0, 'Pacific Plunge', '#1565c0'], ['scrambler', 436, -47, -1, 0, "Inkie's Scrambler", '#6a1b9a'], ['bumper', 356, -69, 0, 1, 'Sig Alert Bumper Cars', '#0277bd']];
 const GATE_LEN = 6;
 function inRideLine(A, off){ for (const G of RIDE_GATES){ const [k, a, o, da, dO] = G, u = (A - a)*da + (off - o)*dO; if (u < -1.2 || u > GATE_LEN + 1.5) continue; if (Math.abs((A - a)*dO - (off - o)*da) < 1.3) return G; } return null; }
 function buildRideGates(g, P3){ const grp = new THREE.Group(), S = A => 390 - A, at = (A, off, y) => new THREE.Vector3(...P3(S(A), -off, pierDeckH(S(A)) + y)), chrome = std(0xcfd8dc, .3, .6), post = new THREE.CylinderGeometry(.045, .045, 1, 6);
@@ -9720,7 +9746,7 @@ function carHits(c, x, y, ang = c.ang){   // how many spots around the car's edg
   const fx = Math.cos(ang), fy = Math.sin(ang); let n = 0;
   for (const [a, b] of [[2.1, 0], [2, .78], [2, -.78], [-2.05, .78], [-2.05, -.78], [0, .85], [0, -.85]]){
     const px = x + (fx*a - fy*b)*METERS, py = y + (fy*a + fx*b)*METERS;
-    const [ss, st] = landST(px, py); if (ss < .5 || !onMainland(px, py) || inPromenade(ss, st) || !onRoadway(ss, st) || carGround(px, py, c.h) > c.h + .85) n++; }   // (off the road: the curb stops you)
+    const [ss, st] = landST(px, py); if (ss < .5 || !onMainland(px, py) || inPromenade(ss, st) || !onRoadway(ss, st) || (ss > 257 && onPierDeck(ss, st)) || carGround(px, py, c.h) > c.h + .85) n++; }   /* (the temporary bridge is for people on foot: cars use the ramp from the beach lot) */   // (off the road: the curb stops you)
   return n; }
 function carBlocked(c, x, y){ const fx = Math.cos(c.ang)*2.1*METERS, fy = Math.sin(c.ang)*2.1*METERS; if (fenceCross(c.x, c.y, x + fx, y + fy) || fenceCross(c.x, c.y, x - fx, y - fy)) return true;   // (the fence along the top of the bluff stops cars too: down only by the Incline)
   const n = carHits(c, x, y); return n > 0 && n > carHits(c, c.x, c.y); }   // (already scraping a wall? you can slide along it, or back away)

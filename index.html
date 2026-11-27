@@ -6552,7 +6552,7 @@ function buildCoast(){
   { const S = [-7.6, -7, -6, -5, -4, -3, -2, -1.5, -1, -.5]; for (let v = 0; v < 40; v += 2) S.push(v); for (let v = 40; v < 300; v += 12) S.push(v); for (let v = 300; v < 416; v += 2.5) S.push(v); for (let v = 416; v <= 1260; v += 15) S.push(v);
     const Tl = []; for (let v = -2700; v < -2300; v += 20) Tl.push(v); for (let v = -2300; v < -1480; v += 10) Tl.push(v); for (let v = -1480; v < -1030; v += 4) Tl.push(v); for (let v = -1030; v < 200; v += 10) Tl.push(v); for (let v = 200; v <= 420; v += 20) Tl.push(v); for (let v = 460; v <= (SOUTHP.on ? 4800 : 3000); v += 40) Tl.push(v);   // (south: Ocean Park and Venice's flat beach)
     // stairwells down through a shop floor (Barnes & Noble): the ground must open up there, or you'd look down into... the ground
-    const WELLS = promRooms().filter(r => r.down).map(r => { const a = r.fs + r.inw*r.down.o0, b = r.fs + r.inw*r.down.o1; return [Math.min(a, b), Math.max(a, b), r.down.tm - r.down.ow, r.down.tm + r.down.ow, r.down.yB - 1.5]; });
+    const WELLS = promRooms().filter(r => r.down).map(r => { const a = r.fs, b = r.fs + r.inw*(r.D + .12); return [Math.min(a, b), Math.max(a, b), r.t0, r.t1, r.down.yB - 1.5]; });   // (under the whole store: the downstairs runs under all of it, and the street's ground cut through its rooms; a little past the back wall so the edge of the hole hides behind it)
     for (const r of promRooms().filter(r => r.jr)) WELLS.push([r.fs - r.D, r.fs, r.t0, r.t1, r.lvs[0].y - 1.5]);   // (John Reed's lower level runs under the whole building)
     for (const [s0, s1, t0, t1] of WELLS){ S.push(s0 - .05, s0 + .05, s1 - .05, s1 + .05); Tl.push(t0 - .05, t0 + .05, t1 - .05, t1 + .05); }
     S.sort((a, b) => a - b); Tl.sort((a, b) => a - b);
@@ -10287,6 +10287,8 @@ function jrLevels(r){ const y = r.floor;   // (set when the room is laid out: wa
   r.lvs = [{ y: y - 4.6, ceil: 4, holes: [] }, { y, ceil: 4.4, holes: [[18, 27.6, 14, 16.4]] }, { y: y + 5, ceil: 3.9, holes: [[15.2, 29.7, 10.7, 20.1]] }];
   r.stairs = [{ x0: 18.6, x1: 29.7, y0: 11.9, y1: 13.7, ha: y, hb: y + 5 }, { x0: 18, x1: 27.6, y0: 14.1, y1: 16.3, ha: y, hb: y - 4.6 }]; }   // the grand staircase: up to the top floor, and down to the lower level
 const lvOf = (r, h) => r.lvs.reduce((k, lv, i) => h > lv.y - 1.2 ? i : k, 0);
+const jrCeilLv = (r, gh, cs, ct) => { let k = lvOf(r, gh + 1.6); const d = (cs - r.fs)*r.inw, Y = r.t1 - ct;   // the camera's ceiling: the floor your head is on (not your feet, halfway down the stairs),
+  while (k + 1 < r.lvs.length && r.lvs[k + 1].holes.some(h => d > h[0] && d < h[1] && Y > h[2] && Y < h[3])) k++; return k; };   //   and over the stairwell, the next ceiling up
 function jrGo(r, o, lv, X, Y, title, sub){ const [x, y] = landXY(r.fs + r.inw*X, r.t1 - Y); o.x = x; o.y = y; o.vx = o.vy = 0; walkRef = r.lvs[lv].y + .5; o.gh = groundAt(x, y); walkRef = o.gh + .3; sfx(1046, .25, 'sine', .05); sfx(784, .35, 'sine', .05, .22); banner(title, sub); }
 function buildJohnReed(r, g, y0){
   const W = r.t1 - r.t0, D = r.D, H = JR.H, L = new THREE.Group(); L.position.set(...(() => { const [x, z] = landXY(r.fs, r.t1); return [x*U, y0, z*U]; })()); L.rotation.y = Math.PI; g.add(L);   // (turned round: +X runs away from the Promenade, +Y toward Wilshire)
@@ -12904,7 +12906,7 @@ function placeCamera(px, py, pz, heading, dt, kind, sub = 0, floorY = -99){
       if (f < 1) _tp.set(px + ex*f, py + ey*f, pz + ez*f); }
     const gh = walkH(_tp.x/U, _tp.z/U) + .8; if (_tp.y < gh) _tp.y = gh;   // (never inside the bluff)
     const rr = kind === 'ocean' && ocean?.onLand && !ocean.car ? roomAt(...landST(ocean.x, ocean.y), true) : null;   // (in a shop: under its ceiling, upstairs or down)
-    if (rr){ const lv = rr.lvs && rr.lvs[lvOf(rr, ocean.gh ?? rr.floor)], cy = lv ? lv.y + lv.ceil - .25 : downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + (rr.ceil || 3.5) - .25; if (_tp.y > cy) _tp.y = cy; }
+    if (rr){ const lv = rr.lvs && rr.lvs[jrCeilLv(rr, ocean.gh ?? rr.floor, ...landST(_tp.x/U, _tp.z/U))], cy = lv ? lv.y + lv.ceil - .25 : downIn(ocean) ? rr.down.yB + 3.9 : rr.floor + (rr.ceil || 3.5) - .25; if (_tp.y > cy) _tp.y = cy; }
     if (kind === 'ocean' && ocean?.onLand && CAYTON.floor && (ocean.gh ?? 0) > CAYTON.floor - 1.5 && (() => { const [s2, t2] = landST(ocean.x, ocean.y), B = CAYTON.box; return s2 > B[0] && s2 < B[1] && t2 > B[2] && t2 < B[3]; })()){ const cy = CAYTON.floor + CAYTON.H - .6; if (_tp.y > cy) _tp.y = cy; }   // (in the Cayton: under its skylights)
     if (kind === 'ocean' && ocean?.onLand && FAIR.hall.y && (ocean.gh ?? 0) > FAIR.hall.y - 1){ const [ps, pt] = landST(ocean.x, ocean.y), inRoom = pt < FAIR.hall.box[2], B = inRoom ? [FAIR.hall.room[0], FAIR.hall.room[1], FAIR.hall.balc[2] - 1.5, FAIR.hall.room[3]] : FAIR.hall.box; if (inFairHall(ps, pt)){ const [cs, ct] = landST(_tp.x/U, _tp.z/U), [nx, nz] = landXY(clamp(cs, B[0] + .3, B[1] - .3), clamp(ct, B[2] + .25, B[3] - .25)); _tp.x = nx*U; _tp.z = nz*U; _tp.y = Math.min(_tp.y, FAIR.hall.y + 2.4); } }   // (in the Ocean Tower's corridor: the camera stays in the hall)
     if (kind === 'ocean' && ocean?.onLand && inFairLobby(...landST(ocean.x, ocean.y))){ const cy = (ocean.gh ?? 0) + 4.1; if (_tp.y > cy) _tp.y = cy; }   // (in the Fairmont's lobby: under its ceiling)

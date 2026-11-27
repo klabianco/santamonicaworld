@@ -8687,6 +8687,16 @@ function buildBlock1400W(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
   { const B = L('1446'), m = B.t0 + 8;   // PacSun: a dark frame round a big sunset picture; then Santa Monica Souvenirs' charcoal
     f(B, B.t0, m, 4.7, B.h, 0x4a4242, .15); pic(B, B.t0 + .7, m - .7, 5.3, 8.6, cv(256, 128, (x, w, h) => { const gd = x.createLinearGradient(0, 0, 0, h); gd.addColorStop(0, '#b9c2d6'); gd.addColorStop(.6, '#e9b7b0'); gd.addColorStop(1, '#6d6070'); x.fillStyle = gd; x.fillRect(0, 0, w, h); x.fillStyle = '#4c4656'; x.beginPath(); x.moveTo(0, h); for (let i = 0; i <= 16; i++) x.lineTo(i*w/16, h*.8 - (i % 3)*6); x.lineTo(w, h); x.fill(); }), .2);
     f(B, m, B.t1, 4.7, B.h, 0x353537, .12); }
+  // ---- inland (photos 2024-2026): out is toward smaller s ----
+  const fI = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(B.s - out - dep, B.s - out, t0, t1, y0, y1, hex, gl(B));
+  { const B = L('1411'), m = B.t0 + 6.4;   // Puzzle Zoo's white front with a little cornice, then Aldo's tall black panel
+    fI(B, B.t0, m, B.h - .5, B.h - .25, 0xe2e0da, .2); fI(B, B.t0, B.t0 + .4, 0, B.h, 0xe8e6e0, .2);
+    fI(B, m, B.t1, 4.65, B.h + .2, 0x1e1e1e, .1); fI(B, m, m + .5, 0, 4.65, 0x1e1e1e, .1); fI(B, B.t1 - .5, B.t1, 0, 4.65, 0x1e1e1e, .1); }
+  { const B = L('1429');   // white, three paned windows upstairs with grey trim, a cornice
+    for (let k = 0; k < 3; k++){ const t = B.t0 + 1 + k*2.3; fI(B, t, t + 1.5, 5.6, 7.8, 0x8f9496, .1); fI(B, t + .12, t + 1.38, 5.72, 7.68, 0x2c3a44, .12); fI(B, t + .72, t + .78, 5.72, 7.68, 0xf2f1ec, .14); for (const y of [6.38, 7.03]) fI(B, t + .12, t + 1.38, y, y + .05, 0xf2f1ec, .14); }
+    fI(B, B.t0, B.t1, B.h - .5, B.h - .2, 0xdedcd6, .3); fI(B, B.t0, B.t1, 4.7, 4.9, 0xdedcd6, .2); }
+  { const B = L('1437');   // Culto: a low dark front with gold trim
+    for (const y of [4.75, 5.6]) fI(B, B.t0 + .5, B.t1 - .5, y, y + .06, 0xb08d4a, .14); fI(B, B.t0, B.t1, B.h - .2, B.h + .05, 0x1a1a1a, .2); }
   g.add(grp); mergeStatic(grp); }
 function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, base + (y0 + y1)/2)); grp.add(me); return me; };
@@ -8882,7 +8892,10 @@ const BLOCK1400 = [
   { side: -1, s: 640.6, t0: -296.0, t1: -272.0, h: 9.9, c: 0xc9b394, name: '1440' },
   { side: -1, s: 636.2, t0: -272.4, t1: -265.4, h: 9.5, c: 0x8e5a44, name: '1442' },
   { side: -1, s: 641.4, t0: -265.6, t1: -250.0, h: 6.7, c: 0xf2f0ea, name: '1444' },
-  { side: -1, s: 640.6, t0: -250.8, t1: -234.8, h: 13.1, c: 0x4a4242, name: '1446' } ];   // (the old AMC Broadway 4, 1441: 1989, closed Sept 2024 and for lease)
+  { side: -1, s: 640.6, t0: -250.8, t1: -234.8, h: 13.1, c: 0x4a4242, name: '1446' },
+  { side: 1, s: 665.2, t0: -372.4, t1: -357.6, h: 7.2, ht: 7.2, c: 0xf3f2ef, name: '1411' },
+  { side: 1, s: 664.8, t0: -334.8, t1: -326.4, h: 8.9, c: 0xf2f1ec, name: '1429' },
+  { side: 1, s: 663.8, t0: -296.0, t1: -281.0, h: 6.0, ht: 6.0, c: 0x2b2b2b, name: '1437' } ];   // (the old AMC Broadway 4, 1441: 1989, closed Sept 2024 and for lease)
 function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1400.find(b => b.name === n);
   const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const add = (geo, hex, s, t, y, ry, m) => { const me = new THREE.Mesh(geo, m || mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };

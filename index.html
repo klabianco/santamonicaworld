@@ -1121,7 +1121,7 @@ const breathSay = n => `Hold your breath ${breathAt(n)} seconds longer.`;
    upgrade costs about 1.6x the one before (curve), so there's always something to save up for. */
 const curve = (base, n, k = 1.6) => Array.from({ length: n }, (_, i) => Math.round(base*k**i/10)*10);
 const SHOP = [
-  { id:'paraglider', who:'all', gadget: true, icon:'🪂', name:'Paraglider',     lv:[1500], say: () => 'Open it in the air (a dolphin jump, a jetpack flight, or from the crow\'s nest) and glide down. Steer with the joystick.' },
+  { id:'paraglider', who:'all', gadget: true, icon:'🪂', name:'Paraglider',     lv:[1500], say: () => 'Open it in the air (a dolphin jump, a jetpack flight, or from up high) and glide down. Steer with the joystick.' },
   { id:'grapple',    who:'all', gadget: true, icon:'🪝', name:'Grappling Hook', lv:[3000], say: () => 'Shoot it straight ahead: if it hooks land or a ship (up to 25 m away), it zips you there.' },
   { id:'jetpack',    who:'all', gadget: true, icon:'🚀', name:'Jetpack',        lv:[6000], say: () => 'Hold Use to fly up into the sky, from the water or from land. About 6 seconds of fuel that refills when you land.' },
   { id:'turbo',    who:'all',     name:'Turbo Booster',    lv: Array.from({ length: 30 }, (_, i) => 2500*2**i), many: true,   // buy it again and again: each one doubles your speed and costs twice as much
@@ -1840,7 +1840,7 @@ function renderGadgetBar(){
   const u = $('gadgetUse'); u.hidden = !heldGadget || mode !== 'ocean'; if (heldGadget) u.firstChild.textContent = heldGadget === 'jetpack' ? 'Fly' : heldGadget === 'grapple' ? 'Shoot' : 'Glide'; }
 function holdGadget(id){ heldGadget = heldGadget === id ? null : id; sfx(heldGadget ? 700 : 400, .06, 'triangle', .04); renderGadgetBar();
   if (heldGadget && !ocean?.gadgetTold?.[heldGadget]){ (ocean.gadgetTold = ocean.gadgetTold || {})[heldGadget] = true;
-    coach({ paraglider: 'Paraglider: jump high (dolphin jump, jetpack, or climb to the crow\'s nest), then tap Glide to float down.', grapple: 'Grappling hook: face land or the pirate ship and tap Shoot. It zips you there!',
+    coach({ paraglider: 'Paraglider: jump high (dolphin jump, jetpack, or climb something tall), then tap Glide to float down.', grapple: 'Grappling hook: face land and tap Shoot. It zips you there!',
       jetpack: 'Jetpack: hold Fly to go up. Let go to fall, or open your paraglider!' }[heldGadget], 7); } }
 $('gadgetBar').addEventListener('click', e => { const b = e.target.closest('[data-g]'); if (b){ initAudio(); holdGadget(b.dataset.g); } });
 { const u = $('gadgetUse'), on = v => { gadgetHeld = v; u.classList.toggle('on', v); };
@@ -1874,7 +1874,7 @@ function fireGrapple(o){
   sfx(900, .15, 'square', .04, 0, -500); }
 function grappleStep(o, dt){
   const g = o.grapple; g.t += dt; const shoot = .25; o.vx = o.vy = 0;
-  if (!g.hit){ if (g.t > .55){ o.grapple = null; banner('Nothing to grab', 'Face land or the pirate ship, then shoot'); } return; }
+  if (!g.hit){ if (g.t > .55){ o.grapple = null; banner('Nothing to grab', 'Face land, then shoot'); } return; }
   if (g.t < shoot) return;   // the hook is still flying
   const k = Math.min(1, (g.t - shoot)*30*METERS/g.d);   // zip at about 30 m/s
   o.x = g.sx + (g.hit.x - g.sx)*k; o.y = g.sy + (g.hit.y - g.sy)*k; o.depth = 0; o.vd = 0;

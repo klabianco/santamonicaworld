@@ -6683,7 +6683,7 @@ function buildCoast(){
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
+    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -6927,7 +6927,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -9180,6 +9180,61 @@ function buildMarket(g, P3){ const sat = new THREE.Group(), wed = new THREE.Grou
 /* 100 Wilshire (1971, 22 stories, the tallest in town) at Ocean & Wilshire, and its lower wing along Ocean Ave, from photos (Commons:
    "100 Wilshire" 2007, "Lawrence Welk buildings" 2009, 2010): white, with a ribbon of dark blue glass at every floor that runs right
    round the building, round its rounded corners; the wing stands on white piers over a glass lobby. box: the OSM footprint [s0, t0, s1, t1] */
+/* Wilshire's south side from Ocean to 3rd, from photos (Pacific Catch's own corner photo 2025, Street View 2022 in a What Now LA article, the
+   Matthews leasing brochure for 210 Wilshire Nov 2025, a 2018 blog photo of Wally's, Commons 'Wilshire Boulevard, Santa Monica' 2010).
+   120 Wilshire: a tall white block of square panels by the driveway, the 4-story middle with the '120' lobby, the 2-story wing with a ribbon of
+   green glass behind white fins, and Pacific Catch on the 2nd St corner (navy tile pilasters, glass round a patio of palms, blue-and-white tile
+   planters, wood slats). Across 2nd: Hillstone (red-brown brick piers, tall dark windows, a screen of bronze louvers) and the cream building
+   of Wally's and the old California Pizza Kitchen (for lease since 2025) split by a curved green glass stair tower */
+const WIL_S = [{ side: -1, s: 519.4, t0: -817.2, ht: 9.5, c: 0xedede9, name: '120W' }, { side: -1, s: 589.4, t0: -817.6, skip: true }, { side: -1, s: 559.4, t0: -817.2, skip: true }];
+function buildWilshireS(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3(sc, tc, G + (y0 + y1)/2)); grp.add(me); return me; };
+  let G = landH(500, -818), TW = -817.2;
+  const fW = (s0, s1, y0, y1, hex, dep = .12, out = 0) => bx(s0, s1, TW - out - dep, TW - out, y0, y1, hex);   // a slab on the Wilshire face (out toward Wilshire)
+  const fE = (sw, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(sw + out, sw + out + dep, t0, t1, y0, y1, hex);   // a slab on a face looking east (toward bigger s)
+  const fWst = (sw, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(sw - out - dep, sw - out, t0, t1, y0, y1, hex);   // a slab on a face looking west
+  const signW = (sc, y, w, h, text, bg, fg, size, out = .2, flip) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(sc, TW - out, G + y)); sg.rotation.y = Math.PI; grp.add(sg); return sg; };
+  const signE = (sw, tc, y, w, h, text, bg, fg, size, out = .2) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(sw + out, tc, G + y)); sg.rotation.y = Math.PI/2; grp.add(sg); return sg; };
+  const grid = (s0, s1, y0, y1, d, hex, out = .02) => { for (let y = y0 + d; y < y1 - .1; y += d) fW(s0, s1, y, y + .03, hex, .02, out); for (let u = s0 + d; u < s1 - .1; u += d) fW(u, u + .03, y0, y1, hex, .02, out); };
+  const palmAt = (s, t, h) => { const p = palm(h); p.position.set(...P3(s, t, landH(s, t))); grp.add(p); };
+  const GL = 0x2c3a44, NAVY = 0x1f3b66, WD = 0x9a6b42, PN = 0xedede9, J = 0xd2d3cf;
+  // ---- 120 Wilshire ----
+  bx(473.6, 482.5, -817.2, -800, 0, 16.5, PN); grid(473.6, 482.5, 0, 16.5, 1.6, J);   // the tall block by the driveway, square panels
+  bx(482.5, 493, -817, -795, 9.5, 14.8, PN); fW(484, 489.5, 11.2, 11.8, 0x2a2f33, .1, .2);   // the middle's top floors, with a slot window
+  fW(482.5, 493, 0, 9.5, PN, .2); fW(485.5, 490, 0, 3, GL, .1, .2); fW(485.3, 490.2, 3.1, 3.2, 0xb8bcbe, 1.1, .2); fW(485.5, 490, 3.3, 3.8, GL, .08, .2);   // the '120' lobby: glass doors under a thin metal canopy
+  signW(487.75, 4.2, 1.4, .45, '120', '#edede9', '#7a7d80', 220, .45);
+  for (const [a, b] of [[483, 485.2], [490.3, 492.6], [476, 481.5]]) { bx(a, b, -818.6, -817.4, 0, .5, 0x9a9a94); for (let u = a + .3; u < b; u += .55) bx(u - .05, u + .05, -818.2, -818.0, .5, 3.2 + (u*7 % 1), 0x4f7a3a); }   // (bamboo in planters)
+  fW(493, 509, 3.6, 9.5, PN, .2); for (let k = 0; k < 3; k++){ const a = 493.6 + k*5.1; fW(a, a + 4.5, 5, 8.6, 0x9dbfb5, .1, .22); fW(a - .1, a + 4.6, 8.6, 8.8, PN, .55); for (let u = a + .9; u < a + 4.4; u += .9) fW(u, u + .08, 5, 8.6, PN, .3, .2); }   // the wing: green glass behind white fins
+  fW(493, 509, 0, 3.4, GL, .1, .1); fW(482.5, 519.4, 3.4, 3.9, WD, .5, .1); for (let u = 482.6; u < 519.3; u += .25) fW(u, u + .1, 3.4, 3.9, 0x7d5535, .05, .6);   // (glass under the wood-slat canopy band)
+  // Pacific Catch on the corner: white tiles, navy tile pilasters, glass round the patio, a wood-slat sign panel; the navy sign on 2nd St
+  grid(509, 519.4, 3.9, 9.5, 1.3, J); fE(519.4, -817.2, -800, 3.9, 9.5, PN, .1); for (let y = 5.2; y < 9.4; y += 1.3) fE(519.4, -817.2, -800, y, y + .03, J, .02, .1);
+  for (const u of [509, 513.5, 518.3]) fW(u, u + 1.1, 0, 3.4, NAVY, .25, .1);
+  fW(510.1, 513.5, .9, 3.4, GL, .06, .15); fW(514.6, 518.3, .9, 3.4, GL, .06, .15); for (const [a, b] of [[510.1, 513.5], [514.6, 518.3]]) fW(a, b, 0, .9, 0xdfe8f2, .4, .1);   // (glass over blue-and-white tile planter walls)
+  for (let y = 4.3; y < 8.8; y += .3) fW(511.8, 516.6, y, y + .2, WD, .12, .05); signW(514.2, 6.4, 3.6, 1.1, 'Pacific Catch', '#7a5535', '#ffffff', 180, .2);
+  fE(519.4, -815.5, -806.5, 4.6, 8.3, 0x1e4a85, .15); signE(519.4, -811, 6.45, 8, 2.2, 'Pacific Catch', '#1e4a85', '#ffffff', 200, .18);
+  for (let k = 0; k < 4; k++) fE(519.4, -816.8 + k*3.2, -815.6 + k*3.2, 0, 3.4, NAVY, .25);
+  palmAt(511.5, -811, 4.5); palmAt(516.2, -812, 5);   // (palms in the patio)
+  for (const s of [492, 503, 512]) palmAt(s, -819.4, 11);   // the three tall fan palms in the sidewalk
+  // ---- across 2nd St: Hillstone, then the cream building ----
+  G = landH(566, -818); TW = -817.6; const T1 = -771, BR = 0xa0503a, LV = 0x7a5a40, CR = 0xe4dccd, CR2 = 0xd6cdbb;
+  bx(543.6, 556.5, TW, T1, 0, 8.6, BR); bx(543.5, 556.6, TW - .05, T1 + .05, 8.6, 9.0, 0x6d4a3a);   // Hillstone: red-brown brick
+  for (let k = 0; k < 4; k++){ const a = 544.4 + k*3; fW(a, a + 2.2, .3, 7.8, 0x24282b, .1); fW(a + 1.08, a + 1.12, .3, 7.8, 0x5a4a3a, .14); fW(a, a + 2.2, 3.9, 4.0, 0x5a4a3a, .14); }
+  for (let k = 0; k < 4; k++){ const a = TW + 1 + k*2.8; fWst(543.6, a, a + 2, .3, 7.8, 0x24282b, .1); }
+  for (let y = 5.2; y < 8.4; y += .35){ fW(543.6, 556.5, y, y + .22, LV, .08, .9); fWst(543.6, TW, TW + 12, y, y + .22, LV, .08, .9); }   // the screen of louvers out in front
+  for (const u of [543.8, 556]) fW(u, u + .3, 5.2, 8.4, LV, .9);
+  signW(550, 6.8, 4.4, .8, 'HILLSTONE', '#7a5a40', '#e2c48a', 220, 1.05); bx(544, 556, TW - .9, TW - .3, 0, .7, 0x3c6b34);   // (bronze letters, a low hedge)
+  bx(556.5, 589.4, TW, T1, 0, 11.6, CR); bx(556.4, 589.5, TW - .3, T1, 11.2, 11.6, 0x6b6b66);   // the cream building, a dark cornice
+  const tower = 571.5; bx(tower - 2, tower + 2, TW - .3, TW + 1, 0, 12.6, null, std(0x2f5a52, .15, .4)); const cy = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 12.6, 18, 1, false, Math.PI/2, Math.PI), std(0x2f5a52, .15, .4)); cy.position.set(...P3(tower, TW - .3, G + 6.3)); grp.add(cy);   // the curved green glass stair tower
+  for (const [a, b] of [[557, tower - 2.4], [tower + 2.4, 589]]){
+    for (let u = a + .3; u < b - 1; u += 1.7) fW(u, u + .9, 10.2, 10.9, CR2, .25);   // (the notches under the cornice)
+    const n = Math.round((b - a)/2.7), w = (b - a)/n; for (let k = 0; k < n; k++){ const u = a + k*w + .4; fW(u, u + w - .8, 6.1, 9.1, 0x2a3a46, .1); fW(u - .1, u + w - .7, 5.95, 6.1, 0x55585a, .3); fW(u + w/2 - .6, u + w/2 - .2, 5.4, 6.0, 0x7fa79a, .5); }   // tall single-pane windows on sills, little sage sun-fins
+    for (let y = 1.2; y < 11; y += 1.5) fW(a, b, y, y + .04, CR2, .03);
+    fW(a + .2, b - .2, .25, 4.1, GL, .1); fW(a, b, 4.1, 4.3, 0x3a3a38, 1.6); fW(a + .2, b - .2, 4.6, 5.3, GL, .08); }   // glass shops under a thin flat canopy, a row of glass over it
+  signW(564.5, 5.0, 3.6, 1.1, "Wally's", '#1f4d34', '#ffffff', 300, .14); signW(564.5, 4.2, 6, .3, 'FINE WINES & GOURMET FOODS', '#3a3a38', '#ffffff', 110, 1.62);
+  for (let u = 558; u < 569; u += 1.6) bx(u, u + 1.2, TW - 2.6, TW - 2, 0, 1, 0x2f5a2c);   // (Wally's patio: boxwood in black planters)
+  signW(580.5, 4.95, 3, .7, 'FOR LEASE', '#e8e4dc', '#6a6a6a', 220, .14);   // (the old California Pizza Kitchen, for lease since 2025)
+  palmAt(tower + 3, TW - 2.4, 12);
+  g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };
 function buildW100(g, P3){ const grp = new THREE.Group(), glass = std(0x1f3550, .2, .5), white = std(0xf4f4f1, .7);

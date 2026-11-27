@@ -8491,7 +8491,11 @@ const OCEAN1300 = [
   { side: 1, s: 433.4, t0: -548.8, t1: -535.8, h: 10.1, c: 0x55657a, name: 'Gussie Moran', skip: true },
   { side: 1, s: 457.6, t0: -547.0, t1: -535.4, h: 10.2, c: 0x5b6a7e, roof: 0x6b5a4a, name: 'Gussie back' },
   { side: 1, s: 421.2, t0: -503.2, t1: -487.8, h: 8.8, ht: 7, c: 0xf6f4ee, roof: 0xb5532f, name: '1337' },
-  { side: 1, s: 418.6, t0: -457.4, t1: -425.4, h: 12.8, ht: 8.4, c: 0xeedfc0, name: '101 SM Blvd' } ];
+  { side: 1, s: 418.6, t0: -457.4, t1: -425.4, h: 12.8, ht: 8.4, c: 0xeedfc0, name: '101 SM Blvd' },
+  { side: 1, s: 421.4, t0: -533.4, t1: -516.8, h: 7, ht: 7, c: 0xf2f0ea, name: '1327' },
+  { side: 1, s: 427.6, t0: -518.6, t1: -503.8, h: 10.2, c: 0xedede6, name: '1333', skip: true },
+  { side: 1, s: 421.2, t0: -402.6, t1: -356.8, h: 12.6, ht: 12.6, c: 0xe6dfd2, name: 'Portofino', round: [421.2, -402.6, 5] },
+  { side: 1, s: 417.6, t0: -233.6, t1: -218.4, h: 13.6, ht: 13.6, c: 0xd9c9a3, roof: 0xd08c6e, name: '101 Broadway' } ];
 function buildOcean1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => OCEAN1300.find(b => b.name === n);
   const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + (y0 + y1)/2)); grp.add(me); return me; };
   const at = (geo, hex, s, t, y, ry = 0) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, y)); me.rotation.y = ry; grp.add(me); return me; };
@@ -8528,6 +8532,39 @@ function buildOcean1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
     { const r = new THREE.Mesh(new THREE.CylinderGeometry(.01, 3.2, 1.6, 4, 1), mat(0xb5532f)); r.rotation.y = Math.PI/4; r.scale.set(1.3, 1, 2.4); r.position.set(...P3(B.s + 5, B.t1 - 9, base + ht + .8)); grp.add(r); }   // a red tile hip roof piece
     bx(B.s + 14, B.s + 24, B.t0 + 9, B.t0 + 17, ht, ht + 2.8, null, base).material = new THREE.MeshStandardMaterial({ color: 0x9cc0c8, roughness: .1, metalness: .4, transparent: true, opacity: .7 });   // the glass box on the roof deck
     F(B, B.t1 - 9, B.t1, .3, 3.6, 0x1f2225, .1, 0, base); F(B, B.t1 - 9, B.t1, 3.6, 3.85, 0xa3262b, .18, 0, base); }   // the dark corner storefront with red trim
+  /* more of Ocean Ave, from photos: 1327 (1951; Commons panoramio 2015 and a 1976 Huntington Library photo), a white two-story block with a dark
+     green fascia, green awnings and a railed roof deck; 1333 (1906, a landmark; Huntington Library 1976), a white Queen Anne house with a steep
+     front gable, a balcony with turned balusters over the porch, a box bay, the round corner turret with its cone, a picket fence and big
+     eucalyptus trees; Portofino Plaza (1401, Commons Sept 2022 and its leasing photos), cream travertine, dark bronze ribbon windows between
+     white bands that sweep round the Santa Monica Blvd corner, a drum-shaped penthouse and navy awnings; and 101 Broadway on the corner
+     (Commons Sept 2022), buff brick with cream string courses and cornice under a salmon metal roof, a navy shopfront and white canopy */
+  { const B = L('1327'), base = landH(B.s, (B.t0 + B.t1)/2), GR = 0x3f5e4a;
+    F(B, B.t0, B.t1, B.h - .6, B.h + .1, GR, .25, 0, base); for (const y of [1.2, 4.4]) for (let k = 0; k < 3; k++){ const t = B.t0 + 2.5 + k*5.2; F(B, t, t + 2.2, y, y + 1.6, GL, .08, 0, base); bx(B.s - 1, B.s, t - .2, t + 2.4, y + 1.6, y + 2, GR, base); }
+    bx(B.s + 8, B.s + 13, B.t0 + 4, B.t0 + 9, B.h, B.h + 2.6, 0xf2f0ea, base); for (let t = B.t0 + 1; t < B.t1 - .9; t += .5) bx(B.s + .2, B.s + .25, t, t + .04, B.h, B.h + 1, 0x3a3d40, base); bx(B.s + .2, B.s + .25, B.t0 + 1, B.t1 - 1, B.h + 1, B.h + 1.06, 0x3a3d40, base); }
+  { const B = L('1333'), s0 = B.s + 3.5, s1 = B.s + 19, t0 = B.t0 + 1, t1 = B.t1 - 1.5, base = landH(s0, (t0 + t1)/2), WL = 0xedede6, RF = 0x3e5a45, c = (t0 + t1)/2 - 1;
+    bx(s0, s1, t0, t1, 0, 6.6, WL, base); for (let y = .8; y < 6.5; y += .22) bx(s0 - .03, s0, t0, t1, y, y + .04, 0xd5d5cc, base);   // painted wood siding
+    { const rf = new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(s1 - s0, t1 - t0)/2 + .4, 3.6, 4, 1), mat(RF)); rf.rotation.y = Math.PI/4; rf.scale.set((s1 - s0)/(t1 - t0), 1, 1); rf.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, base + 6.6 + 1.8)); grp.add(rf); }   // the hipped roof
+    gable(s0 - .6, s0 + 6, c - 3.4, c + 3.4, 6.6, 4, RF, base); { const sh = new THREE.Shape(); sh.moveTo(-3.4, 0); sh.lineTo(0, 3.7); sh.lineTo(3.4, 0); sh.lineTo(-3.4, 0); const me = new THREE.Mesh(new THREE.ShapeGeometry(sh), mat(WL)); me.rotation.y = -Math.PI/2; me.position.set(...P3(s0 - .65, c, base + 6.6)); grp.add(me); }   // the steep front gable
+    bx(s0 - 1.6, s0, c - 3, c + 3, 3.2, 3.4, WL, base); for (let t = c - 2.9; t < c + 3; t += .25) bx(s0 - 1.5, s0 - 1.42, t, t + .08, 3.4, 4.2, 0xffffff, base); bx(s0 - 1.6, s0 - 1.35, c - 3, c + 3, 4.2, 4.32, 0xffffff, base);   // the balcony and its turned balusters
+    for (const k of [-1, 0, 1]){ F({ s: s0 }, c + k*1.5 - .6, c + k*1.5 + .6, 3.8, 5.8, GL, .08, 0, base); } for (const t of [c - 2.9, c + 2.7]) bx(s0 - 1.6, s0 - 1.4, t, t + .2, 0, 3.2, 0xffffff, base);   // (the 3-window bay behind, the porch posts)
+    bx(s0 - 1, s0, t0 + .8, t0 + 3.6, .6, 2.9, WL, base); F({ s: s0 - 1 }, t0 + 1, t0 + 3.4, 1, 2.6, GL, .08, 0, base); F({ s: s0 }, c - .55, c + .55, .4, 2.6, 0x3a2a1e, .08, 0, base); bx(s0 - 2.6, s0 - 1.6, c - 1, c + 1, 0, .5, 0x9a958c, base);   // the box bay, the front door and steps
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 7.6, 16), mat(WL)); tr.position.set(...P3(s0 + .6, t1 - 1.2, base + 3.8)); grp.add(tr);   // the round corner turret
+    for (const y of [1.2, 4.6]) for (const a of [-.9, 0, .9]){ const w = new THREE.Mesh(new THREE.BoxGeometry(.06, 1.6, .9), mat(GL)); w.position.set(...P3(s0 + .6 - 2.02*Math.cos(a), t1 - 1.2 + 2.02*Math.sin(a), base + y + .8)); w.rotation.y = -a; grp.add(w); }
+    at(new THREE.ConeGeometry(2.4, 2, 16), RF, s0 + .6, t1 - 1.2, base + 8.6);
+    for (let t = B.t0 + .3; t < B.t1 - .2; t += .2) if (Math.abs(t - c) > 1.1) bx(B.s + .4, B.s + .45, t, t + .07, 0, 1, 0xffffff, base); bx(B.s + .38, B.s + .47, B.t0 + .3, B.t1 - .2, .7, .78, 0xffffff, base);   // the white picket fence
+    for (const [s, t] of [[B.s - 1.2, B.t0 + 1.5], [B.s - 1.2, B.t1 - 1]]){ at(new THREE.CylinderGeometry(.45, .7, 9, 8), 0xb8b0a0, s, t, base + 4.5); for (const [ds, dt, dy] of [[0, 0, 10], [1.5, 1, 8.8], [-1, -1.6, 9.4]]) at(new THREE.IcosahedronGeometry(2.4, 1), 0x6f8f62, s + ds, t + dt, base + dy); } }   // (the eucalyptus)
+  { const B = L('Portofino'), base = landH(B.s, (B.t0 + B.t1)/2), CR = 0xf4f2ec, BZ = 0x3a3a36, tS = B.t0;   // Portofino Plaza
+    for (const y of [4.2, 8.2]){ F(B, B.t0 + 5, B.t1, y, y + .7, CR, .5, 0, base); F(B, B.t0 + 5, B.t1, y + .9, y + 3.2, BZ, .08, 0, base); bx(B.s + 5, B.s + 40, tS - .5, tS, y, y + .7, CR, base); bx(B.s + 5, B.s + 40, tS - .08, tS, y + .9, y + 3.2, BZ, base);
+      const cv = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, .7, 16, 1, true, Math.PI, Math.PI/2), mat(CR)); cv.position.set(...P3(B.s + 5, B.t0 + 5, base + y + .35)); grp.add(cv); }   // white bands sweeping round the corner, dark ribbon windows between
+    F(B, B.t0 + 5, B.t1, 12.3, 12.9, CR, .3, 0, base); bx(B.s + 4, B.s + 30, B.t0 + 4, B.t1 - 6, 12.6, 16, 0xe6dfd2, base); bx(B.s + 3.9, B.s + 4, B.t0 + 5, B.t1 - 7, 13, 15.6, BZ, base);   // the set-back top floor
+    at(new THREE.CylinderGeometry(4, 4, 3.6, 20), 0xf4f2ec, B.s + 9, B.t0 + 9, base + 14.4); at(new THREE.CylinderGeometry(4.05, 4.05, 2, 20, 1, true), BZ, B.s + 9, B.t0 + 9, base + 14.4);   // (the drum-shaped penthouse)
+    for (let k = 0; k < 4; k++){ const t = B.t0 + 8 + k*9; bx(B.s - 1.4, B.s, t, t + 6, 2.9, 3.3, 0x1f2e5a, base); }   // (navy awnings over the restaurants)
+    for (const t of [B.t0 + 14, B.t1 - 8]){ const p = palm(13); p.position.set(...P3(B.s - 3.5, t, landH(B.s - 3.5, t))); grp.add(p); } }
+  { const B = L('101 Broadway'), base = landH(B.s, (B.t0 + B.t1)/2), CS = 0xe8ddc0;   // 101 Broadway
+    for (const y of [4.6, 8.0, 11.4]) F(B, B.t0, B.t1, y, y + .3, CS, .15, 0, base); F(B, B.t0, B.t1, B.h - .6, B.h, CS, .45, 0, base);
+    for (const y of [5.4, 8.8]) for (const t of [B.t0 + 3.5, B.t1 - 5.5]){ F(B, t, t + 1.8, y, y + 2.3, GL, .08, 0, base); F(B, t - .15, t + 1.95, y - .2, y, CS, .15, 0, base); F(B, t - .15, t + 1.95, y + 2.3, y + 2.5, CS, .12, 0, base); }
+    F(B, B.t0 + .5, B.t1 - .5, 3.1, 4.2, 0x2e4f73, .1, 0, base); bx(B.s - 1.4, B.s, B.t0 + .5, B.t1 - .5, 2.9, 3.05, 0xffffff, base);
+  }
   g.add(grp); mergeStatic(grp); }
 /* The Criterion Theatre and Apartments (1924, Italian Renaissance Revival), the inland corner of the 1300 block at Arizona: from the city's
    historic inventory, the Santa Monica Conservancy's walking tour and photos (2010, 2011 Commons, 2017). Brick painted bright white, three

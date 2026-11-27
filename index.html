@@ -8776,7 +8776,11 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     f(B, a, b, 4.7, 7.9, 0xf4f4f1, .45); f(B, a + .35, b - .35, 4.95, 7.55, 0x1f3466, .1, .45); for (let t = a + .5; t < b - .4; t += .25) f(B, t, t + .08, 4.95, 7.55, 0x2a4278, .05, .55);
     sign(B, (a + b)/2, 6.2, 7, .62, 'DODGERS CLUBHOUSE', '#1f3466', '#ffffff', 84, .62);
     for (let k = 0; k < 5; k++){ const t = a + 1 + k*(b - a - 2)/4; f(B, t - .03, t + .03, 7.8, 7.86, 0x2a2d30, .55, .45); f(B, t - .12, t + .12, 7.6, 7.75, 0x2a2d30, .2, .85); }
-    f(B, b + .3, B.t1, B.h - .3, B.h + .05, 0xcabd9f, .2); for (const y of [6.2, 9.6]) win(B, b + 1, B.t1 - 1, y, y + 2, 7, 0xe9e1cf, 0x34434d); }   // (the rest, where Patagonia is: tan stucco with two rows of windows, a guess)
+    { const m = B.t1 - 8.4, YL = 0xe9c75e, CR = 0xf2ead2, BR = 0x9a4a38;   // the rest, from the storefront photos (thirdstreetoccupancy.com, 2024-26): Patagonia's yellow front with cream pilasters, then Wilson's red brick
+      f(B, b + .3, m, 4.7, B.h + .05, YL, .1); for (const t of [b + .3, (b + m)/2 - .35, m - .7]) f(B, t, t + .7, 4.7, B.h + .05, CR, .2); f(B, b + .3, m, B.h - .7, B.h + .05, CR, .3); f(B, b + .3, m, 4.7, 5.1, CR, .25);
+      for (const t of [b + 1.6, (b + m)/2 + .9]) for (let k = 0; k < 2; k++){ const u = t + k*1.9; f(B, u, u + 1.4, 6.4, 9.2, 0x6b4a33, .12); f(B, u + .12, u + 1.28, 6.52, 9.08, 0x34434d, .14); }
+      f(B, m, B.t1, 4.7, B.h + .05, BR, .1); for (let y = 4.9; y < B.h; y += .3) f(B, m, B.t1, y, y + .03, 0x7a3a2c, .13); for (let k = 0; k < 4; k++){ const u = m + .9 + k*1.8; f(B, u, u + 1.2, 6.6, 8.4, 0x2a2d30, .16); f(B, u - .1, u + 1.3, 6.45, 6.6, 0xe9e1cf, .2); }
+      f(B, m, B.t1, B.h - .5, B.h + .05, 0x8a4232, .25); } }
   // ---- ocean side ----
   { const B = L('Grant'), C = B.c, C2 = 0xd9d1bf, pw = .9;
     for (const y of [5.0, 5.3, 5.6]) f(B, B.t0 + pw, B.t1 - pw, y, y + .12, C2, .08, .1);   // three grooves over the shops

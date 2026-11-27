@@ -8922,7 +8922,13 @@ function buildBlock1400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   { const B = L('charcoal'), base = landH(B.s + 3, B.t0 + 3), D = 0x2c3034, Wt = 0xf1f1ee;   // a plain charcoal box, a darker band at the top, the shop fronts framed in white
     bx(B.s - .14, B.s, B.t0, B.t1, B.h - 1.6, B.h + .15, D, base); bx(B.s - .1, B.s, B.t0, B.t1, 4.65, 4.85, Wt, base);
     bx(B.s, B.s + 20, B.t0 - .14, B.t0, B.h - 1.6, B.h + .15, D, base); bx(B.s, B.s + 20, B.t0 - .1, B.t0, 4.65, 4.85, Wt, base);
-    for (const t of [B.t0 + .2, B.t0 + 7.5, B.t0 + 15]) bx(B.s - .12, B.s, t, t + .25, 0, 4.65, Wt, base); }
+    for (const t of [B.t0 + .2, B.t0 + 7.5, B.t0 + 15]) bx(B.s - .12, B.s, t, t + .25, 0, 4.65, Wt, base);
+    // past Raising Cane's corner, each front its own color (storefront photos on thirdstreetoccupancy.com, 2024-2026): 1403 in yellow-tan stucco,
+    // 1405 white with fine ribs and Sunsations' black band over grey (lined up with the game's shops, which sit a little further along than the real ones)
+    const P = (t0, t1, y0, y1, hex, d = .18) => bx(B.s - d, B.s - .02, t0, t1, y0, y1, hex, base);
+    P(B.t0 + 8.6, B.t0 + 15.2, 4.85, B.h + .15, 0xe8cf8e); P(B.t0 + 8.6, B.t0 + 15.2, B.h - .2, B.h + .15, 0xd9bf80, .26);
+    P(B.t0 + 15.2, B.t0 + 21.8, 4.85, B.h + .15, 0xeeeeea); for (let y = 5.2; y < B.h; y += .3) P(B.t0 + 15.3, B.t0 + 21.7, y, y + .04, 0xd8d8d4, .21);
+    P(B.t0 + 21.8, B.t1, 4.85, 6.6, 0x1c1c1c); P(B.t0 + 21.8, B.t1, 6.6, B.h + .15, 0xcfd0ce); }
   // the old AMC Broadway 4 (1441, 1989; closed Sept 2024, boarded up and for lease), from photos (Commons, July 2022): white postmodern Art Deco,
   // black tile at the street, a white marquee (its red amc letters gone), the BROADWAY sign of stacked white fins edged in red neon, and the
   // white tower stepping up behind the front with tall dark slits

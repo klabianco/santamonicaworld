@@ -8611,6 +8611,12 @@ function buildBlock1200M(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     for (let t = B.t0 + .2, k = 0; t < B.t1 - .1; t += .35, k++) f(B, t, t + .35, B.h - .7, B.h + .1, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // (black and white stripes along the top)
     for (const t of [B.t0 + .3, B.t0 + 5.1, B.t1 - 5.4, B.t1 - .7]) for (let y = 0, k = 0; y < 4.6; y += .4, k++) f(B, t, t + .4, y, y + .4, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // the striped piers
     f(B, B.t0 + .3, B.t1 - .3, 4.62, 4.72, BK, .9); }
+  { const B = L('1212');   // 1212 Santa Monica: beige block, two floors of black-framed glass, a patio walled with living green planters and heaters
+    for (let y = 5.1; y < B.h; y += .4) f(B, B.t0, B.t1, y, y + .03, 0xc4baa4, .03); f(B, B.t0 + 2.5, B.t1 - 1, 4.7, 7.6, 0x24303a, .08); for (let t = B.t0 + 2.5; t < B.t1 - .9; t += 1.9) f(B, t, t + .1, 4.7, 7.6, BK, .12); f(B, B.t0 + 2.5, B.t1 - 1, 6.1, 6.2, BK, .12);
+    for (const [a, b] of [[B.t0 + .5, B.t0 + 6.6], [B.t0 + 8.6, B.t1 - .6]]){ bx(B.s + 2.6, B.s + 3.1, a, b, 0, 1.3, 0x2a2b2c, gl(B)); for (let t = a + .2; t < b - .2; t += .45) bx(B.s + 3.1, B.s + 3.25, t, t + .35, .15 + (t*5 % .3), 1.25, 0x4f7f3a, gl(B)); }
+    for (const t of [B.t0 + 3, B.t1 - 3]){ bx(B.s + 1.8, B.s + 1.9, t - .05, t + .05, 0, 2.2, 0x6a6c6e, gl(B)); bx(B.s + 1.6, B.s + 2.1, t - .25, t + .25, 2.2, 2.5, 0x6a6c6e, gl(B)); } }
+  { const B = L('1218');   // Chipotle's building: white and light grey modern blocks, a dark strip of recessed glass upstairs
+    f(B, B.t0, B.t1, 4.7, 5.2, 0xdedfdc, .25); f(B, B.t0 + 1, B.t1 - 1, 5.5, 7.0, 0x2c3a44, .06); for (let t = B.t0 + 1; t < B.t1 - .9; t += 2.2) f(B, t, t + .25, 5.5, 7.0, 0xe9e9e6, .14); f(B, B.t0, B.t1, B.h - .3, B.h + .05, 0xdedfdc, .2); }
   // ---- the inland side's middle (photos Feb 2024 - Nov 2026): out is toward smaller s ----
   const fI = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(B.s - out - dep, B.s - out, t0, t1, y0, y1, hex, gl(B));
   const sI = (B, tc, y, w, h, text, bg, fg, size, out = .16) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(B.s - out, tc, gl(B) + y)); sg.rotation.y = -Math.PI/2; grp.add(sg); };
@@ -8827,7 +8833,9 @@ const BLOCK1200 = [
   { side: 1, s: 664.2, t0: -695.2, t1: -686.4, h: 6.4, ht: 6.4, c: 0x6f7c95, name: '1241' },
   { side: 1, s: 664.2, t0: -686.4, t1: -663.6, h: 7.4, ht: 7.4, c: 0x1c1c1c, name: '1247' },
   { side: 1, s: 664.0, t0: -663.8, t1: -648.2, h: 9.4, ht: 9.4, c: 0xedebe6, name: '1251' },
-  { side: 1, s: 665.4, t0: -648.4, t1: -634.0, h: 9.4, ht: 9.4, c: 0xecebe6, name: '301AZ', round: [665.4, -634.0, 2.2] } ];
+  { side: 1, s: 665.4, t0: -648.4, t1: -634.0, h: 9.4, ht: 9.4, c: 0xecebe6, name: '301AZ', round: [665.4, -634.0, 2.2] },
+  { side: -1, s: 641.0, t0: -785.4, t1: -770.2, h: 8.4, ht: 8.4, c: 0xd7cdb8, name: '1212' },
+  { side: -1, s: 641.0, t0: -770.8, t1: -755.4, h: 7.8, c: 0xe9e9e6, name: '1218' } ];
 const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
   const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
   for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }

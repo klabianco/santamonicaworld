@@ -9369,7 +9369,8 @@ function buildMarket(g, P3){ const sat = new THREE.Group(), wed = new THREE.Grou
    green glass behind white fins, and Pacific Catch on the 2nd St corner (navy tile pilasters, glass round a patio of palms, blue-and-white tile
    planters, wood slats). Across 2nd: Hillstone (red-brown brick piers, tall dark windows, a screen of bronze louvers) and the cream building
    of Wally's and the old California Pizza Kitchen (for lease since 2025) split by a curved green glass stair tower */
-const WIL_S = [{ side: -1, s: 519.4, t0: -817.2, ht: 9.5, c: 0xedede9, name: '120W' }, { side: -1, s: 589.4, t0: -817.6, skip: true }, { side: -1, s: 559.4, t0: -817.2, skip: true }];
+const WIL_S = [{ side: -1, s: 519.4, t0: -817.2, ht: 9.5, c: 0xedede9, name: '120W' }, { side: -1, s: 589.4, t0: -817.6, skip: true }, { side: -1, s: 559.4, t0: -817.2, skip: true },
+  { side: -1, s: 635.2, t0: -907.0, skip: true, name: 'SeaRise' }, { side: -1, s: 589.6, t0: -877.8, ht: 8.4, c: 0xe6e0d4, name: '201W' }];
 function buildWilshireS(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
   const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const sc = (s0 + s1)/2, tc = (t0 + t1)/2, me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3(sc, tc, G + (y0 + y1)/2)); grp.add(me); return me; };
   let G = landH(500, -818), TW = -817.2;
@@ -9417,6 +9418,27 @@ function buildWilshireS(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
   for (let u = 558; u < 569; u += 1.6) bx(u, u + 1.2, TW - 2.6, TW - 2, 0, 1, 0x2f5a2c);   // (Wally's patio: boxwood in black planters)
   signW(580.5, 4.95, 3, .7, 'FOR LEASE', '#e8e4dc', '#6a6a6a', 220, .14);   // (the old California Pizza Kitchen, for lease since 2025)
   palmAt(tower + 3, TW - 2.4, 12);
+  /* the north side, 2nd to 3rd (Commons '233 Wilshire Boulevard, Santa Monica' Mar 2025 and 2009, Douglas Emmett's photos): the SeaRise Office
+     Tower (233, 1976), nine floors of dark blue-grey reflective glass with a dark spandrel band at every floor and the corner at 3rd cut back on
+     the angle, over a grass berm with big spreading ficus trees, tall fan palms and a low stone sign; and 201 Wilshire (1948), two floors of cream
+     stucco with a dark ribbon window upstairs, grey metal barrel roofs, the green glass barrel skylight over its atrium and a brick entry block */
+  { const s0 = 595.8, s1 = 635.2, t0 = -907, t1 = -855, sc = (s0 + s1)/2, tc = (t0 + t1)/2, base = landH(615, -856), FH = 4.6, NF = 9;
+    const P = [[s0, t1], [621, t1], [s1, t1 - 14], [s1, t0 + 3], [s1 - 3, t0], [s0, t0]];
+    const ext = (pts, y0, h, m, grow = 0) => { const sh = new THREE.Shape(); pts.forEach(([u, v], i) => { const x = (u - sc)*(1 + grow), y = -(v - tc)*(1 + grow); i ? sh.lineTo(x, y) : sh.moveTo(x, y); }); const ge = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false }); ge.rotateX(-Math.PI/2); const me = new THREE.Mesh(ge, m); me.position.set(...P3(sc, tc, base + y0)); grp.add(me); return me; };
+    ext(P, 0, NF*FH + .6, std(0x56677e, .12, .55)); for (let k = 0; k < NF; k++) ext(P, k*FH + 3.1, 1.5, std(0x232a36, .3, .3), .004); ext(P, NF*FH, 1.3, std(0x232a36, .3, .3), .004);
+    const G0 = std(0x3a3f44, .6), GR = std(0x5f8f3f, .9); bx(600, 620, t1 + .1, t1 + 1.5, 0, .5, 0xa9a49a); G = base;
+    const ficus = (s, t, r) => { const tr = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 4, 7), mat(0x8d8a82)); tr.position.set(...P3(s, t, landH(s, t) + 2)); grp.add(tr); for (const [dx, dy, dz, k] of [[0, 5, 0, 1], [r*.5, 4.4, r*.3, .8], [-r*.5, 4.6, -r*.2, .8], [r*.2, 5.2, -r*.5, .75]]){ const c = new THREE.Mesh(new THREE.IcosahedronGeometry(r*k, 1), mat(0x3f7a32)); c.position.set(...P3(s + dx, t + dz, landH(s, t) + dy)); grp.add(c); } };
+    const berm = new THREE.Mesh(new THREE.BoxGeometry(13, .8, 12), mat(0x5f8f3f)); berm.position.set(...P3(641, -852, landH(641, -852) + .2)); berm.rotation.y = Math.PI/4; grp.add(berm);
+    for (const [s, t, r] of [[600, -852.5, 3.2], [610, -852.5, 3.4], [622, -853, 3], [633, -849, 3.6], [640, -858, 3.2]]) ficus(s, t, r);
+    for (const s of [597, 605, 615, 627]) palmAt(s, -851.2, 13);
+    const mon = bx(641.5, 644.5, -850.2, -849.4, 0, 1, 0xe3dccb); mon.position.y = landH(643, -850) + .5; }
+  { const s0 = 553.2, s1 = 589.6, t0 = -877.8, t1 = -845.4, H = 8.4; G = landH(570, -845); TW = t1;   // 201 Wilshire
+    const fN = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, t1 + out, t1 + out + dep, y0, y1, hex);   // (a slab on its Wilshire face, out toward bigger t)
+    fN(s0 + 4, s1 - 6, 5.3, 6.9, 0x2a3540, .1); fN(s0 + 4, s1 - 6, 6.9, 7.0, 0xd6d0c4, .14); fN(s0, s1, H - .2, H + .05, 0xd6d0c4, .2);
+    bx(s1 - 5, s1, t1, t1 + 2.4, 0, 6, 0x6b3a2e); bx(s1 - 3.6, s1 - 1.4, t1 + 2.4, t1 + 2.45, 0, 2.6, 0x1e1e1e); bx(s0 + 2, s1 - 6, t1 + .1, t1 + 1.1, 0, .7, 0x6b3a2e);   // the brick entry block, a brick planter wall
+    for (let s = s0 + 2.6; s < s1 - 6.5; s += 1.4){ const ag = new THREE.Mesh(new THREE.ConeGeometry(.45, .7, 6), mat(0x7a9a6a)); ag.position.set(...P3(s, t1 + .6, G + 1.05)); grp.add(ag); }
+    { const c = new THREE.Mesh(new THREE.CylinderGeometry((s1 - s0 - 11)/2, (s1 - s0 - 11)/2, t1 - t0 - 4, 18, 1, false, Math.PI/2, Math.PI), mat(0x8e959c)); c.rotation.x = Math.PI/2; c.scale.z = .3; c.position.set(...P3(s0 + 9 + (s1 - s0 - 11)/2, (t0 + t1)/2, G + H - .2)); grp.add(c); }   // the grey metal barrel roof
+    { const m = std(0x5fa08a, .2, .3); m.transparent = true; m.opacity = .85; const c = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 6, 16, 1, false, 0, Math.PI), m); c.rotation.z = Math.PI/2; c.scale.x = .6; c.position.set(...P3(s0 + 4.6, (t0 + t1)/2, G + H - .1)); grp.add(c); } }   // (the green glass skylight over the atrium)
   g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };

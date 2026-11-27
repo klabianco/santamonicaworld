@@ -8340,7 +8340,8 @@ const BLOCK1300 = [
   { side: -1, s: 641.2, t0: -564.0, t1: -548.2, h: 10.9, c: 0xa08770, name: 'BN' },
   { side: -1, s: 641.0, t0: -476.0, t1: -469.4, h: 7.2, ht: 7.2, c: 0x222428, name: '1340' },
   { side: -1, s: 641.0, t0: -469.4, t1: -463.2, h: 7.0, c: 0xe4e5e3, name: '1340A' },
-  { side: -1, s: 641.0, t0: -463.4, t1: -457.2, h: 7.6, ht: 7.6, c: 0xcfcfcb, name: '1342' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
+  { side: -1, s: 641.0, t0: -463.4, t1: -457.2, h: 7.6, ht: 7.6, c: 0xcfcfcb, name: '1342' },
+  { side: 1, s: 665.4, t0: -564.0, t1: -547.6, h: 7.4, ht: 7.4, c: 0xf0f0ec, name: '1315' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
 function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, landH(sc, tc) + (y0 + y1)/2)); grp.add(me); return me; };
   // f: a slab on a facade (side 1 sticks out toward smaller s, side -1 toward bigger s); out: how far in front of the wall
@@ -8660,6 +8661,27 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     for (const [a, b] of [[B.t0, B.t0 + .5], [B.t1 - .5, B.t1]]) f(B, a, b, 4.7, B.h, 0xd3d2cd, .18);
     f(B, B.t0 + .5, B.t1 - .5, 4.7, 5.4, 0x26292c, .12); f(B, B.t0 + .5, B.t1 - .5, 5.4, B.h - .4, 0x5d6f7c, .08); for (let t = B.t0 + .5 + 1.3; t < B.t1 - .6; t += 1.3) f(B, t, t + .05, 5.4, B.h - .4, 0x3a3f44, .11);
     f(B, B.t0 + .5, B.t1 - .5, 6.4, 6.45, 0x3a3f44, .11); f(B, B.t0, B.t1, B.h - .4, B.h + .05, 0xd3d2cd, .2); }
+  /* 1315 (1991; Holey Moley since Dec 2024), from the CBRE leasing brochure photos (2025-26): all white, stepping back like a wedding cake. The street
+     floor and a plain band with the HOLEY MOLEY sign, then a terrace under a big white frame with teal glass rails, yellow umbrellas and an angled
+     slatted pergola, a set-back floor with a thin rail, and the narrow top with dark glass and the big round-arched window rising over the roof */
+  { const B = L('1315'), W = 0xf0f0ec, G0 = gl(B), a = B.t0, b = B.t1, sE = 710.8, TG = std(0x5a9db5, .1, .2); TG.transparent = true; TG.opacity = .55;
+    f(B, a, b, 4.7, 5.0, 0xd8dada, .2); sign(B, a + 5.5, 6.25, 6.4, 1.15, 'HOLEY MOLEY', '#f0f0ec', '#e8412c', 150, .14); sign(B, a + 5.5, 5.35, 2.6, .4, 'GOLF CLUB', '#f0f0ec', '#2a6fc4', 120, .14);
+    { const cn = bx(B.s - 1.2, B.s, b - 3.6, b - .6, 4.65, 5.2, 0x4a4f55, G0); sign(B, b - 2.1, 4.92, 2.8, .4, '• 1315 3RD •', '#4a4f55', '#ffffff', 150, 1.22); }   // (the charcoal box canopy over the office lobby door)
+    const sT = B.s + 3;   // the terrace: the floor sets back 3 m behind a glass rail, under a white frame
+    bx(sT, sE, a + .3, b - .3, 7.4, 10.9, W, G0); win1315(sT, a + 1, b - 1, 7.9, 10.4);
+    const rl = new THREE.Mesh(new THREE.BoxGeometry(.06, 1.1, b - a - 1.2), TG); rl.position.set(...P3(B.s + .15, (a + b)/2, G0 + 7.95)); grp.add(rl); bx(B.s + .05, B.s + .25, a + .6, b - .6, 8.5, 8.56, 0xd0d4d4, G0);
+    for (const t of [a, b - .6]) bx(B.s, sT, t, t + .6, 7.4, 11.4, W, G0); bx(B.s - .1, sT + .2, a, b, 10.9, 11.4, W, G0);   // (the big white frame)
+    for (let k = 0; k < 9; k++){ const t = a + 1.2 + k*1.6, sl = bx(B.s + .5, sT - .1, t, t + .12, 10.6, 10.75, 0xf6f6f3, G0); sl.rotation.y = .35; }   // the slatted pergola, set at an angle
+    for (const t of [a + 4, a + 10.5]){ at(new THREE.ConeGeometry(1.4, .6, 10), 0xf2c418, B.s + 1.6, t, G0 + 9.9, 0); bx(B.s + 1.57, B.s + 1.63, t - .03, t + .03, 7.4, 9.7, 0xdddddd, G0); }   // (yellow umbrellas)
+    const s4 = B.s + 4.4; bx(s4, sE, a, b, 11.4, 14.6, W, G0); win1315(s4, a + 1, b - 1, 11.9, 14.1); bx(sT - .1, sT, a + .5, b - .5, 11.4, 12.4, 0xf6f6f3, G0); bx(sT - .15, sT + .05, a + .5, b - .5, 12.4, 12.5, 0xf6f6f3, G0);   // the floor above, a thin white rail at its balcony
+    const s5 = B.s + 6.5, ta = a + 3.6, tb = b - 3.6, tc = (ta + tb)/2; bx(s5 + 4, sE, a + .5, b - .5, 14.6, 17.6, W, G0); bx(s5, s5 + 14, ta, tb, 14.6, 19.0, W, G0);   // the narrow top
+    bx(s5 - .06, s5, tc - 2.4, tc + 2.4, 14.9, 18.8, 0x2e3a45, G0); for (const t of [tc - 1.2, tc, tc + 1.2]) bx(s5 - .14, s5, t - .05, t + .05, 14.9, 18.8, 0xffffff, G0); bx(s5 - .14, s5, tc - 2.4, tc + 2.4, 16.8, 16.9, 0xffffff, G0);
+    for (const t of [ta + .7, tb - .7]) bx(s5 - .06, s5, t - .4, t + .4, 16.3, 17.1, 0x2e3a45, G0);   // (small square windows either side)
+    const ar = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.1, 3, 20, 1, false, 0, Math.PI), mat(W)); ar.rotation.z = Math.PI/2; ar.rotation.x = Math.PI/2; ar.position.set(...P3(s5 + 1.5, tc, G0 + 19.0)); grp.add(ar);   // the round-topped gable over the arched window
+    const ag = new THREE.Mesh(new THREE.CircleGeometry(2.5, 20, 0, Math.PI), mat(0x2e3a45)); ag.rotation.y = -Math.PI/2; ag.position.set(...P3(s5 - .03, tc, G0 + 19.0)); grp.add(ag);
+    const af = new THREE.Mesh(new THREE.TorusGeometry(2.55, .1, 6, 20, Math.PI), mat(0xffffff)); af.rotation.y = -Math.PI/2; af.position.set(...P3(s5 - .05, tc, G0 + 19.0)); grp.add(af);
+    for (let k = 1; k < 4; k++){ const sp = bx(s5 - .1, s5 - .04, tc - .04, tc + .04, 19.0, 21.5, 0xffffff, G0); sp.geometry.translate(0, 1.25, 0); sp.position.y -= 1.25; sp.rotation.x = (k - 2)*.75; }   // (its glazing bars)
+    function win1315(sw, t0, t1, y0, y1){ bx(sw - .06, sw, t0, t1, y0, y1, 0x2e3a45, G0); for (let t = t0 + 1.6; t < t1 - .3; t += 1.6) bx(sw - .12, sw, t - .05, t + .05, y0, y1, 0xffffff, G0); } }
   g.add(grp); mergeStatic(grp); }
 /* 3rd St, the Wilshire end of the 1200 block, from photos (Wikimedia Commons, Sept 2017 and July 2022): the 1935 streamline corner at 1201
    (the old Barnes & Noble, its round corner, speed lines and the steel lattice sign tower on the tall block behind), the Santa Monica Art

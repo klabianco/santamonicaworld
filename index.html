@@ -8634,6 +8634,19 @@ function buildBlock1200M(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     fI(B, B.t0 + 2, B.t1 - 2, 4.55, 4.9, 0x4a3324, 1.6); for (let t = B.t0 + 2.2; t < B.t1 - 2; t += 1.2) fI(B, t, t + .2, 4.4, 4.55, 0x3a2818, 1.6);
     sI(B, (B.t0 + B.t1)/2, 5.25, 4.6, .55, 'CASA MARTIN', '#edebe6', '#c8202a', 150, .14);
     for (const t of [B.t0 + 1.4, B.t1 - 1.4]){ fI(B, t - .18, t + .18, 2.6, 3.2, 0x111111, .35); fI(B, t - .1, t + .1, 2.7, 3.1, 0xffe2a0, .37); } }
+  { const B = L('301AZ'), G0 = gl(B), W = 0xecebe6, sE = 711.2, tA = B.t1, TV = 0xd5c6ac;   // 301 Arizona (1991; the XYZ3 flyer 2026 and a storefront photo Sept 2026)
+    for (const t of [B.t0 + .2, B.t0 + 5.2, B.t0 + 9.6]) fI(B, t, t + .9, 0, 5.0, TV, .15);   // travertine piers and tall glass; white metal panels round the cut corner
+    bx(B.s - .1, B.s + 2.3, tA - 2.3, tA + .1, 0, 5.0, 0xf2f2f0, G0);
+    const bb = labelTex('SANTA MONICA FARMERS MARKETS', '#f3efe4', '#2a5f9e', 1024, 290, 56);   // the big billboard wrapping the corner over the shops, its silver soffit under it
+    const pb = new THREE.Mesh(new THREE.PlaneGeometry(12, 3.4), new THREE.MeshBasicMaterial({ map: bb })); pb.position.set(...P3(B.s - .75, tA - 7.6, G0 + 7.0)); pb.rotation.y = -Math.PI/2; grp.add(pb);
+    const pa = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.4), new THREE.MeshBasicMaterial({ map: bb })); pa.position.set(...P3(B.s + 5.4, tA + .75, G0 + 7.0)); grp.add(pa);
+    bx(B.s - .7, B.s - .6, tA - 13.6, tA + .7, 5.3, 8.7, 0x2a2d30, G0); bx(B.s - .7, B.s + 10.4, tA + .6, tA + .7, 5.3, 8.7, 0x2a2d30, G0);
+    bx(B.s - .9, B.s + .1, tA - 13.6, tA + .9, 5.0, 5.3, 0xc4c8cc, G0); bx(B.s - .9, B.s + 10.4, tA - .1, tA + .9, 5.0, 5.3, 0xc4c8cc, G0);
+    for (let k = 0; k < 7; k++){ const s0 = B.s + 11.5 + k*4.6; for (const y of [5.6, 9.9, 13.6]) bx(s0, s0 + 3.2, tA, tA + .08, y, y + 2.4, 0x2a3a46, G0); }   // the Arizona side: rows of dark windows
+    for (const y of [5.3, 9.6, 13.3]){ const c = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 1.1, 16, 1, false, -Math.PI/2, Math.PI), mat(0xf6f6f4)); c.position.set(...P3(sE - 5, tA, G0 + y + .55)); grp.add(c); }   // (the stacked round white balcony fronts)
+    const s3 = B.s + 3; bx(s3, sE, B.t0, tA, 9.4, 13.1, W, G0); bx(s3 - .1, s3, B.t0 + .4, tA - .4, 10.0, 12.6, 0x2a3a46, G0);   // the third floor set back behind a terrace, the penthouse over the front half
+    const s4 = B.s + 6; bx(s4, 690, B.t0, tA, 13.1, 16.8, W, G0); bx(s4 - .1, s4, B.t0 + .4, tA - .4, 13.6, 16.3, 0x2a3a46, G0); bx(690, sE, B.t0, tA, 13.1, 13.5, 0xd8d6d0, G0);
+    for (const [sx, y] of [[B.s + .1, 9.4], [s3 + .1, 13.1]]){ bx(sx, sx + .06, B.t0 + .2, tA - .3, y + 1.0, y + 1.08, 0xf6f6f4, G0); for (let t = B.t0 + .3; t < tA - .3; t += 1.2) bx(sx, sx + .05, t, t + .05, y, y + 1.05, 0xf6f6f4, G0); } }   // (plain white railings)
   function fo(B, d){ return B.s + d; }
   g.add(grp); mergeStatic(grp); }
 function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
@@ -8764,7 +8777,8 @@ const BLOCK1200 = [
   { side: 1, s: 663.6, t0: -704.4, t1: -695.0, h: 6.6, ht: 6.6, c: 0xe9e6de, name: '1237' },
   { side: 1, s: 664.2, t0: -695.2, t1: -686.4, h: 6.4, ht: 6.4, c: 0x6f7c95, name: '1241' },
   { side: 1, s: 664.2, t0: -686.4, t1: -663.6, h: 7.4, ht: 7.4, c: 0x1c1c1c, name: '1247' },
-  { side: 1, s: 664.0, t0: -663.8, t1: -648.2, h: 9.4, ht: 9.4, c: 0xedebe6, name: '1251' } ];
+  { side: 1, s: 664.0, t0: -663.8, t1: -648.2, h: 9.4, ht: 9.4, c: 0xedebe6, name: '1251' },
+  { side: 1, s: 665.4, t0: -648.4, t1: -634.0, h: 9.4, ht: 9.4, c: 0xecebe6, name: '301AZ', round: [665.4, -634.0, 2.2] } ];
 const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
   const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
   for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }

@@ -8761,7 +8761,9 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
       at(new THREE.TorusGeometry(r + .09, .12, 6, 18, Math.PI), C2, fo(B, .14), c, gl(B) + 9.7, rot(B)); f(B, a + .35, a + bw - .35, 7.9, 8.0, 0xf2ede0, .14); f(B, c - .04, c + .04, 6.2, 9.7 + r, 0xf2ede0, .14);   // (moulding, transom and mullion)
       f(B, a + .2, a + bw - .2, 5.9, 6.2, C2, .18); }   // (the sill)
     f(B, B.t0, B.t1, 11.9, 13.6, C, .2); for (let t = B.t0 + .5; t < B.t1 - .3; t += 1.1) f(B, t, t + .5, 12.3, 13.2, C2, .25);   // the frieze: a run of raised panels
-    f(B, B.t0 - .1, B.t1 + .1, 13.6, 14.0, C2, .45); f(B, B.t0, B.t1, 14.0, B.h + .1, C, .2); }
+    f(B, B.t0 - .1, B.t1 + .1, 13.6, 14.0, C2, .45); f(B, B.t0, B.t1, 14.0, B.h + .1, C, .2);
+    for (let k = 0; k < 3; k++){ const t = B.t0 + .6 + k*2.5; for (let j = 0; j < 5; j++) f(B, t + j*.42, t + j*.42 + .42, 3.05, 3.5, j % 2 ? 0xf4f4f0 : 0x2f6b46, .9); }   // Barney's Beanery downstairs (storefront photo 2024-26): green and white awnings,
+    for (const [a, b] of [[B.t0 + .4, -454.4], [-451.6, B.t0 + 7.4]]){ for (let t = a; t < b - .3; t += .5) f(B, t, t + .36, 0, .95, 0x8a6a4c, .06, 2.6); f(B, a, b, .95, 1.02, 0x5a4636, .1, 2.58); } }   // (a gap in it at the door)   // and its patio behind a low wood fence
   { const B = L('Junipher'), C = B.c, TC = 0xe3d3b0, sE = 711.2, ys = [[5.9, 7.9], [8.9, 10.9], [11.9, 13.5]];
     const bays = (u0, u1, nb, slab, pt) => { const pw = .6, bw = (u1 - u0 - (nb + 1)*pw)/nb;   // pilasters and windows in pairs, diamond tiles under each window
       slab(u0, u1, 5.5, 13.9, C, .05); slab(u0, u1, 4.7, 5.5, TC, .22); for (let k = 0; k < 4; k++) slab(u0 + .3 + k*(u1 - u0 - .6)/4, u0 + .3 + k*(u1 - u0 - .6)/4 + .5, 5.0, 5.2, 0xcdb98e, .26);   // (the frieze over the ground floor)

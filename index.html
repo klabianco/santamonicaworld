@@ -8335,7 +8335,12 @@ const BLOCK1300 = [
   { side: 1, s: 665.2, t0: -442.0, t1: -426.8, h: 15.3, c: 0xf0e8d3, name: 'Junipher' },
   { side: -1, s: 641.6, t0: -488.0, t1: -475.4, h: 9.2, c: 0xe9e3d4, name: 'Grant' },
   { side: -1, s: 640.6, t0: -457.6, t1: -445.2, h: 7.7, c: 0xe4ddcc, name: '1354' },
-  { side: -1, s: 642.6, t0: -445.8, t1: -425.2, h: 11, c: 0xd8cbb0, name: 'Bank of Italy' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
+  { side: -1, s: 642.6, t0: -445.8, t1: -425.2, h: 11, c: 0xd8cbb0, name: 'Bank of Italy' },
+  { side: -1, s: 641.2, t0: -579.6, t1: -564.0, h: 8.3, c: 0xc2bbb6, name: '1312' },
+  { side: -1, s: 641.2, t0: -564.0, t1: -548.2, h: 10.9, c: 0xa08770, name: 'BN' },
+  { side: -1, s: 641.0, t0: -476.0, t1: -469.4, h: 7.2, ht: 7.2, c: 0x222428, name: '1340' },
+  { side: -1, s: 641.0, t0: -469.4, t1: -463.2, h: 7.0, c: 0xe4e5e3, name: '1340A' },
+  { side: -1, s: 641.0, t0: -463.4, t1: -457.2, h: 7.6, ht: 7.6, c: 0xcfcfcb, name: '1342' } ];   // (AMC Santa Monica 7, 1310: see buildAMC7)
 function buildBlock1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, landH(sc, tc) + (y0 + y1)/2)); grp.add(me); return me; };
   // f: a slab on a facade (side 1 sticks out toward smaller s, side -1 toward bigger s); out: how far in front of the wall
@@ -8629,6 +8634,32 @@ function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     const sun = (t, ry, s) => { const y = gl(B) + 5.6; at(new THREE.CircleGeometry(1.5, 20, 0, Math.PI), 0xb98f5c, s, t, y, ry); for (let k = 1; k < 8; k++){ const r = at(new THREE.BoxGeometry(.07, 1.4, .05), 0xe8c98e, s, t, y, ry); r.rotateZ(-Math.PI/2 + k*Math.PI/8); r.translateY(.7); }
       at(new THREE.TorusGeometry(1.5, .08, 6, 20, Math.PI), 0xa57a48, s, t, y, ry); };
     sun(B.t0 + 3.5, rot(B), fo(B, .16)); sun(B.t0 + 8.5, rot(B), fo(B, .16)); }
+  /* the ocean side's south end, from photos: Barnes & Noble (1318, SMDP Aug 2024 and the 'coming soon' hoarding), the Coffee Bean (1312, Commons
+     'AMC Santa Monica 7' 2020, edge only), and 1340 (SMDP 2021, JLL flyer 2020). The game's shops sit one building along from the real ones here
+     (shops can't be narrower than 6.6 m), so the white bay with the canopy is drawn where Wonders of the World's shop is, and the glass front where Lids is */
+  { const B = L('BN'), BR = 0x8f7863, ST = 0xcdbfa6, CP = 0xb5afa5, FR = 0x2a2d30, GB = 0x3e5f7a;
+    for (const [a, b] of [[B.t0, B.t0 + .7], [B.t1 - .7, B.t1]]) f(B, a, b, 4.7, B.h, CP, .2);   // the smooth grey concrete corner piers
+    f(B, B.t0 + .7, B.t1 - .7, 4.7, 5.5, FR, .1); f(B, B.t0 + .9, B.t1 - .9, 4.78, 5.42, GB, .12); for (let t = B.t0 + .9; t < B.t1 - 1; t += 1.6) f(B, t, t + .06, 4.78, 5.42, FR, .14);   // (the clerestory glass over the sign)
+    f(B, B.t0 + .7, B.t1 - .7, 5.6, 6.3, ST, .14); for (let t = B.t0 + 1, k = 0; t < B.t1 - 1.2; t += .7, k++){ f(B, t, t + .5, k % 2 ? 5.75 : 5.9, k % 2 ? 6.15 : 6.0, 0xb9aa8e, .19); f(B, t + .2, t + .3, 5.7, 6.2, 0xbfb196, .17); }   // the cast-stone frieze with its geometric relief
+    const n = 6, w = (B.t1 - B.t0 - 1.4)/n;
+    for (let k = 0; k < n; k++){ const a = B.t0 + .7 + k*w + .35, b = a + w - .7; f(B, a - .08, b + .08, 6.4, 9.0, FR, .1); f(B, a, b, 6.48, 8.92, GB, .12); f(B, (a + b)/2 - .04, (a + b)/2 + .04, 6.48, 8.92, FR, .14); f(B, a, b, 7.3, 7.36, FR, .14); f(B, a - .15, b + .15, 6.3, 6.42, BR, .16); }   // six big windows, dark frames, blue glass
+    f(B, B.t0 + 1, B.t0 + 2.4, 9.2, 10.2, ST, .14); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) f(B, B.t0 + 1.12 + i*.44, B.t0 + 1.42 + i*.44, 9.3 + j*.32, 9.5 + j*.32, 0xb9aa8e, .18);   // (the square carved panel up in the corner)
+    f(B, B.t0 + .7, B.t1 - .7, B.h - .7, B.h - .55, ST, .16); f(B, B.t0, B.t1, B.h - .25, B.h + .05, BR, .22); }   // (a stone line and the brick cornice)
+  { const B = L('1312');   // the Coffee Bean: pale grey stucco, a broad charcoal band near the top, a band of wood slats over the shop (where the slats are is a guess)
+    f(B, B.t0, B.t1, 5.9, 7.3, 0x2b2b2b, .15); f(B, B.t0, B.t1, B.h - .2, B.h + .05, 0xb3aca7, .2);
+    for (let y = 4.75; y < 5.75; y += .16) f(B, B.t0 + .5, B.t1 - .5, y, y + .12, y % .32 < .16 ? 0x8a6a4c : 0x7d5f43, .08); }
+  { const B = L('1340');   // Surrender Tattoo's flat matte black front with 1340 in small white numbers and a pendant lamp out front
+    f(B, B.t0, B.t1, 4.7, B.h, 0x1f2226, .06); f(B, B.t0, B.t1, 5.9, 5.94, 0x2b2f34, .08);
+    sign(B, B.t1 - .7, 5.05, .7, .28, '1340', '#1f2226', '#ffffff', 150, .09);
+    const lt = (B.t0 + B.t1)/2 + 1.2; f(B, lt - .02, lt + .02, 5.3, 6.4, 0x111111, .04, .9); at(new THREE.SphereGeometry(.16, 10, 8), 0xfff1c8, fo(B, .92), lt, gl(B) + 5.15, 0); }
+  { const B = L('1340A'), PN = 0xe4e5e3, J = 0xc9cbca;   // the white bay: big square stone panels, a deep rounded white canopy box over the shop, light stone pilasters
+    for (const [a, b] of [[B.t0, B.t0 + .45], [B.t1 - .45, B.t1]]) f(B, a, b, 4.7, B.h, 0xd8d6d0, .14);
+    for (let y = 5.9; y < B.h; y += 1.3) f(B, B.t0 + .45, B.t1 - .45, y, y + .03, J, .1); for (let t = B.t0 + .45 + 1.33; t < B.t1 - .6; t += 1.33) f(B, t, t + .03, 5.3, B.h, J, .1);
+    f(B, B.t0 + .45, B.t1 - .45, 4.7, 5.3, 0xf4f4f2, .55); at(new THREE.CylinderGeometry(.3, .3, B.t1 - B.t0 - .9, 14), 0xf4f4f2, fo(B, .55), (B.t0 + B.t1)/2, gl(B) + 5.0, 0).rotation.x = Math.PI/2; }
+  { const B = L('1342');   // Lids' building: light grey stone pilasters, a dark fascia, and blue-grey glass across the upper floor (from the edge of the 2020 flyer; the rest is a guess)
+    for (const [a, b] of [[B.t0, B.t0 + .5], [B.t1 - .5, B.t1]]) f(B, a, b, 4.7, B.h, 0xd3d2cd, .18);
+    f(B, B.t0 + .5, B.t1 - .5, 4.7, 5.4, 0x26292c, .12); f(B, B.t0 + .5, B.t1 - .5, 5.4, B.h - .4, 0x5d6f7c, .08); for (let t = B.t0 + .5 + 1.3; t < B.t1 - .6; t += 1.3) f(B, t, t + .05, 5.4, B.h - .4, 0x3a3f44, .11);
+    f(B, B.t0 + .5, B.t1 - .5, 6.4, 6.45, 0x3a3f44, .11); f(B, B.t0, B.t1, B.h - .4, B.h + .05, 0xd3d2cd, .2); }
   g.add(grp); mergeStatic(grp); }
 /* 3rd St, the Wilshire end of the 1200 block, from photos (Wikimedia Commons, Sept 2017 and July 2022): the 1935 streamline corner at 1201
    (the old Barnes & Noble, its round corner, speed lines and the steel lattice sign tower on the tall block behind), the Santa Monica Art

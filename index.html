@@ -8611,6 +8611,29 @@ function buildBlock1200M(g, P3){ const grp = new THREE.Group(), M = {}, mat = (h
     for (let t = B.t0 + .2, k = 0; t < B.t1 - .1; t += .35, k++) f(B, t, t + .35, B.h - .7, B.h + .1, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // (black and white stripes along the top)
     for (const t of [B.t0 + .3, B.t0 + 5.1, B.t1 - 5.4, B.t1 - .7]) for (let y = 0, k = 0; y < 4.6; y += .4, k++) f(B, t, t + .4, y, y + .4, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // the striped piers
     f(B, B.t0 + .3, B.t1 - .3, 4.62, 4.72, BK, .9); }
+  // ---- the inland side's middle (photos Feb 2024 - Nov 2026): out is toward smaller s ----
+  const fI = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(B.s - out - dep, B.s - out, t0, t1, y0, y1, hex, gl(B));
+  const sI = (B, tc, y, w, h, text, bg, fg, size, out = .16) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(B.s - out, tc, gl(B) + y)); sg.rotation.y = -Math.PI/2; grp.add(sg); };
+  { const B = L('1225'); for (let y = 5.3; y < B.h; y += .9) fI(B, B.t0, B.t1, y, y + .03, 0xb8ad94, .03); for (const t of [B.t0 + 3, B.t1 - 3]) fI(B, t, t + .08, 4.7, B.h, 0xa7a9ab, .06); fI(B, B.t0, B.t1, B.h - .15, B.h + .05, 0xcdbf9f, .14); }   // limestone-look panels, two thin metal strips
+  { const B = L('1227'); for (let k = 0; k < 4; k++){ const t = B.t0 + 1 + k*(B.t1 - B.t0 - 2)/3; fI(B, t - .25, t + .25, 4.7, B.h + 1.3, 0xd3d6d8, .5); }   // the 1938 front: four square fins rising over the parapet, a white box canopy
+    fI(B, B.t0 + 1.6, B.t1 - 1.6, 4.65, 5.3, 0xf6f6f4, 1.1); }
+  { const B = L('1231');   // PicklePop: ribbed silver siding, a recessed glass balcony across the middle upstairs, a dark red band, a thin metal canopy
+    for (let y = 4.9; y < B.h; y += .25) fI(B, B.t0, B.t1, y, y + .1, 0xa9adb1, .05);
+    fI(B, B.t0 + 4, B.t1 - 4, 5.5, 8.9, 0x2a3640, .02, -.6); fI(B, B.t0 + 3.6, B.t1 - 3.6, 5.3, 5.5, 0xb9bdc1, 1.2); fI(B, B.t0 + 4, B.t1 - 4, 5.5, 6.6, 0x9fc3cc, .05, .05); fI(B, B.t0 + 4, B.t1 - 4, 6.6, 6.66, 0x8a8f93, .08, .05);
+    fI(B, B.t0, B.t1, 4.7, 5.3, 0x9c3c42, .1); fI(B, B.t0 + 1, B.t1 - 1, 4.62, 4.7, 0x8d9196, 1); }
+  { const B = L('1237'); fI(B, B.t0 + .3, B.t1 - .3, 4.7, 6.2, 0xf2c232, .1); fI(B, B.t0, B.t0 + .3, 0, B.h, 0x1f3a6e, .2); fI(B, B.t1 - .3, B.t1, 0, B.h, 0x1f3a6e, .2);   // Ugo: the yellow board band, the navy frame and patio rail
+    sI(B, (B.t0 + B.t1)/2, 5.45, 3.2, 1.1, 'ugo', '#f2c232', '#1f3a6e', 260, .14);
+    for (let t = B.t0 + .4; t < B.t1 - .3; t += .3) fI(B, t, t + .04, 0, 1, 0x1f3a6e, .04, 1.4); fI(B, B.t0 + .4, B.t1 - .4, .95, 1.02, 0x1f3a6e, .06, 1.4); }
+  { const B = L('1241'), m = B.t0;   // 1241's slate blue panels in a thick frame (the game's Temen shop lands in Ugo's building, so its stripped white front isn't drawn)
+    fI(B, m, B.t1, B.h - .6, B.h, 0x5c6880, .3); fI(B, m, m + .4, 0, B.h, 0x5c6880, .3); fI(B, B.t1 - .4, B.t1, 0, B.h, 0x5c6880, .3); }
+  { const B = L('1247'), m = B.t0 + 7.4;   // 1245: narrow and white with a tall plain sign band; 1247: black boards with thin gold strips
+    fI(B, B.t0, m, 4.7, B.h, 0xf3f3f3, .1); fI(B, B.t0, B.t0 + .5, 0, B.h, 0xf3f3f3, .2); fI(B, m - .5, m, 0, B.h, 0xf3f3f3, .2);
+    for (let y = 4.9; y < B.h; y += .32) fI(B, m, B.t1, y, y + .26, 0x222222, .06); for (const y of [5.3, 6.4]) fI(B, m + 1, B.t1 - 1, y, y + .05, 0xc8a44a, .09); fI(B, m, B.t1, 0, .4, 0x1c1c1c, .2); }
+  { const B = L('1251');   // Casa Martin: white stucco, three square windows upstairs, a heavy dark-wood beam awning with red letters, black lanterns
+    for (let k = 0; k < 3; k++){ const t = B.t0 + 3.2 + k*(B.t1 - B.t0 - 6.4)/2; fI(B, t - 1.1, t + 1.1, 6.0, 8.2, 0x6b6e70, .1); fI(B, t - .9, t + .9, 6.2, 8.0, 0x2c3a44, .12); }
+    fI(B, B.t0 + 2, B.t1 - 2, 4.55, 4.9, 0x4a3324, 1.6); for (let t = B.t0 + 2.2; t < B.t1 - 2; t += 1.2) fI(B, t, t + .2, 4.4, 4.55, 0x3a2818, 1.6);
+    sI(B, (B.t0 + B.t1)/2, 5.25, 4.6, .55, 'CASA MARTIN', '#edebe6', '#c8202a', 150, .14);
+    for (const t of [B.t0 + 1.4, B.t1 - 1.4]){ fI(B, t - .18, t + .18, 2.6, 3.2, 0x111111, .35); fI(B, t - .1, t + .1, 2.7, 3.1, 0xffe2a0, .37); } }
   function fo(B, d){ return B.s + d; }
   g.add(grp); mergeStatic(grp); }
 function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
@@ -8734,7 +8757,14 @@ const BLOCK1200 = [
   { side: -1, s: 641.0, t0: -740.4, t1: -725.2, h: 9.6, ht: 9.6, c: 0xe8e1d0, name: '1228' },
   { side: -1, s: 641.2, t0: -725.2, t1: -694.8, h: 10.2, ht: 10.2, c: 0xbfa684, name: '1232' },
   { side: -1, s: 641.2, t0: -695.0, t1: -679.8, h: 8.8, c: 0xf1cbd2, name: '1240' },
-  { side: -1, s: 641.2, t0: -680.0, t1: -664.8, h: 9.0, c: 0xe4dccb, name: '1244' } ];
+  { side: -1, s: 641.2, t0: -680.0, t1: -664.8, h: 9.0, c: 0xe4dccb, name: '1244' },
+  { side: 1, s: 664.8, t0: -742.0, t1: -732.6, h: 6.2, ht: 6.2, c: 0xd6cbb0, name: '1225' },
+  { side: 1, s: 664.4, t0: -733.0, t1: -725.2, h: 7.4, ht: 7.4, c: 0xc9ccce, name: '1227' },
+  { side: 1, s: 665.6, t0: -725.2, t1: -703.8, h: 9.6, ht: 9.6, c: 0xb9bdc1, name: '1231' },
+  { side: 1, s: 663.6, t0: -704.4, t1: -695.0, h: 6.6, ht: 6.6, c: 0xe9e6de, name: '1237' },
+  { side: 1, s: 664.2, t0: -695.2, t1: -686.4, h: 6.4, ht: 6.4, c: 0x6f7c95, name: '1241' },
+  { side: 1, s: 664.2, t0: -686.4, t1: -663.6, h: 7.4, ht: 7.4, c: 0x1c1c1c, name: '1247' },
+  { side: 1, s: 664.0, t0: -663.8, t1: -648.2, h: 9.4, ht: 9.4, c: 0xedebe6, name: '1251' } ];
 const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
   const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
   for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }

@@ -6901,7 +6901,7 @@ function buildCoast(){
     for (const k of [-1.6, -.5, .6, 1.7]) bx(2.6, 3, k - .3, k + .3, .9, 1.9, std([0xfdd835, 0xe53935, 0x1e88e5, 0x43a047][(k*10|0) % 4 & 3], .5));   // fins and masks on the back wall
     const sgn = new THREE.Mesh(new THREE.PlaneGeometry(4, .7), new THREE.MeshBasicMaterial({ map: labelTex('DIVE SHOP', '#1f6b8a', '#ffffff', 512, 90, 64) })); sgn.position.set(...P3(ds - .45, dt, gh + 3.25)); sgn.rotation.y = -Math.PI/2; hut.add(sgn);
     g.add(hut); }
-  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildArizonaCorner(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildCriterion(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildOcean1300(g, P3); buildKeller(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
+  buildBooths(g, P3); buildBlock1100(g, P3); buildBlock1200(g, P3); buildBlock1200M(g, P3); buildArizonaCorner(g, P3); buildBlock1300(g, P3); buildBlock1300S(g, P3); buildCriterion(g, P3); buildAMC7(g, P3); buildBlock1400(g, P3); buildOcean1300(g, P3); buildKeller(g, P3); buildSMP(g, P3); buildBikeRacks(g, P3); buildPierTown(g, P3); buildParkRides(g, P3); buildRideGates(g, P3); buildCarousel(g, P3); buildFreewayFence(g, P3); buildPierRailings(g, P3); buildBus(g); buildFairmont(g, P3); (SOUTHP.on ? (buildVenice(g, P3), buildVPier(g, P3)) : buildSouth(g)); buildAnnenberg(g, P3); buildLooks(g, P3); buildBergamot(g, P3); if (SOUTHP.box) buildEline(g, P3); buildStorefronts(g); buildPierLot(g, P3); buildTongva(g, P3);
   buildPacificPark(g, P3);
   // the 1941 neon arch at Ocean and Colorado: SANTA MONICA / YACHT HARBOR / SPORT FISHING · BOATING · CAFES
   { const arch = new THREE.Group(), blue = std(0x1b3f9c, .5), cream = std(0xf2c230, .6), span = 7.6, H = 5.8;
@@ -8576,6 +8576,43 @@ function buildCriterion(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
    three grooves, fluted piers, dentils, a curved parapet still reading W.T. GRANT), the 1930 Art Deco front at 1354 (a terra cotta frame
    round a sign panel, stepped piers, a chevron parapet) and the old Bank of Italy on the corner (1929, travertine slabs since 1964, with
    some Deco sunburst panels showing where slabs came off). */
+/* Promenade 1200 block, the ocean side's middle, from the storefront photos on thirdstreetoccupancy.com (Feb 2024 - Feb 2026): 1220 (Two Bit Circus
+   till 2024) in board-formed concrete with dark streaks, 1222 two floors of glass in a black steel grid by a cream pier, Outlandish (1228) in cream
+   stucco with a big shallow arch round its glass, the Museum of Illusions (1232) in tan panels with its bowed green glass front and pilasters,
+   Cabo Cantina (1240) in pink with thin blue strips and a thatched palm fringe, the slim white Deco tower with fins between it and Sephora, and
+   Sephora (1244): its grey-purple pixel band, a cream parapet topped with black and white stripes, striped piers and a thin black canopy */
+function buildBlock1200M(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1200.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2);
+  const bx = (s0, s1, t0, t1, y0, y1, hex, base, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, base + (y0 + y1)/2)); grp.add(me); return me; };
+  const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => bx(B.s + out, B.s + out + dep, t0, t1, y0, y1, hex, gl(B));   // (all on the ocean side: out is toward bigger s)
+  const GL = 0x2c3a44, BK = 0x1c1c1c;
+  { const B = L('1220'), m = -748;   // 1220: concrete with water streaks; 1222: the black grid of glass and the cream pier
+    for (let t = B.t0 + .6; t < m - .5; t += .9) f(B, t, t + .25 + (t*3 % .4), 5.2 + (t*7 % 1.5), B.h, 0x85837e, .03);
+    f(B, B.t0, m, B.h - .3, B.h + .05, 0x8e8c87, .15);
+    f(B, m, B.t1 - .7, 4.7, B.h, 0xe6e0d2, .05); f(B, m + .2, B.t1 - .9, 4.8, B.h - .6, 0x34444f, .1); for (let t = m + .2; t < B.t1 - .8; t += 1.45) f(B, t, t + .1, 4.8, B.h - .6, BK, .15); for (const y of [4.75, 7.3, B.h - .65]) f(B, m + .2, B.t1 - .9, y, y + .12, BK, .15);
+    f(B, B.t1 - .7, B.t1, 4.7, B.h + .2, 0xe6e0d2, .2); f(B, B.t1 - .8, B.t1 + .05, B.h + .2, B.h + .45, 0xd8d0be, .3); }
+  { const B = L('1228'), a = B.t0 + 1.4, b = B.t1 - 1.4, c = (a + b)/2, hw = (b - a)/2, ya = 5.0, sag = 2.6;   // Outlandish: the big shallow arch
+    f(B, B.t0, B.t1, B.h - .55, B.h - .1, 0xddd5c2, .45); f(B, B.t0, B.t1, 4.7, 5.0, 0xa9a496, .14);
+    f(B, a, b, ya, ya + 4.2, 0xd6cebb, .02); f(B, a + .5, b - .5, ya + .2, ya + 3.6, GL, .06); for (let k = 1; k < 6; k++) f(B, a + .5 + k*(b - a - 1)/6 - .04, a + .5 + k*(b - a - 1)/6 + .04, ya + .2, ya + 3.6, BK, .1);
+    const R = (hw*hw + sag*sag)/(2*sag); for (let k = 0; k <= 18; k++){ const t = a + k*(b - a)/18, y = ya + 1.6 + Math.sqrt(R*R - (t - c)**2) - (R - sag); f(B, t - .45, t + .45, y - .2, y + .25, 0xf0eadb, .2); f(B, t - .4, t + .4, ya + 3.6, y - .2, 0xe8e1d0, .08); } }
+  { const B = L('1232'), tc = (B.t0 + B.t1)/2, hw = 6.5, TN = 0xb39a78;   // the Museum of Illusions: tan panels, pilasters, the bowed green glass
+    for (let y = 5.9; y < B.h - .3; y += 1.4) f(B, B.t0, B.t1, y, y + .03, TN, .03); for (let t = B.t0 + 1.8; t < B.t1 - .5; t += 1.8) f(B, t, t + .03, 4.7, B.h, TN, .03);
+    for (const t of [B.t0 + .2, tc - hw - 1.4, tc + hw + .6, B.t1 - 1]){ f(B, t, t + .8, 4.7, B.h + .5, 0xc8b08e, .25); f(B, t - .1, t + .9, B.h + .5, B.h + .75, 0xd2bc9a, .35); }
+    f(B, B.t0, B.t1, B.h - .2, B.h + .1, 0xc8b08e, .2);
+    for (let k = 0; k < 10; k++){ const t = tc - hw + k*1.3, u = (t + .65 - tc)/hw, o = .9*(1 - u*u); f(B, t, t + 1.3, 5.0, 9.0, 0x5f8f80, .06, o); f(B, t - .03, t + .03, 5.0, 9.0, 0xdfe3e0, .1, o); for (const y of [6.3, 7.6]) f(B, t, t + 1.3, y, y + .06, 0xdfe3e0, .1, o); }
+    f(B, tc - hw - .3, tc + hw + .3, 4.65, 4.85, 0x9a9da0, 1.3); f(B, tc - hw - .2, tc + hw + .2, 8.95, 9.15, 0xd2bc9a, 1.0);
+    for (const t of [B.t0 + .6, B.t1 - .6]) bx(fo(B, .35), fo(B, .65), t - .15, t + .15, 3.3, 3.6, 0xfff3d0, gl(B)); }   // (round lamps on the piers)
+  { const B = L('1240');   // Cabo Cantina: pink stucco, thin blue strips, a fringe of thatch along the top
+    for (let t = B.t0 + 1.2; t < B.t1 - 1; t += 2.4) f(B, t, t + .12, 4.7, B.h - 1.2, 0x3b7fc4, .05);
+    f(B, B.t0, B.t1 - .2, B.h - 1.2, B.h - .3, 0xb08a4f, .35); for (let t = B.t0 + .1; t < B.t1 - .4; t += .35) f(B, t, t + .3, B.h - 1.45 - (t*13 % .3), B.h - 1.1, 0x9c7840, .3, .05); }
+  { const B = L('1244'), a = -681.2, b = -679.3;   // the slim white Deco tower with fins, rising over the roofs (the Khedr Building)
+    f(B, a, b, 4.7, 12.6, 0xf2f1ec, .5); for (const t of [a + .3, (a + b)/2, b - .3]) f(B, t - .07, t + .07, 5.5, 12.9, 0xf7f6f2, .3, .5); f(B, a + .2, b - .2, 12.6, 13.4, 0xf2f1ec, .4);
+    const P = 0x5b5262; f(B, B.t0 + .2, B.t1, 4.95, 7.6, P, .08); for (let i = 0; i < 70; i++){ const t = B.t0 + .4 + (i*7.31 % (B.t1 - B.t0 - .8)), y = 5.05 + (i*3.17 % 2.4); f(B, t, t + .3, y, y + .2, i % 3 ? 0x6c6274 : 0x4b4352, .1); }   // Sephora: the pixel tile band
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(5.2, .7), new THREE.MeshBasicMaterial({ map: labelTex('SEPHORA', '#5b5262', '#ffffff', 1024, 138, 110) })); sg.position.set(...P3(B.s + .14, (B.t0 + B.t1)/2 + .5, gl(B) + 6.3)); sg.rotation.y = Math.PI/2; grp.add(sg);
+    for (let t = B.t0 + .2, k = 0; t < B.t1 - .1; t += .35, k++) f(B, t, t + .35, B.h - .7, B.h + .1, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // (black and white stripes along the top)
+    for (const t of [B.t0 + .3, B.t0 + 5.1, B.t1 - 5.4, B.t1 - .7]) for (let y = 0, k = 0; y < 4.6; y += .4, k++) f(B, t, t + .4, y, y + .4, k % 2 ? 0xf4f4f2 : 0x1a1a1a, .14);   // the striped piers
+    f(B, B.t0 + .3, B.t1 - .3, 4.62, 4.72, BK, .9); }
+  function fo(B, d){ return B.s + d; }
+  g.add(grp); mergeStatic(grp); }
 function buildBlock1300S(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m)), L = n => BLOCK1300.find(b => b.name === n), gl = B => landH(B.s, (B.t0 + B.t1)/2), rot = B => B.side > 0 ? -Math.PI/2 : Math.PI/2;
   const bx = (s0, s1, t0, t1, y0, y1, hex, base) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), mat(hex)); const sc = (s0 + s1)/2, tc = (t0 + t1)/2; me.position.set(...P3(sc, tc, base + (y0 + y1)/2)); grp.add(me); return me; };
   const f = (B, t0, t1, y0, y1, hex, dep = .12, out = 0) => { const a = B.side > 0 ? B.s - out - dep : B.s + out; return bx(a, a + dep, t0, t1, y0, y1, hex, gl(B)); };
@@ -8692,7 +8729,12 @@ const BLOCK1200 = [
   { side: 1, s: 664.4, t0: -773.2, t1: -740.0, h: 7.9, c: 0x8e8f8a, name: 'museum' },
   { side: -1, s: 640.8, t0: -816.6, t1: -785.4, h: 11.4, c: 0xf2f1ec, name: 'reed', round: [640.8, -816.6, 4] },
   { side: -1, s: 641.2, t0: -650.2, t1: -634.0, h: 22.5, ht: 14.6, c: 0xe8e2d4, name: '225 Arizona' },
-  { side: -1, s: 641.2, t0: -664.8, t1: -649.8, h: 8.8, c: 0xf3f2ee, name: '1254' } ];
+  { side: -1, s: 641.2, t0: -664.8, t1: -649.8, h: 8.8, c: 0xf3f2ee, name: '1254' },
+  { side: -1, s: 641.0, t0: -755.8, t1: -740.4, h: 9.7, c: 0x9a9893, name: '1220' },
+  { side: -1, s: 641.0, t0: -740.4, t1: -725.2, h: 9.6, ht: 9.6, c: 0xe8e1d0, name: '1228' },
+  { side: -1, s: 641.2, t0: -725.2, t1: -694.8, h: 10.2, ht: 10.2, c: 0xbfa684, name: '1232' },
+  { side: -1, s: 641.2, t0: -695.0, t1: -679.8, h: 8.8, c: 0xf1cbd2, name: '1240' },
+  { side: -1, s: 641.2, t0: -680.0, t1: -664.8, h: 9.0, c: 0xe4dccb, name: '1244' } ];
 const roundCorner = (p, R) => { const [cs, ct, r] = R; let i = 0, d = 1e9; p.forEach((v, k) => { const e = Math.hypot(v[0] - cs, v[1] - ct); if (e < d){ d = e; i = k; } }); if (d > 2) return p;   // (swap the footprint's corner for a quarter circle)
   const P = p[i], A = p[(i + p.length - 1) % p.length], B = p[(i + 1) % p.length], u = n => { const L = Math.hypot(n[0] - P[0], n[1] - P[1]); return [(n[0] - P[0])/L, (n[1] - P[1])/L]; }, ua = u(A), ub = u(B), arc = [];
   for (let k = 0; k <= 8; k++){ const f = k/8, a = [P[0] + ua[0]*r, P[1] + ua[1]*r], b = [P[0] + ub[0]*r, P[1] + ub[1]*r]; arc.push([(1 - f)*(1 - f)*a[0] + 2*f*(1 - f)*P[0] + f*f*b[0], (1 - f)*(1 - f)*a[1] + 2*f*(1 - f)*P[1] + f*f*b[1]]); }
@@ -11041,7 +11083,7 @@ function buildBNFront(g, P3){ const sF = PROM.s0 + .06, t0 = -563.9, t1 = -548.3
 function buildPromenade(g, P3, at, instanceOf){
   buildBNFront(g, P3);
   // the real shops and restaurants (OpenStreetMap), each with its sign where it really is: glass shopfronts all along, awnings where they serve food, marquees at the two movie theaters
-  const BRAND = { 'Apple Store': ['#1d1d1f', '#f5f5f7', ' '], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'], 'For Lease': ['#e8e4dc', '#6a6a6a', 'FOR LEASE'], 'MINISO': ['#e60012', '#ffffff'], 'Wilson': ['#c8102e', '#ffffff'], 'Beyond Yoga': ['#f4efe6', '#3a3a3a'], 'Culto': ['#111111', '#ffffff'], 'Gacha & Catch': ['#ff3e8a', '#ffffff'], 'Holey Moley': ['#111111', '#ff4fa3', 'HOLEY MOLEY'], 'Vans': ['#111111', '#ffffff', 'VANS'], 'Uniqlo': ['#e60012', '#ffffff', 'UNIQLO'], 'JD Sports': ['#111111', '#ffffff', 'JD'], 'Oakley': ['#111111', '#ffffff', 'OAKLEY'], 'The Cube VR': ['#1a1036', '#7cf7ff', 'THE CUBE VR'], 'Santa Monica Art Museum': ['#f4efe6', '#111111'], 'Outlandish': ['#111111', '#ff5aa5', 'OUTLANDISH'], 'Wonders of the World': ['#2a1a4a', '#ffd23f'], 'Odd One Out': ['#ffcf3f', '#3a2a12', 'ODD ONE OUT'], 'Ugo Trattoria': ['#2e5d3a', '#f4efe2'], 'Museum of Illusions': ['#111111', '#ffffff', 'MUSEUM OF ILLUSIONS'], 'PicklePop': ['#ff5aa5', '#ffffff', 'PICKLEPOP'], 'Yogurtland': ['#e4007c', '#ffffff', 'yogurtland'], 'TMNT Pizzeria': ['#1f8a3b', '#ffffff', 'TMNT PIZZERIA'], 'El Husuba': ['#7a3e1d', '#f4efe2'], 'Ugo': ['#2e5d3a', '#f4efe2'],
+  const BRAND = { 'Apple Store': ['#1d1d1f', '#f5f5f7', ' '], 'Cabo Cantina': ['#c8202a', '#ffffff', 'CABO CANTINA'], 'H&M': ['#ffffff', '#e50010'], 'Zara': ['#111111', '#ffffff', 'ZARA'], 'Sephora': ['#111111', '#ffffff', 'SEPHORA'], 'Barnes & Noble': ['#3a3d41', '#ffffff', 'BARNES & NOBLE'], 'For Lease': ['#e8e4dc', '#6a6a6a', 'FOR LEASE'], 'MINISO': ['#e60012', '#ffffff'], 'Wilson': ['#c8102e', '#ffffff'], 'Beyond Yoga': ['#f4efe6', '#3a3a3a'], 'Culto': ['#111111', '#ffffff'], 'Gacha & Catch': ['#ff3e8a', '#ffffff'], 'Holey Moley': ['#111111', '#ff4fa3', 'HOLEY MOLEY'], 'Vans': ['#111111', '#ffffff', 'VANS'], 'Uniqlo': ['#e60012', '#ffffff', 'UNIQLO'], 'JD Sports': ['#111111', '#ffffff', 'JD'], 'Oakley': ['#111111', '#ffffff', 'OAKLEY'], 'The Cube VR': ['#1a1036', '#7cf7ff', 'THE CUBE VR'], 'Santa Monica Art Museum': ['#f4efe6', '#111111'], 'Outlandish': ['#111111', '#ff5aa5', 'OUTLANDISH'], 'Wonders of the World': ['#2a1a4a', '#ffd23f'], 'Odd One Out': ['#ffcf3f', '#3a2a12', 'ODD ONE OUT'], 'Ugo Trattoria': ['#2e5d3a', '#f4efe2'], 'Museum of Illusions': ['#111111', '#ffffff', 'MUSEUM OF ILLUSIONS'], 'PicklePop': ['#ff5aa5', '#ffffff', 'PICKLEPOP'], 'Yogurtland': ['#e4007c', '#ffffff', 'yogurtland'], 'TMNT Pizzeria': ['#1f8a3b', '#ffffff', 'TMNT PIZZERIA'], 'El Husuba': ['#7a3e1d', '#f4efe2'], 'Ugo': ['#2e5d3a', '#f4efe2'],
     'Starbucks': ['#00704a', '#ffffff'], 'Lululemon': ['#d22030', '#ffffff', 'lululemon'], "Levi's": ['#ffffff', '#c41230'], 'Johnny Rockets': ['#d0021b', '#ffffff'], 'Puzzle Zoo': ['#f4efe4', '#c4561f', 'PUZZLE ZOO'],
     "Raising Cane's": ['#c8102e', '#ffffff'], "Wetzel's Pretzels": ['#ffd23f', '#c8102e'], 'AMC Santa Monica 7': ['#a0101e', '#ffe9a8'], 'AMC Broadway 4': ['#a0101e', '#ffe9a8'], 'Google Store': ['#ffffff', '#4285f4'],
     'Chipotle': ['#451400', '#f4efe2'], 'Patagonia': ['#1d2b44', '#ffffff'], 'Adidas': ['#111111', '#ffffff'], 'Foot Locker': ['#111111', '#ffffff'], 'Sunglass Hut': ['#c8102e', '#ffffff'], "IT'SUGAR": ['#ff3e8a', '#ffffff'],

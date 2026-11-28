@@ -6683,7 +6683,7 @@ function buildCoast(){
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500, ...BWAY200, ...SMB400].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
+    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500, ...BWAY200, ...SMB400, ...SECOND1300].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -6927,7 +6927,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildSecond1300(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -9728,6 +9728,69 @@ function buildSMB400(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, 
       f4(t - .2, t + 1.8, 4.55, 4.65, 0x161616, .7); f4(t - .2, t + 1.8, 5.5, 5.55, 0x161616, .7, .62); for (let u = t - .2; u <= t + 1.8; u += .14) f4(u, u + .02, 4.65, 5.5, 0x161616, .02, .66); }   // black iron balconies on the 2nd floor
     f4(t0, t1, .3, 3.6, GL, .1); f4(t0, t1, 3.6, 4.2, 0x5e6f7d, .2); sign(s0 - .22, t0 + 9, 3.9, 2.2, .5, 'Rapha', '#5e6f7d', '#ffffff', 220, -Math.PI/2);
     for (const t of [t0 + 6, t0 + 18]) tree(s0 - 4, t, 0x3f6e34, 2.4, 4.6); }
+  g.add(grp); mergeStatic(grp); }
+/* 2nd St's inland side from Santa Monica Blvd to Arizona, from photos: Santa Monica Square (201 Santa Monica Blvd, 1983; Douglas Emmett's
+   photos): warm brown brick, a brick podium with planted roof terraces and the tower stepping back above it as an octagon with clipped corners,
+   bands of dark glass, US Bank high on the corner, EQUINOX on the podium, the brushed-metal 201 on its plinth with palms. Second Street Plaza
+   (1333 2nd St, 1991; leasing photo Jan 2025): white panels in a grid with pale teal glass, the round turret at the north end under an open
+   ribbed crown, the parking way in under a white lattice canopy (ENTRY / EXIT) between dark green columns. Hotel Hart (1305 2nd St, 1914,
+   a landmark, restored 2021; KFA's photos): three floors of gold-speckled buff brick round a courtyard open to 2nd St with a white two-tier
+   porch, a darker base under a stone band, white double-hung windows between pilasters, a white bracketed cornice, red-and-white striped
+   awnings, white fire escapes and the big ficus at the corner. (Floor counts on the tower and window counts are read from photos.) */
+const SECOND1300 = [{ side: 1, s: 544.2, t0: -472.4, ht: 10.5, c: 0x8f6a52, name: 'SMSq' }, { side: 1, s: 544.4, t0: -518.6, c: 0xe9ebe8, roof: 0xcfd2d0, name: 'SSPlaza' }, { side: 1, s: 542.8, t0: -610.6, ht: 12, c: 0xc98a45, name: 'Hart' }];
+function buildSecond1300(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  let G = 0;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + (y0 + y1)/2)); grp.add(me); return me; };
+  const at = (geo, hex, s, t, y) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, G + y)); grp.add(me); return me; };
+  const sign = (s, t, y, w, h, text, bg, fg, size, ry) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(s, t, G + y)); sg.rotation.y = ry; grp.add(sg); return sg; };
+  const palmAt = (s, t, h) => { const p = palm(h); p.position.set(...P3(s, t, landH(s, t))); grp.add(p); };
+  const tree = (s, t, r = 2.6, ht = 5) => { at(new THREE.CylinderGeometry(.2, .3, ht, 6), 0xb8b0a2, s, t, ht/2); const c = at(new THREE.IcosahedronGeometry(r, 1), 0x3f6e34, s, t, ht + r*.5); c.scale.y = .75; };
+  const oct = (s0, s1, t0, t1, y0, y1, hex) => { const k = Math.cos(Math.PI/8), r = (t1 - t0)/2/k, me = at(new THREE.CylinderGeometry(r, r, y1 - y0, 8), hex, (s0 + s1)/2, (t0 + t1)/2, (y0 + y1)/2); me.rotation.y = Math.PI/8; me.scale.set((s1 - s0)/(t1 - t0), 1, 1); return me; };   // (an octagon with its flats on the streets)
+  const GL = 0x262d33, OW = -Math.PI/2;
+  // ---- Santa Monica Square: 2nd St face at s 544.2, SM Blvd face at t -426.8 ----
+  { const s0 = 544.2, s1 = 583.4, t0 = -472.4, T = -426.8, BR = 0x8f6a52; G = landH(s0, (t0 + T)/2);
+    for (const y of [1.2, 4.6, 8]){ bx(s0 - .08, s1, t0 + 2, T - 2, y, y + 1.6, GL); bx(s0 + 2, s1 - 2, t0, T + .08, y, y + 1.6, GL); }   // the podium's glass bands
+    bx(s0 + 1, s0 + 6, t0 + 1, T - 1, 10.5, 11.2, 0x5f8a45); bx(s0 + 6, s1 - 1, T - 6, T - 1, 10.5, 11.2, 0x5f8a45);   // planted terraces
+    oct(s0 + 6, s1 - 1, t0 + 1, T - 6, 10.5, 31.5, BR); for (let y = 12; y < 30; y += 3.5){ const b = oct(s0 + 5.94, s1 - .94, t0 + .94, T - 5.94, y, y + 1.5, GL); b.material = mat(GL, .2, .3); }   // the octagonal tower and its dark glass bands
+    oct(s0 + 5.8, s1 - .8, t0 + .8, T - 5.8, 31.2, 31.6, 0x7d5c47);
+    sign(s0 - .12, (t0 + T)/2 - 4, 3.6, 6, .9, 'EQUINOX', '#8f6a52', '#2a2a2a', 200, OW);
+    sign(s0 + 6.2, T - 5, 27.5, 4, .8, 'us bank', '#8f6a52', '#ffffff', 190, -Math.PI/4);
+    bx(s0 - 4, s0 - 1, T + 1, T + 4, 0, .5, 0xbcbcb8); bx(s0 - 3.5, s0 - 1.5, T + 1.5, T + 3.5, .5, .9, 0xc8c8c4); sign(s0 - 3.6, T + 2.5, 1.5, 1.6, .8, '201', '#b9bcbe', '#55595c', 300, -Math.PI/4 - Math.PI/2);   // the brushed-metal 201 on its plinth
+    for (const [s, t] of [[s0 - 2, T + 6], [s0 - 6, T + 2], [s0 - 3, t0 + 12]]) palmAt(s, t, 6); tree(s0 - 4, t0 + 22); }
+  // ---- Second Street Plaza: 2nd St face at s 544.4 ----
+  { const s0 = 544.4, s1 = 584.4, t0 = -518.6, t1 = -472.6, H = 30, TL = 0x8fc3bd, WH = 0xf2f3f1; G = landH(s0, (t0 + t1)/2);
+    const f2 = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(s0 - out - dep, s0 - out, a, b, y0, y1, hex);
+    for (let y = 4.4; y < H - 2; y += 4.2) for (let t = t0 + 1; t < t1 - 9; t += 2.6){ f2(t, t + 2.2, y, y + 2.6, TL, .1); f2(t + 1.08, t + 1.12, y, y + 2.6, WH, .04, .1); f2(t, t + 2.2, y + 1.28, y + 1.32, WH, .04, .1); }   // teal glass in a white grid
+    for (let y = 3.9; y < H; y += 4.2) f2(t0, t1, y, y + .25, 0xdfe1df, .2);
+    const ts = s0 + 3.5, tt = t1 - 4.5; at(new THREE.CylinderGeometry(4.5, 4.5, H + 1, 20), WH, ts, tt, (H + 1)/2);   // the round turret at the north end
+    for (let y = 4.4; y < H - 2; y += 4.2){ at(new THREE.CylinderGeometry(4.56, 4.56, 2.4, 20, 1, true), TL, ts, tt, y + 1.3); const bl = at(new THREE.CylinderGeometry(5.4, 5.4, .2, 20, 1, false, Math.PI, Math.PI), WH, ts, tt, y - .3); bl.rotation.y = 0; at(new THREE.TorusGeometry(5.35, .03, 4, 24, Math.PI), WH, ts, tt, y + .7).rotation.set(Math.PI/2, 0, Math.PI); }   // curved balconies with white rails
+    { const ring = at(new THREE.TorusGeometry(4.3, .12, 6, 28), WH, ts, tt, H + 4); ring.rotation.x = Math.PI/2; for (let k = 0; k < 12; k++){ const a = k/12*TAU, rb = new THREE.Mesh(new THREE.BoxGeometry(.12, 3.2, .12), mat(WH)); rb.position.set(...P3(ts + Math.cos(a)*4.3, tt + Math.sin(a)*4.3, G + H + 2.6)); grp.add(rb); }
+      const dm = at(new THREE.SphereGeometry(4.3, 16, 6, 0, TAU, 0, Math.PI/2), 0xd9dcdc, ts, tt, H + 4); dm.scale.y = .35; dm.material = new THREE.MeshStandardMaterial({ color: 0xd9dcdc, wireframe: true }); }   // the open ribbed crown
+    // the parking way in: white lattice canopy, ENTRY / EXIT, dark green columns
+    { const a = t0 + 12, b = t0 + 22; f2(a, b, 0, 3, 0x1b1d1f, .1); bx(s0 - 3, s0, a, b, 3.3, 3.45, WH); for (let t = a; t <= b; t += .5) bx(s0 - 3, s0, t, t + .06, 3.45, 3.7, WH); for (const t of [a, a + 3.3, b - 3.3, b]) at(new THREE.CylinderGeometry(.3, .3, 3.3, 12), 0x3b4a44, s0 - 2.7, t, 1.65);
+      sign(s0 - 3.02, a + 2.5, 3.1, 1.8, .35, 'EXIT', '#ffffff', '#111111', 220, OW); sign(s0 - 3.02, b - 2.5, 3.1, 1.8, .35, 'ENTRY', '#ffffff', '#111111', 220, OW); }
+    f2(t0 + 24, t1 - 9, .3, 3.6, GL, .1); for (const t of [t0 + 26, t0 + 32]) palmAt(s0 - 2.5, t, 7); }
+  // ---- Hotel Hart: 2nd St face at s 542.8, Arizona face at t -610.6 ----
+  { const s0 = 542.8, s1 = 572.6, t0 = -610.6, t1 = -579.6, H = 12, DK = 0x9a5a2e, WH = 0xf6f4ee; G = landH(s0, t0 + 6);
+    const f2 = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(s0 - out - dep, s0 - out, a, b, y0, y1, hex);
+    const fA = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, t0 - out - dep, t0 - out, y0, y1, hex);
+    f2(t0, t1, 0, 1.3, DK, .14); fA(s0, s1, 0, 1.3, DK, .14); f2(t0, t1, 1.3, 1.55, 0xe6dccb, .22); fA(s0 - .2, s1, 1.3, 1.55, 0xe6dccb, .22);   // the darker base and the stone band
+    f2(t0, t1, H - .6, H, WH, .55); fA(s0 - .55, s1, H - .6, H, WH, .55); for (let t = t0 + .5; t < t1; t += 1.1) f2(t, t + .2, H - 1, H - .6, WH, .35); for (let s = s0; s < s1; s += 1.1) fA(s, s + .2, H - 1, H - .6, WH, .35);   // the white bracketed cornice
+    const cw = [(t0 + t1)/2 - 5, (t0 + t1)/2 + 5];   // (the courtyard)
+    const win = (face, c, y) => { if (face === '2'){ f2(c - .45, c + .45, y, y + 1.9, 0x2f3438, .1); f2(c - .55, c + .55, y - .1, y + 2, WH, .06, .03); f2(c - .55, c + .55, y + .93, y + 1.0, WH, .07, .04); } else { fA(c - .45, c + .45, y, y + 1.9, 0x2f3438, .1); fA(c - .55, c + .55, y - .1, y + 2, WH, .06, .03); fA(c - .55, c + .55, y + .93, y + 1.0, WH, .07, .04); } };
+    for (const y of [2, 5.4, 8.8]){ for (let t = t0 + 1.4; t < t1 - .8; t += 1.8) if (t < cw[0] - .6 || t > cw[1] + .6) win('2', t, y); for (let s = s0 + 1.4; s < s1 - .8; s += 1.8) win('A', s, y); }
+    for (const y of [4.5, 7.9]){ for (let t = t0 + 2; t < t1 - 1; t += 3.6) if (t < cw[0] - .6 || t > cw[1] + .6) f2(t, t + .5, y - .3, y + .05, 0xd9b27a, .1); for (let s = s0 + 2; s < s1 - 1; s += 3.6) fA(s, s + .5, y - .3, y + .05, 0xd9b27a, .1); }   // patterned brick panels with diamond tiles
+    // the courtyard open to 2nd St: shadowed recess, the white two-tier porch with columns and balustrades
+    f2(cw[0], cw[1], 1.55, H - 1, 0x8a5a30, .14, -.04); f2(cw[0] + 2, cw[1] - 2, 0, 2.6, 0x3a2e24, .1, -.02);   // (the courtyard's back wall, as the porch is drawn on the face)
+    for (const y of [3.8, 7.4]){ bx(s0 - 1.4, s0, cw[0] + .6, cw[1] - .6, y, y + .25, WH); for (let t = cw[0] + .6; t <= cw[1] - .5; t += .25) bx(s0 - 1.37, s0 - 1.3, t, t + .08, y + .25, y + 1.1, WH); bx(s0 - 1.4, s0 - 1.25, cw[0] + .6, cw[1] - .6, y + 1.1, y + 1.2, WH); }
+    for (const t of [cw[0] + .8, cw[0] + 3.6, cw[1] - 3.6, cw[1] - .8]) at(new THREE.CylinderGeometry(.2, .2, 9.6, 10), WH, s0 - 1.2, t, 4.8);
+    for (let k = 0; k < 3; k++) bx(s0 - 1.4 - .35*(k + 1), s0 - 1.4 - .35*k, cw[0] + 2, cw[1] - 2, 0, .45 - k*.15, 0xd8d2c6);   // (the steps up)
+    // red-and-white striped awnings over the ground-floor windows
+    const stripe = canvasTex(64, 32, (c, w, h) => { for (let i = 0; i < 8; i++){ c.fillStyle = i % 2 ? '#ffffff' : '#a3262a'; c.fillRect(i*w/8, 0, w/8, h); } }, false), sm = new THREE.MeshStandardMaterial({ map: stripe, roughness: .9 });
+    for (let t = t0 + 2.3; t < t1 - 2; t += 3.6) if (t < cw[0] - 1 || t > cw[1] + 1){ const aw = bx(s0 - .9, s0, t - .8, t + .8, 3.75, 3.85, null, sm); aw.rotation.z = -.5; }
+    for (let s = s0 + 2.3; s < s1 - 2; s += 3.6){ const aw = bx(s - .8, s + .8, t0 - .9, t0, 3.75, 3.85, null, sm); aw.rotation.x = .5; }
+    for (const y of [5.2, 8.6]){ fA(s0 + 14, s0 + 17, y, y + .06, WH, 1); for (let s = s0 + 14; s <= s0 + 17; s += .25) fA(s, s + .03, y, y + 1, WH, .03, .97); const st = fA(s0 + 14.4, s0 + 16.6, y - 1.6, y - 1.54, WH, .5, .3); st.rotation.x = .6; }   // white fire escapes on Arizona
+    tree(s0 - 4, t0 - 3, 3.4, 5.5); }
   g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };

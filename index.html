@@ -6079,7 +6079,7 @@ function buildVenice(g, P3){ const W = .35;   // (the canals' water level, a gue
 /* Signs on the buildings that have them, the Chain Reaction sculpture (Paul Conrad, 1991: a mushroom cloud made of chain links, about 8 m tall, on the Civic Center lawn),
    and the original Hot Dog on a Stick stand by the pier in its red, yellow and blue stripes. */
 function buildLooks(g, P3){
-  for (const L of LOOKS){ const b = L.best; if (!L.sign || !b) continue; const P = b.p; let bi = 0, bm = 1e9; for (let i = 0; i < P.length; i++){ const a = P[i], c = P[(i + 1) % P.length], L2 = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L2 < 6) continue; const m = (a[0] + c[0])/2; if (m < bm){ bm = m; bi = i; } }
+  for (const L of LOOKS){ const b = L.best; if (!L.sign || !b || BY_HAND.has(b.name)) continue; const P = b.p; let bi = 0, bm = 1e9; for (let i = 0; i < P.length; i++){ const a = P[i], c = P[(i + 1) % P.length], L2 = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L2 < 6) continue; const m = (a[0] + c[0])/2; if (m < bm){ bm = m; bi = i; } }
     const a = P[bi], c = P[(bi + 1) % P.length], ms = (a[0] + c[0])/2, mt = (a[1] + c[1])/2, w = Math.min(14, Math.hypot(c[0] - a[0], c[1] - a[1])*.8), y = (b.base ?? landH(ms, mt)) + Math.min(L.h*.6, 8);
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, w/7), new THREE.MeshBasicMaterial({ map: labelTex(L.sign, '#' + L.wall.toString(16).padStart(6, '0'), L.sc || '#222', 1024, 146, L.sign.length > 16 ? 58 : 92), transparent: false })); let cs = 0, ct = 0; for (const [s2, t2] of P){ cs += s2/P.length; ct += t2/P.length; } const th = Math.atan2(c[1] - a[1], c[0] - a[0]), out = (-Math.sin(th))*(ms - cs) + Math.cos(th)*(mt - ct) > 0 ? 1 : -1;   // (facing out of the building)
     sg.position.set(...P3(ms - Math.sin(th)*out*.3, mt + Math.cos(th)*out*.3, y)); sg.rotation.y = -th + (out > 0 ? 0 : Math.PI); g.add(sg); }
@@ -6678,6 +6678,7 @@ function buildCoast(){
     if (b.apple) continue;   // (the Apple Store is built by hand: buildAppleStore)
     if (inSMP(sc, tc)) continue;
     if (sc > 2600 && b.k === 3 && b.h < 9){ extrude(b.p, b.base, b.top, [0xb7bcbf, 0xa9aeb1, 0xc4c6c4, 0x9fa6aa][hashOf(b) % 4], 0x8e9396, true); continue; }   // (Bergamot Station: the old rail-yard warehouses, gray corrugated metal, no windows)
+    if (BY_HAND.has(b.name)) continue;   // (Casa del Mar and Shutters: see buildBeachHotels)
     if (b.look){ extrude(b.p, b.base + (b.look.lift || 0), b.top, b.look.wall, b.look.roof, b.look.plain, b.fair ? (a, c) => { const ms = (a[0] + c[0])/2, mt = (a[1] + c[1])/2; return inFairLobby(ms, mt) && Math.min(Math.abs(mt - FAIR.fig[2]), Math.abs(mt - FAIR.lobby[2])) > .6; } : null); continue; }   // (the Civic Center and the beach hotels, in their real colors)
     { const H = OCEAN_HOTELS.find(H => Math.abs(s0 - H.box[0]) < 1.5 && Math.abs(t0 - H.box[1]) < 1.5); if (H){ extrude(H.round ? roundCorner(b.p, H.round) : b.p, b.base, H.ht ? b.base + H.ht : b.top, H.c, H.c, true); continue; } }   // (the Georgian and the Shangri-La: see buildOceanHotels)
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
@@ -6927,7 +6928,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildSecond1300(g, P3); buildFourth1400(g, P3); buildOcean1000(g, P3); buildAz4th(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildSecond1300(g, P3); buildFourth1400(g, P3); buildOcean1000(g, P3); buildAz4th(g, P3); buildBeachHotels(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -9928,6 +9929,75 @@ function buildAz4th(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r
     f4(T + 3, t1 - 3, 3.9, 4.9, 0xc8102e, .3); sign(S - .32, (T + t1)/2, 4.4, 9, .75, 'Bank of America', '#c8102e', '#1d4fa0', 150, -Math.PI/2);
     fA(S + 1, s1 - 1, 0, 3.6, GL, .1, -1.6); for (let s = S + 1; s < s1; s += 3.4){ fA(s, s + .3, 0, H - .4, WB, .3); fA(s + .3, s + 3.1, 3.7, H - .5, 0x8f9498, .1, -.1); for (let u = s + .5; u < s + 3; u += .25) fA(u, u + .06, 3.7, H - .5, 0x6f7478, .05); }   // the arcade of thin white piers and grey slatted grilles
     fA(S, s1, H - .4, H, WB, .4); f4(T + 2, T + 3.2, 1, 2.4, 0x3a3f44, .15); }   // (an ATM)
+  g.add(grp); mergeStatic(grp); }
+/* The two hotels on the sand south of the pier, built by hand from photos (Wikimedia Commons, Flickr 2005-2019, Tim Street-Porter 2015).
+   Hotel Casa del Mar (1926): a U opening to the beach, two red-orange brick wings over two floors of cream cast stone, cream quoins, white
+   windows with arched pairs on top, red clay tile hip roofs with deep eaves and brick chimneys; between the wings a curved two-story cast
+   stone pavilion with an arcade of round arches and black iron gates, tall many-paned windows above, HOTEL CASA DEL MAR in the frieze and a
+   balustraded roof terrace; the set-back middle with its cream top floor of arched windows; a low red-brown wall and fan palms in front.
+   Shutters on the Beach (1993): pale grey shingle with white trim, the north block of four floors with stacked white-railed balconies under a
+   grey hip roof and a white chimney, the curved white two-story pavilion with Shutters / ON THE BEACH on its fascia and umbrellas on its
+   terrace, the taller block behind with white roof rails, the low south wing with X-pattern white railings and navy awnings, white picket
+   gates. (Floor and window counts are read from the photos.) */
+const BY_HAND = new Set(['Hotel Casa Del Mar', 'Shutters on the Beach']);
+function buildBeachHotels(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  let G = 0;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + (y0 + y1)/2)); grp.add(me); return me; };
+  const at = (geo, hex, s, t, y) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, G + y)); grp.add(me); return me; };
+  const sign = (s, t, y, w, h, text, bg, fg, size, ry) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(s, t, G + y)); sg.rotation.y = ry; grp.add(sg); return sg; };
+  const hip = (s0, s1, t0, t1, y, rise, hex) => { const ge = new THREE.ConeGeometry((t1 - t0)/Math.SQRT2, rise, 4, 1); ge.rotateY(Math.PI/4); const r = new THREE.Mesh(ge, mat(hex)); r.scale.set((s1 - s0)/(t1 - t0), 1, 1); r.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + y + rise/2)); grp.add(r); };
+  const GL = 0x2a3036, W = 0xf7f6f2, OW = -Math.PI/2;
+  // a window on a face: 'W' looks to the beach (smaller s), 'E' to Ocean Way, 'N'/'S' along the coast
+  const win = (face, S, c, y, w, h, arch, frame = W) => { const fr = (a, b, y0, y1, hex, dep, out) => face === 'W' ? bx(S - out - dep, S - out, a, b, y0, y1, hex) : face === 'E' ? bx(S + out, S + out + dep, a, b, y0, y1, hex) : face === 'N' ? bx(a, b, S - out - dep, S - out, y0, y1, hex) : bx(a, b, S + out, S + out + dep, y0, y1, hex);
+    fr(c - w/2 - .1, c + w/2 + .1, y - .1, y + h + .1, frame, .05, .02); fr(c - w/2, c + w/2, y, y + h, GL, .06, .03);
+    if (arch){ const ry = face === 'W' ? OW : face === 'E' ? Math.PI/2 : face === 'N' ? Math.PI : 0, o = .1, ps = face === 'W' ? [S - o, c] : face === 'E' ? [S + o, c] : face === 'N' ? [c, S - o] : [c, S + o];
+      const a1 = at(new THREE.CircleGeometry(w/2 + .1, 12, 0, Math.PI), frame, ps[0], ps[1], y + h); a1.rotation.y = ry; const a2 = at(new THREE.CircleGeometry(w/2, 12, 0, Math.PI), GL, face === 'W' ? ps[0] - .01 : face === 'E' ? ps[0] + .01 : ps[0], face === 'N' ? ps[1] - .01 : face === 'S' ? ps[1] + .01 : ps[1], y + h); a2.rotation.y = ry; } };
+  // ---- Hotel Casa del Mar: s 229.4-281.6, t 605-664; beach face at s 229.4 ----
+  { const s0 = 229.4, s1 = 281.6, t0 = 605, t1 = 664, BR = 0xb5583a, CS = 0xe9dcc0, TL = 0xb4552f; G = landH(s0 + 10, (t0 + t1)/2);
+    const wings = [[t0, t0 + 15], [t1 - 15, t1]], mid = [t0 + 15, t1 - 15], ms0 = s0 + 15;
+    for (const [a, b] of wings){ bx(s0, s1, a, b, 0, 7, CS); bx(s0, s1, a, b, 7, 21.4, BR); bx(s0, s1, a, b, 21.4, 25, BR); bx(s0 - .3, s1 + .3, a - .3, b + .3, 6.8, 7.2, CS); bx(s0 - .6, s1 + .6, a - .6, b + .6, 24.8, 25.2, CS); hip(s0 - 1, s1 + 1, a - 1, b + 1, 25.2, 3.2, TL);
+      for (const [qs, qt] of [[s0, a], [s0, b], [s1, a], [s1, b]]) for (let y = 7.2; y < 24.6; y += 1.2) bx(qs - .25, qs + .25, qt - .25 + ((y*5 | 0) % 2 ? .4 : 0)*(qt === a ? 1 : -1), qt + .25 + ((y*5 | 0) % 2 ? .4 : 0)*(qt === a ? 1 : -1), y, y + .6, CS);   // cream quoins
+      for (const c of [a + 3, (a + b)/2, b - 3]){ for (const y of [1.2, 4.3]) win('W', s0, c, y, 1.3, 2, false); for (const y of [8, 11.4, 14.8, 18.2]) win('W', s0, c, y, 1.3, 2, false); for (const d of [-.8, .8]) win('W', s0, c + d, 22, .65, 1.6, true); }
+      for (let s = s0 + 3; s < s1 - 2; s += 3.4){ const fc = a === t0 ? 'N' : 'S', S = a === t0 ? t0 : t1; for (const y of [8, 11.4, 14.8, 18.2]) win(fc, S, s, y, 1.2, 2, false); win(fc, S, s, 22, 1, 1.5, true); for (const y of [1.2, 4.3]) win(fc, S, s, y, 1.2, 2, false); }
+      for (let t = a + 3; t < b - 2; t += 3.3){ for (const y of [8, 11.4, 14.8, 18.2]) win('E', s1, t, y, 1.2, 2, false); win('E', s1, t, 22, 1, 1.5, true); }
+      bx(s1 - 6, s1 - 4.6, (a + b)/2 - .7, (a + b)/2 + .7, 25, 31, BR); }   // brick chimneys
+    // the set-back middle with its cream top floor of arched windows
+    bx(ms0, s1, mid[0], mid[1], 0, 21.4, BR); bx(ms0, s1, mid[0], mid[1], 21.4, 25, CS); hip(ms0 - 1, s1 + 1, mid[0], mid[1], 25.2, 3, TL);
+    for (let t = mid[0] + 2; t < mid[1] - 1.5; t += 2.6){ for (const y of [11.4, 14.8, 18.2]) win('W', ms0, t, y, 1.2, 2, false); win('W', ms0, t, 21.8, 1.1, 1.8, true); }
+    for (let t = mid[0] + 2; t < mid[1] - 1.5; t += 2.6){ for (const y of [8, 11.4, 14.8, 18.2]) win('E', s1, t, y, 1.2, 2, false); win('E', s1, t, 22, 1, 1.5, true); }
+    { const c = (mid[0] + mid[1])/2; bx(s1, s1 + .3, c - 2.6, c + 2.6, 0, 6.4, CS); at(new THREE.CircleGeometry(2.1, 16, 0, Math.PI), 0x2a2a2a, s1 + .32, c, 4.6).rotation.y = Math.PI/2; bx(s1 + .3, s1 + .33, c - 2.1, c + 2.1, 0, 4.6, 0x2a2a2a); bx(s1 + .3, s1 + 3.5, c - 2.4, c + 2.4, 3.3, 3.5, 0x1b1b1b); bx(s1, s1 + .2, t0, t1, 0, .6, 0x5a2a2a); }   // the cream arched portal on Ocean Way, its black canopy, the maroon plinth
+    // the curved two-story cast-stone pavilion between the wings
+    { const ps = s0 + 1.5, R = (mid[1] - mid[0])/2, c = (mid[0] + mid[1])/2; bx(ps, ms0, mid[0], mid[1], 0, 8, CS);
+      const cv = at(new THREE.CylinderGeometry(R, R, 8, 28, 1, false, Math.PI, Math.PI), CS, ps, c, 4); cv.scale.x = .22;
+      const arches = 7; for (let k = 0; k < arches; k++){ const tt = mid[0] + 2.5 + k*(mid[1] - mid[0] - 5)/(arches - 1), bulge = R*.22*Math.sqrt(Math.max(0, 1 - ((tt - c)/R)**2)), sa = ps - bulge - .02;
+        bx(sa - .02, sa, tt - .8, tt + .8, 0, 2.4, 0x1c1c1c); const ar = at(new THREE.CircleGeometry(.8, 12, 0, Math.PI), 0x1c1c1c, sa - .01, tt, 2.4); ar.rotation.y = OW; for (let u = tt - .7; u < tt + .75; u += .2) bx(sa - .05, sa - .02, u, u + .03, 0, 2.4, 0x111111);
+        bx(sa - .05, sa, tt - .9, tt + .9, 4.2, 7, 0xffffff); bx(sa - .07, sa - .03, tt - .75, tt + .75, 4.35, 6.85, GL); for (const d of [-.25, .25]) bx(sa - .09, sa - .05, tt + d - .02, tt + d + .02, 4.35, 6.85, 0xffffff); }
+      const fz = R*.22; sign(ps - fz - .05, c, 3.4, 9, .55, 'HOTEL CASA DEL MAR', '#e9dcc0', '#3a2a1e', 52, OW);
+      for (let t = mid[0] + .5; t < mid[1]; t += .4){ const bulge = R*.22*Math.sqrt(Math.max(0, 1 - ((t - c)/R)**2)); bx(ps - bulge + .1, ps - bulge + .2, t, t + .1, 8, 8.9, CS); } bx(ps - fz, ms0, mid[0], mid[1], 8.9, 9.05, CS); }   // the balustraded roof terrace
+    bx(s0 - 4, s0 - 3.4, t0 - 2, t0 + 25, 0, .8, 0x7a3e2e); bx(s0 - 4, s0 - 3.4, t0 + 34, t1 + 2, 0, .8, 0x7a3e2e); }   // the low red-brown wall in front (the palms are already there)
+  // ---- Shutters on the Beach: s 235.2-324.2, t 520.6-586.6; beach face at s 235.2 ----
+  { const s0 = 235.2, s1 = 324.2, t0 = 520.6, t1 = 586.6, SH = 0xc5c9c8, RF = 0x6f767a, NV = 0x1f3358; G = landH(s0 + 10, (t0 + t1)/2);
+    const shingles = (a, b, y0, y1, S) => { for (let y = y0 + .3; y < y1; y += .3) bx(S - .03, S, a, b, y, y + .03, 0xb5bab9); };
+    const rail = (S, a, b, y) => { bx(S - .05, S + .05, a, b, y + 1, y + 1.08, W); for (let t = a; t <= b + .01; t += .2) bx(S - .02, S + .02, t - .02, t + .02, y, y + 1, W); };
+    // the north block: four floors, stacked balconies, a hip roof and a white chimney
+    { const a = t0, b = t0 + 27, e = s0 + 38; bx(s0, e, a, b, 0, 13, SH); shingles(a, b, 0, 13, s0); hip(s0 - .8, e + .8, a - .8, b + .8, 13, 3.4, RF); bx(s0 + 14, s0 + 15.6, b - 6, b - 4.4, 12, 19, W);
+      for (let k = 0; k < 6; k++){ const c = a + 2.4 + k*4.4; for (let y = 1; y < 12; y += 3.2) win('W', s0, c, y, 1.4, 2.2, false); for (let y = 4; y < 12; y += 3.2){ bx(s0 - 1.2, s0, c - 1.6, c + 1.6, y - .2, y, W); rail(s0 - 1.15, c - 1.6, c + 1.6, y); } }
+      for (let k = 0; k < 6; k++) bx(s0 - 1.4, s0 - .4, a + 1.5 + k*4.4, a + 3.4 + k*4.4, 0, .7, 0x8a6b4a); }   // (planter boxes)
+    // the taller block behind, with white roof rails and little roof pavilions
+    { const a = t0 + 26, b = t0 + 47, f = s0 + 16; bx(f, s1 - 8, a, b, 0, 22, SH); shingles(a, b, 13, 22, f); for (let t = a + 1.5; t < b - 1; t += 3) for (let y = 13.6; y < 21; y += 3.1) win('W', f, t, y, 1.3, 2, false); rail(f - .1, a, b, 22); bx(f + 4, f + 8, a + 4, a + 8, 22, 24.4, W); bx(f + 4, f + 8, b - 8, b - 4, 22, 24.4, W); }
+    // the curved white two-story pavilion with the sign and the terrace
+    { const a = t0 + 27, b = t0 + 45, c = (a + b)/2, R = (b - a)/2, ps = s0 + 4; bx(ps, s0 + 16, a, b, 0, 7, W); const cv = at(new THREE.CylinderGeometry(R, R, 7, 24, 1, false, Math.PI, Math.PI), W, ps, c, 3.5); cv.scale.x = .3;
+      for (let k = 0; k < 6; k++){ const tt = a + 2 + k*(b - a - 4)/5, bulge = R*.3*Math.sqrt(Math.max(0, 1 - ((tt - c)/R)**2)); bx(ps - bulge - .04, ps - bulge, tt - .9, tt + .9, .6, 4, GL); }
+      bx(ps - R*.3 - .1, ps, c - 5, c + 5, 4.5, 5.6, W); sign(ps - R*.3 - .12, c, 5.05, 7, 1, 'Shutters', '#ffffff', '#111111', 260, OW); sign(ps - R*.3 - .12, c, 4.6, 4, .25, 'ON THE BEACH', '#ffffff', '#111111', 150, OW); bx(ps - R*.3 - .1, ps, c - 5, c + 5, 5.6, 5.75, 0xa0523a);
+      for (let t = a + .4; t < b; t += .35){ const bulge = R*.3*Math.sqrt(Math.max(0, 1 - ((t - c)/R)**2)); bx(ps - bulge + .05, ps - bulge + .12, t, t + .07, 7, 8, W); }
+      for (const [ds, dt] of [[2, -4], [3, 2], [6, -1], [5, 5]]){ at(new THREE.CylinderGeometry(.04, .04, 2.2, 5), 0xdddddd, ps + ds, c + dt, 8.1); at(new THREE.ConeGeometry(1.4, .6, 10), 0xf0e8d6, ps + ds, c + dt, 9.3); }   // cream umbrellas on the terrace
+      for (const t of [a - 1, b + 1]){ bx(s0 - 2, s0 - .2, t - .9, t + .9, 0, 1.2, W); for (let u = t - .8; u < t + .85; u += .2) bx(s0 - 2.3, s0 - 2.2, u, u + .08, 0, 1.1, W); } }   // white picket gates
+    // the low south wing: X-pattern white railings, grey hip roofs, navy awnings
+    { const a = t0 + 45, b = t1, e = s0 + 30; bx(s0, e, a, b, 0, 9.4, SH); shingles(a, b, 0, 9.4, s0); hip(s0 - .8, e + .8, a - .8, b + .8, 9.4, 3, RF);
+      for (let t = a + 1.5; t < b - 1; t += 3.2){ win('W', s0, t, 4.4, 1.4, 2.2, false); const aw = bx(s0 - 1.1, s0, t - 1.3, t + 1.3, 2.6, 2.75, NV); aw.rotation.z = -.45; bx(s0 - 1.12, s0 - 1.05, t - 1.3, t + 1.3, 2.25, 2.4, W); win('W', s0, t, .5, 1.6, 1.9, false); }
+      bx(s0 - 1.4, s0, a, b, 3.9, 4.1, W); bx(s0 - 1.45, s0 - 1.35, a, b, 4.1, 5, W); for (let t = a; t < b - .4; t += 1){ const x = bx(s0 - 1.42, s0 - 1.38, t, t + 1.3, 4.5, 4.56, W); x.rotation.x = .6; const x2 = bx(s0 - 1.42, s0 - 1.38, t, t + 1.3, 4.5, 4.56, W); x2.rotation.x = -.6; } bx(s0 - 1.45, s0 - 1.35, a, b, 5, 5.1, W); }
+    bx(s0 + 30, s1, t0 + 45, t1, 0, 12, SH); bx(s0 + 38, s1, t0, t0 + 26, 0, 14, SH); bx(s1 - 8, s1, t0 + 26, t0 + 47, 0, 14, SH);   // (the rest of the hotel toward Ocean Way)
+  }
   g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };

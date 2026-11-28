@@ -6683,7 +6683,7 @@ function buildCoast(){
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
+    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500, ...BWAY200].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -6927,7 +6927,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -9631,6 +9631,59 @@ function buildOcean1500(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
       for (let k = 0; k < 10; k++){ const an = k/10*TAU; c.fillStyle = k % 2 ? '#f39c34' : '#e8542a'; c.beginPath(); c.ellipse(w*.24 + Math.cos(an)*22, h*.2 + Math.sin(an)*22, 16, 9, an, 0, TAU); c.fill(); } c.fillStyle = '#f7d154'; c.beginPath(); c.arc(w*.24, h*.2, 12, 0, TAU); c.fill();   // the flower in her hair
       c.fillStyle = '#fff6e0'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.fillText('Welcome', w*.85, h*.4); }, false);
     const mu = new THREE.Mesh(new THREE.PlaneGeometry(b - a, H - .6), new THREE.MeshStandardMaterial({ map: tex, roughness: .9 })); mu.position.set(...P3(S + .08, (a + b)/2, G + (H - .6)/2 + .3)); mu.rotation.y = Math.PI/2; grp.add(mu); }
+  g.add(grp); mergeStatic(grp); }
+/* Broadway at 2nd St, from photos: Hotel Carmel (201 Broadway, 1929; the hotel's own photos 2023, Todd Rick Allen's photos Nov 2023 and
+   Jun 2024, Flickr 2008): four floors of cream plaster scored like stone blocks, a band over the tall ground floor, square dark-framed
+   windows, a thin cornice with little rose ornaments, the vertical HOTEL CARMEL blade sign by the corner (last seen 2008), the white
+   canopy on two columns over the red carpet, red half-dome awnings, a black fire escape, and Jinky's black corner with its peony mural
+   and clock. Across 2nd: 119-131 Broadway (1920; leasing photos 2024-25), two floors of tan stucco with terracotta bands, pilasters, tall
+   teal-framed windows and Sand 'n Surf's teal sign band. (Window counts are from photos partly hidden by trees.) */
+const BWAY200 = [{ side: 1, s: 542.8, t0: -250.0, ht: 16, c: 0xf1ebdc, roof: 0xd4cfc4, name: 'Carmel' }, { side: 1, s: 473.2, t0: -234.0, ht: 9.6, c: 0xd9c7a6, name: '127B' }];
+function buildBway200(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  let G = 0;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + (y0 + y1)/2)); grp.add(me); return me; };
+  const at = (geo, hex, s, t, y) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, G + y)); grp.add(me); return me; };
+  const sign = (s, t, y, w, h, text, bg, fg, size, ry) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(s, t, G + y)); sg.rotation.y = ry; grp.add(sg); return sg; };
+  const tree = (s, t, r = 1.9, ht = 4.2) => { at(new THREE.CylinderGeometry(.13, .2, ht, 6), 0xb8b0a2, s, t, ht/2); const c = at(new THREE.IcosahedronGeometry(r, 1), 0x3f6e34, s, t, ht + r*.5); c.scale.y = .75; };   // (the round-clipped ficus street trees)
+  const GL = 0x2a3036, W = 0xf1ebdc, RD = 0xb3202a, BK = 0x161616;
+  // ---- Hotel Carmel: Broadway face at t -219.2, 2nd St face at s 542.8 ----
+  { const s0 = 542.8, s1 = 589.2, t0 = -250.0, T = -219.2, H = 16; G = landH(s0 + 10, T);
+    const fB = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, T + out, T + out + dep, y0, y1, hex);   // (on the Broadway face, out toward bigger t)
+    const fS = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(s0 - out - dep, s0 - out, a, b, y0, y1, hex);   // (on the 2nd St face)
+    for (let y = 5.4; y < 15; y += .9){ fB(s0, s1, y, y + .03, 0xdcd4c2, .02, .01); fS(t0, T, y, y + .03, 0xdcd4c2, .02, .01); }   // the scored block lines
+    fB(s0 - .3, s1, 4.4, 4.8, 0xe6dfcf, .35); fS(t0, T + .3, 4.4, 4.8, 0xe6dfcf, .35); fB(s0 - .35, s1, H - .4, H, 0xe6dfcf, .4); fS(t0, T + .35, H - .4, H, 0xe6dfcf, .4);   // the band over the ground floor, the cornice
+    for (const y of [5.6, 9.0, 12.4]){ for (let s = s0 + 2.2; s < s1 - 1.5; s += 3.5){ fB(s, s + 1.4, y, y + 1.6, GL, .1); fB(s - .08, s + 1.48, y - .08, y + 1.68, 0x3b332b, .06, .03); fB(s - .08, s + 1.48, y + .95, y + 1.0, 0x3b332b, .07, .04); }
+      for (let t = t0 + 2; t < T - 1.5; t += 3.5){ fS(t, t + 1.4, y, y + 1.6, GL, .1); fS(t - .08, t + 1.48, y - .08, y + 1.68, 0x3b332b, .06, .03); fS(t - .08, t + 1.48, y + .95, y + 1.0, 0x3b332b, .07, .04); } }
+    for (let s = s0 + 2; s < s1; s += 5) at(new THREE.SphereGeometry(.18, 8, 6), 0xc27a72, s, T + .25, H + .15); for (let t = t0 + 2; t < T; t += 5) at(new THREE.SphereGeometry(.18, 8, 6), 0xc27a72, s0 - .25, t, H + .15);   // the little rose ornaments
+    // the vertical HOTEL CARMEL sign by the corner
+    { const bs = s0 + 3.5; bx(bs - .15, bs + .15, T, T + 1.3, 5.8, 14.6, 0xa9c9a8); for (const d of [-.17, .17]){ const p = sign(bs + d, T + .7, 10.2, 8.2, .95, 'HOTEL CARMEL', '#f3eedc', '#3f7a4a', 120, d < 0 ? -Math.PI/2 : Math.PI/2); p.rotation.z = d < 0 ? Math.PI/2 : -Math.PI/2; p.rotation.order = 'YXZ'; } }
+    // the ground floor: glass, the hotel entrance under its canopy, red half-dome awnings
+    fB(s0 + 8, s1 - 1, .4, 3.8, GL, .1); fS(t0 + 1, T - 9, .4, 3.8, GL, .1);
+    const ec = s0 + 22; for (const d of [-1.6, 1.6]) at(new THREE.CylinderGeometry(.18, .18, 3.2, 12), 0xffffff, ec + d, T + 2.4, 1.6); bx(ec - 2, ec + 2, T, T + 2.7, 3.2, 3.7, 0xffffff); sign(ec, T + 2.72, 3.45, 3.2, .4, 'HOTEL CARMEL', '#ffffff', '#b08a3a', 150, 0);
+    bx(ec - 1.2, ec + 1.2, T, T + 3.5, 0, .03, 0x9e1b22); for (const d of [-2.7, 2.7]){ at(new THREE.CylinderGeometry(.3, .25, .6, 10), 0xffffff, ec + d, T + .7, .3); at(new THREE.SphereGeometry(.55, 10, 8), 0x3f6e34, ec + d, T + .7, 1.4); }
+    const dome = (s, t, ry) => { const d = at(new THREE.SphereGeometry(1, 14, 6, 0, Math.PI, 0, Math.PI/2), RD, s, t, 3.2); d.rotation.y = ry; d.scale.set(1, .7, .9); };
+    for (const s of [ec - 5.5, ec + 5.5, ec + 10, ec + 14.5, ec + 19]) dome(s, T, 0); for (const t of [t0 + 4, t0 + 9, t0 + 14]) dome(s0, t, Math.PI);
+    // Jinky's on the corner: black front and awnings round the corner, the peony mural on the corner pillar, the round clock
+    fB(s0 - .1, s0 + 8, 0, 4.3, BK, .15); fS(T - 9, T + .1, 0, 4.3, BK, .15); fB(s0 + 1.5, s0 + 7.5, .3, 3.4, 0xd8d4cc, .05, .17); fS(T - 8, T - 1.5, .3, 3.4, 0xd8d4cc, .05, .17);
+    { const aw = bx(s0, s0 + 8, T, T + 1.6, 3.4, 3.55, BK); aw.rotation.x = .35; const aw2 = bx(s0 - 1.6, s0, T - 9, T, 3.4, 3.55, BK); aw2.rotation.z = -.35; sign(s0 + 4, T + 1.62, 3.2, 3.6, .3, "JINKY'S  ALL DAY DINING", '#161616', '#ffffff', 90, 0); }
+    { const tex = canvasTex(256, 512, (c, w, h) => { c.fillStyle = '#f4efe6'; c.fillRect(0, 0, w, h); c.strokeStyle = '#f08a2b'; c.lineWidth = 22; c.beginPath(); c.arc(-40, h*.6, 200, -1, 1); c.stroke(); c.strokeStyle = '#3a8fd0'; c.beginPath(); c.arc(-40, h*.6, 160, -1, 1); c.stroke();
+        c.strokeStyle = '#3f7a3a'; c.lineWidth = 8; c.beginPath(); c.moveTo(w*.6, h); c.lineTo(w*.55, h*.35); c.stroke(); for (let k = 0; k < 9; k++){ c.fillStyle = k % 2 ? '#f06292' : '#e91e63'; c.beginPath(); c.ellipse(w*.55 + Math.cos(k*.7)*40, h*.3 + Math.sin(k*.7)*30, 34, 22, k, 0, TAU); c.fill(); } }, false);
+      for (const [s, t, ry] of [[s0 - .2, T - .6, -Math.PI/2], [s0 + .6, T + .2, 0]]){ const p = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 3.4), new THREE.MeshBasicMaterial({ map: tex })); p.position.set(...P3(s, t, G + 1.9)); p.rotation.y = ry; grp.add(p); } }
+    { const ck = at(new THREE.CylinderGeometry(.45, .45, .12, 18), 0x161616, s0 + .9, T + 1.2, 4.6); ck.rotation.x = Math.PI/2; const fc = at(new THREE.CircleGeometry(.38, 18), 0xffffff, s0 + .9, T + 1.27, 4.6); fc.material = new THREE.MeshBasicMaterial({ color: 0xffffff }); }
+    // the black fire escape near the corner
+    for (const y of [5.3, 8.7, 12.1]){ bx(s0 + 9, s0 + 13, T, T + 1, y, y + .08, BK); bx(s0 + 9, s0 + 13, T + .97, T + 1.02, y + .08, y + 1, BK); for (let s = s0 + 9; s <= s0 + 13.01; s += .5) bx(s - .02, s + .02, T + .97, T + 1.02, y, y + 1, BK); const st = bx(s0 + 9.5, s0 + 12.5, T + .3, T + .7, y - 1.7, y - 1.62, BK); st.rotation.z = .55; }
+    for (let s = s0 + 6; s < s1; s += 8) tree(s, T + 3.2); for (let t = t0 + 4; t < T - 10; t += 8) tree(s0 - 3.2, t); }
+  // ---- 119-131 Broadway: Broadway face at t -218, 2nd St face at s 519 ----
+  { const s0 = 473.2, s1 = 519.0, t0 = -234.0, T = -218.0, TC = 0xa0573d, TL = 0x2f8a86; G = landH(s1 - 10, T);
+    const fB = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, T + out, T + out + dep, y0, y1, hex);
+    const fE = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(s1 + out, s1 + out + dep, a, b, y0, y1, hex);
+    fB(s0, s1 + .2, 4.2, 4.5, TC, .2); fE(t0, T + .2, 4.2, 4.5, TC, .2); fB(s0, s1 + .3, 8.3, 8.6, TC, .25); fE(t0, T + .3, 8.3, 8.6, TC, .25); fB(s0, s1 + .35, 9.3, 9.6, 0xcbb894, .35); fE(t0, T + .35, 9.3, 9.6, 0xcbb894, .35);   // terracotta bands, the cornice
+    for (let s = s0 + 1; s < s1; s += 7.6) fB(s, s + .7, 4.5, 9.3, 0xcdbb98, .25); for (const t of [t0 + .5, t0 + 6, t0 + 9.5, T - .7]) fE(t, t + .7, 4.5, 9.3, 0xcdbb98, .25);   // pilasters
+    for (let s = s0 + 2.4; s < s1 - 1; s += 3.8){ fB(s, s + 1.1, 5.2, 7.8, GL, .1); fB(s - .08, s + 1.18, 5.12, 7.88, TL, .06, .03); fB(s - .08, s + 1.18, 7.0, 7.06, TL, .07, .04); }
+    for (const t of [t0 + 2.3, t0 + 3.8, t0 + 7.6, t0 + 11.2, t0 + 12.7, t0 + 14.2]){ fE(t - .5, t + .5, 5.2, 7.8, GL, .1); fE(t - .58, t + .58, 5.12, 7.88, TL, .06, .03); }
+    fB(s0, s1, .3, 3.3, GL, .1); fE(t0, T, .3, 3.3, GL, .1); for (let s = s0; s < s1; s += 4.2) fB(s, s + .6, 0, 3.6, 0xb9bab6, .2); fB(s0, s1 + .15, 3.3, 4.1, TL, .15); fE(t0, T + .15, 3.3, 4.1, TL, .15);   // the shop: grey piers and the teal sign band
+    sign(s1 - 9, T + .17, 3.7, 4.4, .6, "Sand 'n Surf", '#2f8a86', '#ffffff', 160, 0); sign(s1 + .17, t0 + 8, 3.7, 4.4, .6, "Sand 'n Surf", '#2f8a86', '#ffffff', 160, Math.PI/2);
+    for (const s of [s0 + 6, s0 + 22]) tree(s, T + 3.2, 2.2, 4.6); }
   g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };

@@ -6683,7 +6683,7 @@ function buildCoast(){
     { const W = W100.find(W => Math.abs(s0 - W.box[0]) < 1.5 && Math.abs(t0 - W.box[1]) < 1.5); if (W){ extrude(W.r ? roundRect(W.box, W.r) : b.p, b.base, b.top, 0xf4f4f1, 0xdcdad4, true); continue; } }   // (100 Wilshire: white, its window ribbons in buildW100)
     if (Math.abs(s0 - BAY_TOWERS[0]) < 1.5 && Math.abs(t0 - BAY_TOWERS[1]) < 1.5){ extrude(b.p, b.base, b.top, 0xf3f2ee, 0xd6d4ce); continue; }   // (Santa Monica Bay Towers, 101 California: white, balconies added in buildBeacon)
     if (s0 > 420 && s1 < 525 && t0 > -1030 && t1 < -880){ const tower = b.h > 20; extrude(b.p, b.base, b.top, tower ? 0xf7f4ee : 0xf1e4c8, tower ? 0xd8d2c6 : 0xb5532f); continue; }   // (the Fairmont Miramar: the white Ocean Tower and the garden bungalows with tile roofs)
-    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500, ...BWAY200, ...SMB400, ...SECOND1300, ...FOURTH1400, ...OCEAN1000].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
+    { const lk = [...BLOCK1100, ...BLOCK1200, ...BLOCK1300, ...BLOCK1400, ...OCEAN1300, ...WIL_S, ...CAL_N, ...OCEAN1500, ...BWAY200, ...SMB400, ...SECOND1300, ...FOURTH1400, ...OCEAN1000, ...AZ4TH].find(L => Math.abs(L.s - (L.side > 0 ? s0 : s1)) < 1.2 && Math.abs(L.t0 - t0) < 1.2); if (lk){ if (lk.skip) continue; extrude(lk.round ? roundCorner(b.p, lk.round) : b.p, b.base, lk.ht ? b.top - b.h + lk.ht : b.top, lk.c, lk.roof ?? null, true); continue; } }   // (3rd St, Wilshire to California from Street View; the middle of the 1300 block from photos)
     extrude(b.p, b.base, b.top, pav ? 0x2f5d4f : b.name === 'Apple Store' ? 0xdfe6ea : onProm ? ERA[hashOf(b) % ERA.length] : pal[hashOf(b) % pal.length], b.k === 1 ? 0x9c5a3c : null); }   // (on the Promenade: colored by when it was built; the pavilions are green iron)
   // the corner building next to home (not in OpenStreetMap; a guess, the size of its neighbors)
   { const p = [[670, -1060], [698, -1060], [698, -1081.5], [670, -1081.5]], lo = Math.min(...p.map(([s, t]) => landH(s, t))) - .4; extrude(p, lo, lo + 10.5, 0xe8dcc8); CITY.bldgs.push({ h: 10.5, k: 0, name: '', p, base: lo, top: lo + 10.5, box: [670, -1081.5, 698, -1060] });
@@ -6927,7 +6927,7 @@ function buildCoast(){
     rails.forEach(([a, b], i) => { const [x0, y0] = landXY(...a), [x1, y1] = landXY(...b), h0 = landH(...a), h1 = landH(...b), L = Math.hypot((x1 - x0)*U, (y1 - y0)*U); q.setFromAxisAngle(up, -Math.atan2((y1 - y0), (x1 - x0)));
       for (const [k, hh] of [[0, .38], [1, .74], [2, 1.12]]){ m4.compose(v.set((x0 + x1)/2*U, (h0 + h1)/2 + hh, (y0 + y1)/2*U), q, sc.set(L, 1, 1)); rm.setMatrixAt(i*3 + k, m4); } });
     for (const m of [pm, rm]){ m.castShadow = true; g.add(m); } }
-  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildSecond1300(g, P3); buildFourth1400(g, P3); buildOcean1000(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
+  buildPalisades(g, P3); buildScooters(g, P3, instanceOf); buildBeacon(g, P3); buildW100(g, P3); buildWilshireS(g, P3); buildCalN(g, P3); buildOcean1500(g, P3); buildBway200(g, P3); buildSMB400(g, P3); buildSecond1300(g, P3); buildFourth1400(g, P3); buildOcean1000(g, P3); buildAz4th(g, P3); buildOceanHotels(g, P3); buildClockTower(g, P3); buildSMBlvd(g, P3); buildO1299(g, P3); buildShore(g, P3); buildMarket(g, P3); buildBuskers(g, P3); buildAqua(g, P3); buildOMB(g, P3); buildGulls(g); buildAir(g); buildBBB(g); buildVball(g, P3); buildBeachBits(g, P3); buildOceanBikeLanes(g, P3);
   // ---- street signs at every corner downtown: Ocean Ave, 2nd, 3rd (the Promenade), 4th, 5th, 6th and 7th, at each cross street from Colorado to Montana ----
   {
     // Real Santa Monica blades (photos at Ocean & Montana): blue, a thin orange stripe along the bottom, the name in big white letters
@@ -9882,6 +9882,52 @@ function buildOcean1000(g, P3){ const grp = new THREE.Group(), M = {}, mat = (he
       for (const [w, a] of [[.7, .5], [.5, 2.1]]){ const hd = bx(S - .82, S - .78, c - .03, c + .03, H + 1, H + 1 + w, 0x222222); hd.rotation.x = a; } }   // the glass entry stack and the round clock
     for (let t = t0 + 3; t < t1; t += 8.5) bx(S + 6, S + 7.2, t, t + 1.2, H, H + 2.2, 0xf8f6f0);   // square white chimneys
     bx(S - 2.5, S - 1.8, t0 + 1, t1 - 1, 0, 1, 0x4a6e3a); palmAt(S - 4, (t0 + t1)/2 + 4, 13); for (const t of [t1 - 3, t1 - 7]) palmAt(S - 4.5, t, 14); }
+  g.add(grp); mergeStatic(grp); }
+/* 4th St at Arizona, from photos (Commons 'Santa Monica and Venice, CA (September 2022) - 026', SMDP April 2025): the Milken Institute
+   (1250 4th St, 1991) in cream limestone panels in a grid, the corner block rising higher with a notched, castle-like top over lower wings
+   with railed terraces, square dark-framed windows in pairs, the two-story glass entry at the corner with X mullions and 1250, MILKEN
+   INSTITUTE and MILKEN FAMILY FOUNDATION in letters on the wall; T.J. Maxx across 4th (1251 4th St) with red pilasters, travertine, a white
+   cantilevered band and its red canopy; and Bank of America (1301 4th St) in white-painted brick with the long red band and blue letters,
+   the arcade of thin white piers and grey slatted grilles. (Window counts and which BofA face has the arcade are guesses.) */
+const AZ4TH = [{ side: -1, s: 762.0, t0: -684.0, ht: 20, c: 0xece6d6, name: 'Milken' }, { side: 1, s: 787.2, t0: -664.6, ht: 7.6, c: 0xe2d6bc, name: 'TJMaxx' }, { side: 1, s: 787.4, t0: -610.8, ht: 6.2, c: 0xf1f0ec, name: 'BofA' }];
+function buildAz4th(g, P3){ const grp = new THREE.Group(), M = {}, mat = (hex, r = .8, m = 0) => M[hex + ':' + r + ':' + m] || (M[hex + ':' + r + ':' + m] = std(hex, r, m));
+  let G = 0;
+  const bx = (s0, s1, t0, t1, y0, y1, hex, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), y1 - y0, Math.abs(t1 - t0)), m || mat(hex)); me.position.set(...P3((s0 + s1)/2, (t0 + t1)/2, G + (y0 + y1)/2)); grp.add(me); return me; };
+  const at = (geo, hex, s, t, y) => { const me = new THREE.Mesh(geo, mat(hex)); me.position.set(...P3(s, t, G + y)); grp.add(me); return me; };
+  const sign = (s, t, y, w, h, text, bg, fg, size, ry) => { const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: labelTex(text, bg, fg, 1024, Math.round(1024*h/w), size) })); sg.position.set(...P3(s, t, G + y)); sg.rotation.y = ry; grp.add(sg); return sg; };
+  const GL = 0x262d34, LS = 0xece6d6, J = 0xd3cbb8;
+  // ---- the Milken Institute: 4th St face at s 762 (out toward bigger s), Arizona face at t -634.6 (out toward bigger t) ----
+  { const s0 = 727.4, S = 762.0, t0 = -684.0, T = -634.6, H = 20; G = landH(S, T - 10);
+    const f4 = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(S + out, S + out + dep, a, b, y0, y1, hex);
+    const fA = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, T + out, T + out + dep, y0, y1, hex);
+    const cs = S - 13, ct = T - 13;   // the corner block
+    bx(cs, S, ct, T, H, 27, LS); for (let k = 0; k < 4; k++){ bx(S - 13 + k*3.6, S - 11 + k*3.6, T - .5, T, 27, 28.4, LS); bx(S - .5, S, T - 13 + k*3.6, T - 11 + k*3.6, 27, 28.4, LS); }   // the notched top
+    bx(s0 + 2, cs, t0 + 2, T - 2, H, H + 3.4, LS); bx(cs, S - 2, t0 + 2, ct, H, H + 3.4, LS);   // the set-back top floor of the wings
+    for (let y = 3.6; y < 27; y += 1.8){ f4(ct, T, y, y + .03, J, .02, .01); fA(cs, S, y, y + .03, J, .02, .01); } for (let y = 3.6; y < H; y += 1.8){ f4(t0, ct, y, y + .03, J, .02, .01); fA(s0, cs, y, y + .03, J, .02, .01); }   // the panel joints
+    for (let y = 8; y < 26; y += 3.6){ for (const c of [ct + 3.2, ct + 9.8]) for (const d of [-.9, .9]) f4(c + d - .6, c + d + .6, y, y + 1.6, GL, .1); for (const c of [cs + 3.2, cs + 9.8]) for (const d of [-.9, .9]) fA(c + d - .6, c + d + .6, y, y + 1.6, GL, .1); }
+    for (let y = 4.4; y < H - 1; y += 3.6){ for (let t = t0 + 2.5; t < ct - 1.5; t += 4) for (const d of [0, 1.6]) f4(t + d, t + d + 1.2, y, y + 1.6, GL, .1); for (let s = s0 + 2.5; s < cs - 1.5; s += 4) for (const d of [0, 1.6]) fA(s + d, s + d + 1.2, y, y + 1.6, GL, .1); }
+    for (const y of [H - .1]){ f4(t0 + 2, ct, y + 1, y + 1.06, 0x222222, .05, -1.9); }   // (the terrace railings)
+    f4(ct + 2, T - 2, 0, 6.8, GL, .1); for (let t = ct + 2; t < T - 2.5; t += 3){ const x1 = f4(t, t + .1, 0, 6.8, 0x55595c, .05, .1); x1.scale.y = 1; const d = f4(t, t + 3, 3.35, 3.45, 0x55595c, .05, .1); d.rotation.x = .9; const d2 = f4(t, t + 3, 3.35, 3.45, 0x55595c, .05, .1); d2.rotation.x = -.9; }   // the two-story glass entry with X mullions
+    sign(S + .14, T - 6.5, 7.6, 2, .7, '1250', '#ece6d6', '#6a655a', 260, Math.PI/2);
+    sign(S + .14, t0 + 14, 3.2, 8, .6, 'MILKEN INSTITUTE', '#ece6d6', '#4a463e', 120, Math.PI/2); sign(s0 + 12, T + .14, 3.2, 10, .6, 'MILKEN FAMILY FOUNDATION', '#ece6d6', '#4a463e', 110, 0);
+    for (const [a, b] of [[t0 + 3, ct - 2]]) bx(S + .2, S + 1.2, a, b, 0, .7, 0xb6ad98); for (let t = t0 + 4; t < ct - 2; t += 1.4) at(new THREE.IcosahedronGeometry(.45, 0), 0x4f7a3a, S + .7, t, 1); }
+  // ---- T.J. Maxx: 4th St face at s 787.2 (out toward smaller s), Arizona face at t -632.6 ----
+  { const S = 787.2, s1 = 832.8, t0 = -664.6, T = -632.6, H = 7.6, RD = 0xb3123a, TR = 0xd9c9a6; G = landH(S, T - 8);
+    const f4 = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(S - out - dep, S - out, a, b, y0, y1, hex);
+    const fA = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, T + out, T + out + dep, y0, y1, hex);
+    for (let y = .6; y < H; y += .6){ f4(t0, T, y, y + .02, 0xc8b892, .02, .01); fA(S, s1, y, y + .02, 0xc8b892, .02, .01); }   // travertine courses
+    for (const t of [T - .8, T - 9, T - 17]) f4(t, t + .8, 0, H, RD, .3); for (const s of [S, S + 9, S + 18]) fA(s, s + .8, 0, H, RD, .3);   // red pilasters
+    f4(T - 16.2, T - 9, .3, 3.8, GL, .1); fA(S + .8, S + 18, .3, 3.8, GL, .1);
+    bx(S - 1.6, S + 20, T, T + 1.6, 4.3, 4.6, 0xf4f4f2); bx(S - 1.6, S, T - 18, T, 4.3, 4.6, 0xf4f4f2);   // the white cantilevered band
+    bx(S + 1, S + 8, T, T + 1.1, 3.8, 4.3, RD); sign(S + 4.5, T + 1.12, 4.05, 3.6, .45, 'T.J.maxx', '#b3123a', '#ffffff', 180, 0); sign(S - .2, T - 6, 5.8, 4.4, .8, 'T.J.maxx', '#e2d6bc', '#b3123a', 190, -Math.PI/2); }
+  // ---- Bank of America: 4th St face at s 787.4, Arizona face at t -610.8 (out toward smaller t) ----
+  { const S = 787.4, s1 = 832.8, T = -610.8, t1 = -584.2, H = 6.2, WB = 0xf1f0ec; G = landH(S, T + 8);
+    const f4 = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(S - out - dep, S - out, a, b, y0, y1, hex);
+    const fA = (a, b, y0, y1, hex, dep = .12, out = 0) => bx(a, b, T - out - dep, T - out, y0, y1, hex);
+    for (let y = .3; y < H - .5; y += .3){ f4(T, t1, y, y + .03, 0xd6d4ce, .02, .01); }   // painted brick courses
+    f4(T + 3, t1 - 3, 3.9, 4.9, 0xc8102e, .3); sign(S - .32, (T + t1)/2, 4.4, 9, .75, 'Bank of America', '#c8102e', '#1d4fa0', 150, -Math.PI/2);
+    fA(S + 1, s1 - 1, 0, 3.6, GL, .1, -1.6); for (let s = S + 1; s < s1; s += 3.4){ fA(s, s + .3, 0, H - .4, WB, .3); fA(s + .3, s + 3.1, 3.7, H - .5, 0x8f9498, .1, -.1); for (let u = s + .5; u < s + 3; u += .25) fA(u, u + .06, 3.7, H - .5, 0x6f7478, .05); }   // the arcade of thin white piers and grey slatted grilles
+    fA(S, s1, H - .4, H, WB, .4); f4(T + 2, T + 3.2, 1, 2.4, 0x3a3f44, .15); }   // (an ATM)
   g.add(grp); mergeStatic(grp); }
 const W100 = [{ box: [429.6, -817.0, 465.8, -774.2], r: 3.2, f0: 7.5, fh: 3.95, top: 3.5 }, { box: [439.6, -774.2, 465.8, -699.6], r: 0, f0: 8, fh: 3.7, top: 2.5, lobby: 1 }];
 const roundRect = ([s0, t0, s1, t1], r) => { const p = []; for (const [cs, ct, a0] of [[s1 - r, t1 - r, 0], [s0 + r, t1 - r, Math.PI/2], [s0 + r, t0 + r, Math.PI], [s1 - r, t0 + r, Math.PI*1.5]]) for (let k = 0; k <= 6; k++){ const a = a0 + k/6*Math.PI/2; p.push([cs + Math.cos(a)*r, ct + Math.sin(a)*r]); } return p; };
